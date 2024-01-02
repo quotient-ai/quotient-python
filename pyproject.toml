@@ -1,0 +1,32 @@
+[tool.poetry]
+name = "quotientai"
+version = "0.0.1"
+authors = [
+    {name = "Vic Weiss", email = "vic@quotientai.co"},
+    {name = "Freddie Vargus", email = "freddie@quotientai.co"},
+]
+description = "CLI for evaluating large language models with Quotient"
+readme = "README.md"
+requires-python = ">=3.9"
+keywords = ["quotient", "evaluation", "llms", "machine learning", "ai"]
+license = {text = "Apache-2.0", file = "LICENSE"}
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: Apache Software License",
+]
+
+[tool.poetry.dependencies]
+python = "^3.9"
+boto3 = "^1.28.61"
+awscli = "^1.29.61"
+requests = "^2.31.0"
+loguru = "^0.7.2"
+pydantic = "1.10"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.poetry_bumpversion.file."quotient_common/__init__.py"]
+search = '__version__ = "{current_version}"'
+replace = '__version__ = "{new_version}"'
