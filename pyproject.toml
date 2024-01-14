@@ -19,7 +19,12 @@ python = "^3.9"
 pydantic = "1.10"
 typer = "^0.9.0"
 rich = "^13.7.0"
+click = "^8.1.7"
+supabase = "^2.3.2"
 
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
+
+[tool.poetry.scripts]
+quotient = "quotientai.cli.entrypoint:cli"
