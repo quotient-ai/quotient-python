@@ -18,7 +18,7 @@ The `quotientai` Python client is an advanced tool for managing evaluation workf
    pip install git+ssh://git@github.com/quotient-ai/quotient-python.git@basic_cli
    ```
 
-## CLI Usage
+## Using `quotientai` from the Command Line
 
 ### Signing Up
 Create your `quotientai` account using the CLI:
@@ -56,5 +56,49 @@ Monitor job status:
 quotient my-jobs --filter id 43 # replace with your job ID
 ```
 
+## Using `quotientai` as a Python Package
+
+### Getting Started with the Python Client
+Import and initialize the QuotientClient with your credentials:
+
+```python
+from quotientai.client import QuotientClient
+
+email = 'your_email@quotientai.co'
+password = 'your_password'
+client = QuotientClient(email, password)
+```
+
+### Sign Up
+To sign up for a new account programmatically:
+
+```python
+client.sign_up(email, password)
+```
+**Note:** A verification email will be sent. Account verification is required to continue.
+
+### Retrieving All Models
+Fetch all available models:
+```python
+client.get_all_models()
+```
+
+### Creating a new Job
+```python
+job_data = {
+    "task_id": 1,
+    "recipe_id": 1,
+    "num_fewshot_examples": 0,
+    "limit": 50,
+}
+client.create_job(job_data)
+```
+
+### Retrieving Jobs
+Get details about all jobs, or filter by specific criteria like job ID:
+
+```python 
+client.get_all_jobs(filters={'id':44})
+```
 ## Support
 For assistance and inquiries: [support@quotientai.co](mailto:support@quotientai.co)
