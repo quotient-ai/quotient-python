@@ -6,6 +6,7 @@ The `quotientai` Python client is an advanced tool for managing evaluation workf
 
 ## Installation
 
+
 **Prerequisites:**
 - SSH keys added to GitHub
 - Access to the private `quotient-ai` package repository
@@ -36,13 +37,13 @@ export QUOTIENT_PASSWORD='my_secret_password';
 ```
 Alternatively, pass credentials directly in commands:
 ```bash
-quotient --email 'user@quotientai.co' --password 'my_secret_password' my-models  
+quotient --email 'user@quotientai.co' --password 'my_secret_password' my-models
 ```
 
 ### Viewing Resources
 Explore available datasets, models, templates, tasks, recipes, and jobs using the CLI:
 ```bash
-quotient my-models 
+quotient my-models
 ```
 **Documentation:** For a comprehensive list of commands and features, visit our [Documentation](<Docs page URL>).
 
@@ -97,7 +98,7 @@ client.create_job(job_data)
 ### Retrieving Jobs
 Get details about all jobs, or filter by specific criteria like job ID:
 
-```python 
+```python
 client.get_all_jobs(filters={'id':44})
 ```
 ## Support

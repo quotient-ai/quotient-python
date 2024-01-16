@@ -11,6 +11,7 @@ class Context:
 # Decorator to pass the context to the command
 pass_context = click.make_pass_decorator(Context)
 
+
 # The main group with common options
 @click.group()
 @click.option('--email', default=lambda: os.environ.get('QUOTIENT_EMAIL'))
