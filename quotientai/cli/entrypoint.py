@@ -40,7 +40,6 @@ def login(ctx):
 @cli.command(name='my-models')
 @click.option('--filter', '-f', multiple=True, type=(str, str), help="Add filters as key-value pairs.")
 @click.pass_context
-@pass_context
 def my_models(ctx, filter):
     """Command to get all models with optional filters."""
     # Convert tuple filters into a dictionary
