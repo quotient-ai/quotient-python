@@ -1,93 +1,112 @@
 import click
 from quotientai.client import QuotientClient
-
-
-client = QuotientClient("vic+2@quotientai.co", "acetonide")
-
 import json
-# The main group
+import os
+
+
+class Context:
+    def __init__(self, email, password):
+        self.client = QuotientClient(email, password)
+
+# Decorator to pass the context to the command
+pass_context = click.make_pass_decorator(Context)
+
+# The main group with common options
 @click.group()
-def cli():
-    pass
+@click.option('--email', default=lambda: os.environ.get('QUOTIENT_EMAIL'))
+@click.option('--password', default=lambda: os.environ.get('QUOTIENT_PASSWORD'), hide_input=True)
+@click.pass_context
+def cli(ctx, email, password):
+    ctx.obj = Context(email, password)
 
 
-@cli.command()
+
+@cli.command(name='sign-up')
 @click.option('--email', prompt=True)
 @click.option('--password', prompt=True, hide_input=True)
-def signup(email, password):
+def sign_up(email, password):
     """Command to sign up."""
+    client = QuotientClient(email, password)
     print(client.sign_up(email, password))
 
 
 @cli.command()
-def login():
+@click.pass_context
+def login(ctx):
     """Command to log in."""
-    print(client.login_to_supabase())
+    print(ctx.obj.client.login_to_supabase())
 
 
 @cli.command(name='my-models')
 @click.option('--filter', '-f', multiple=True, type=(str, str), help="Add filters as key-value pairs.")
-def my_models(filter):
+@click.pass_context
+@pass_context
+def my_models(ctx, filter):
     """Command to get all models with optional filters."""
     # Convert tuple filters into a dictionary
     filter_dict = {key: value for key, value in filter}
-    models = client.get_all_models(filter_dict)
+    models = ctx.obj.client.get_all_models(filter_dict)
     print(json.dumps(models, indent=4, sort_keys=True))
-    client.sign_out()
+    ctx.obj.client.sign_out()
 
 
 @cli.command(name='my-prompt-templates')
 @click.option('--filter', '-f', multiple=True, type=(str, str), help="Add filters as key-value pairs.")
-def my_prompt_templates(filter):
+@click.pass_context
+def my_prompt_templates(ctx,filter):
     """Command to get all prompt templates with optional filters."""
     # Convert tuple filters into a dictionary
     filter_dict = {key: value for key, value in filter}
-    prompt_templates = client.get_all_prompt_templates(filter_dict)
+    prompt_templates = ctx.obj.client.get_all_prompt_templates(filter_dict)
     print(json.dumps(prompt_templates, indent=4, sort_keys=True))
-    client.sign_out()
+    ctx.obj.client.sign_out()
 
 
 @cli.command(name='my-recipes')
 @click.option('--filter', '-f', multiple=True, type=(str, str), help="Add filters as key-value pairs.")
-def my_recipes(filter):
+@click.pass_context
+def my_recipes(ctx, filter):
     """Command to get all recipes with optional filters."""
     # Convert tuple filters into a dictionary
     filter_dict = {key: value for key, value in filter}
-    recipes = client.get_all_recipes(filter_dict)
+    recipes = ctx.obj.client.get_all_recipes(filter_dict)
     print(json.dumps(recipes, indent=4, sort_keys=True))
-    client.sign_out()
+    ctx.obj.client.sign_out()
 
 @cli.command(name='my-tasks')
 @click.option('--filter', '-f', multiple=True, type=(str, str), help="Add filters as key-value pairs.")
-def my_tasks(filter):
+@click.pass_context
+def my_tasks(ctx, filter):
     """Command to get all tasks with optional filters."""
     # Convert tuple filters into a dictionary
     filter_dict = {key: value for key, value in filter}
-    tasks = client.get_all_tasks(filter_dict)
+    tasks = ctx.obj.client.get_all_tasks(filter_dict)
     print(json.dumps(tasks, indent=4, sort_keys=True))
-    client.sign_out()
+    ctx.obj.client.sign_out()
 
 
 @cli.command(name='my-datasets')
 @click.option('--filter', '-f', multiple=True, type=(str, str), help="Add filters as key-value pairs.")
-def my_datasets(filter):
+@click.pass_context
+def my_datasets(ctx, filter):
     """Command to get all tasks with optional filters."""
     # Convert tuple filters into a dictionary
     filter_dict = {key: value for key, value in filter}
-    datasets = client.get_all_datasets(filter_dict)
+    datasets = ctx.obj.client.get_all_datasets(filter_dict)
     print(json.dumps(datasets, indent=4, sort_keys=True))
-    client.sign_out()
+    ctx.obj.client.sign_out()
 
 
 @cli.command(name='my-jobs')
 @click.option('--filter', '-f', multiple=True, type=(str, str), help="Add filters as key-value pairs.")
-def my_jobs(filter):
+@click.pass_context
+def my_jobs(ctx, filter):
     """Command to get all jobs with optional filters."""
     # Convert tuple filters into a dictionary
     filter_dict = {key: value for key, value in filter}
-    jobs = client.get_all_jobs(filter_dict)
+    jobs = ctx.obj.client.get_all_jobs(filter_dict)
     print(json.dumps(jobs, indent=4, sort_keys=True))
-    client.sign_out()
+    ctx.obj.client.sign_out()
 
 
 @cli.command(name='create-job')
@@ -95,7 +114,8 @@ def my_jobs(filter):
 @click.option('--recipe-id', required=True, type=int, help='Recipe ID for the job.')
 @click.option('--num-fewshot-examples', default=0, show_default=True, type=int, help='Number of few-shot examples.')
 @click.option('--limit', type=int, help='Limit for the job (optional).')
-def create_job(task_id, recipe_id, num_fewshot_examples, limit):
+@click.pass_context
+def create_job(ctx, task_id, recipe_id, num_fewshot_examples, limit):
     """Command to create a new job."""
 
     job_data = {
@@ -105,9 +125,9 @@ def create_job(task_id, recipe_id, num_fewshot_examples, limit):
         "limit": limit,
     }
 
-    new_job = client.create_job(job_data)
+    new_job = ctx.obj.client.create_job(job_data)
     print(json.dumps(new_job, indent=4, sort_keys=True))
-    client.sign_out()
+    ctx.obj.client.sign_out()
 
 
 
