@@ -1,13 +1,7 @@
 from datetime import datetime
-import json
-
 from supabase import create_client
 import time
 
-import logging
-
-#Disable logging from the Supabase library
-logging.getLogger("supabase").setLevel(logging.DEBUG)
 
 class QuotientClient:
     def __init__(self, email:str, password:str):
@@ -54,7 +48,7 @@ class QuotientClient:
                 query = query.eq(key, value)
         data = query.execute()
         return data.data
-    
+
     def get_all_prompt_templates(self, filters=None):
         self.check_token()
         query = self.supabase_client.table("prompt_template").select("*")
@@ -63,7 +57,7 @@ class QuotientClient:
                 query = query.eq(key, value)
         data = query.execute()
         return data.data
-    
+
     def get_all_recipes(self, filters=None):
         self.check_token()
         query = self.supabase_client.table("recipe").select("*,prompt_template(*),model(*)")
@@ -72,7 +66,7 @@ class QuotientClient:
                 query = query.eq(key, value)
         data = query.execute()
         return data.data
-    
+
     def get_all_datasets(self, filters=None):
         self.check_token()
         query = self.supabase_client.table("dataset").select("*")
@@ -107,8 +101,6 @@ class QuotientClient:
         query = self.supabase_client.table("job").insert(job)
         response = query.execute()
         return response.data
-    
+
 
     status = "Scheduled"
-
-
