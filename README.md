@@ -8,7 +8,6 @@ The `quotientai` Python client is an advanced tool for managing evaluation workf
 
 
 **Prerequisites:**
-- SSH keys added to GitHub
 - Access to the private `quotient-ai` package repository
 - Python 3.10 or higher
 
@@ -16,7 +15,7 @@ The `quotientai` Python client is an advanced tool for managing evaluation workf
 1. Ensure your SSH keys are added to GitHub ([SSH Key Setup Guide](https://docs.github.com/en/authentication/connecting-to-github-with-ssh/generating-a-new-ssh-key-and-adding-it-to-the-ssh-agent)).
 2. Install `quotientai` client using pip:
    ```bash
-   pip install git+ssh://git@github.com/quotient-ai/quotient-python.git@basic_cli
+   pip install git+https://{token}@gitprovider.com/user/project.git@basic_cli
    ```
 
 ## Using `quotientai` from the Command Line
