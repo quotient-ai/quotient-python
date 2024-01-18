@@ -37,7 +37,7 @@ def list_models(filter):
     """Command to get all models with optional filters."""
     # Convert tuple filters into a dictionary
     filter_dict = {key: value for key, value in filter}
-    models = client.get_all_models(filter_dict)
+    models = client.list_models(filter_dict)
     print(json.dumps(models, indent=4, sort_keys=True))
     client.sign_out()
 
@@ -54,7 +54,7 @@ def list_prompt_templates( filter):
     """Command to get all prompt templates with optional filters."""
     # Convert tuple filters into a dictionary
     filter_dict = {key: value for key, value in filter}
-    prompt_templates = client.get_all_prompt_templates(filter_dict)
+    prompt_templates = client.list_prompt_templates(filter_dict)
     print(json.dumps(prompt_templates, indent=4, sort_keys=True))
     client.sign_out()
 
@@ -71,7 +71,7 @@ def list_recipes( filter):
     """Command to get all recipes with optional filters."""
     # Convert tuple filters into a dictionary
     filter_dict = {key: value for key, value in filter}
-    recipes = client.get_all_recipes(filter_dict)
+    recipes = client.list_recipes(filter_dict)
     print(json.dumps(recipes, indent=4, sort_keys=True))
     client.sign_out()
 
@@ -88,7 +88,7 @@ def list_tasks( filter):
     """Command to get all tasks with optional filters."""
     # Convert tuple filters into a dictionary
     filter_dict = {key: value for key, value in filter}
-    tasks = client.get_all_tasks(filter_dict)
+    tasks = client.list_tasks(filter_dict)
     print(json.dumps(tasks, indent=4, sort_keys=True))
     client.sign_out()
 
@@ -105,7 +105,7 @@ def list_datasets(filter):
     """Command to get all tasks with optional filters."""
     # Convert tuple filters into a dictionary
     filter_dict = {key: value for key, value in filter}
-    datasets = client.get_all_datasets(filter_dict)
+    datasets = client.list_datasets(filter_dict)
     print(json.dumps(datasets, indent=4, sort_keys=True))
     client.sign_out()
 
@@ -122,7 +122,7 @@ def list_jobs( filter):
     """Command to get all jobs with optional filters."""
     # Convert tuple filters into a dictionary
     filter_dict = {key: value for key, value in filter}
-    jobs = client.get_all_jobs(filter_dict)
+    jobs = client.list_jobs(filter_dict)
     print(json.dumps(jobs, indent=4, sort_keys=True))
     client.sign_out()
 

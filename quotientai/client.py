@@ -47,7 +47,7 @@ class QuotientClient:
         if not self.token or current_time >= self.token_expiry:
             self.login_to_supabase()
 
-    def get_all_models(self, filters=None):
+    def list_models(self, filters=None):
         self.check_token()
         query = self.supabase_client.table("model").select("*")
         if filters:
@@ -56,7 +56,7 @@ class QuotientClient:
         data = query.execute()
         return data.data
 
-    def get_all_prompt_templates(self, filters=None):
+    def list_prompt_templates(self, filters=None):
         self.check_token()
         query = self.supabase_client.table("prompt_template").select("*")
         if filters:
@@ -65,7 +65,7 @@ class QuotientClient:
         data = query.execute()
         return data.data
 
-    def get_all_recipes(self, filters=None):
+    def list_recipes(self, filters=None):
         self.check_token()
         query = self.supabase_client.table("recipe").select(
             "*,prompt_template(*),model(*)"
@@ -76,7 +76,7 @@ class QuotientClient:
         data = query.execute()
         return data.data
 
-    def get_all_datasets(self, filters=None):
+    def list_datasets(self, filters=None):
         self.check_token()
         query = self.supabase_client.table("dataset").select("*")
         if filters:
@@ -85,7 +85,7 @@ class QuotientClient:
         data = query.execute()
         return data.data
 
-    def get_all_tasks(self, filters=None):
+    def list_tasks(self, filters=None):
         self.check_token()
         query = self.supabase_client.table("task").select("*,dataset(*)")
         if filters:
@@ -94,7 +94,7 @@ class QuotientClient:
         data = query.execute()
         return data.data
 
-    def get_all_jobs(self, filters=None):
+    def list_jobs(self, filters=None):
         self.check_token()
         query = self.supabase_client.table("job").select("*")
         if filters:

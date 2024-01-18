@@ -78,7 +78,7 @@ client.sign_up(email, password)
 ### Retrieving All Models
 Fetch all available models:
 ```python
-client.get_all_models()
+client.list_models()
 ```
 
 ### Creating a new Job
@@ -96,7 +96,7 @@ client.create_job(job_data)
 Get details about all jobs, or filter by specific criteria like job ID:
 
 ```python
-client.get_all_jobs(filters={'id':44})
+client.list_jobs(filters={'id':44})
 ```
 ## Support
 For assistance and inquiries: [support@quotientai.co](mailto:support@quotientai.co)
