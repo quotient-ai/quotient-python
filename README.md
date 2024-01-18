@@ -59,12 +59,13 @@ quotient list jobs --filter id 43 # replace with your job ID
 Import and initialize the QuotientClient with your credentials:
 
 ```python
+import os
+
 from quotientai.client import QuotientClient
 
-email = 'your_email@quotientai.co'
-password = 'your_password'
+email = os.environ['QUOTIENT_EMAIL']
+password = os.environ['QUOTIENT_PASSWORD']
 client = QuotientClient(email, password)
-```
 
 ### Sign Up
 To sign up for a new account programmatically:
