@@ -35,26 +35,22 @@ Authenticate your requests by setting environment variables:
 export QUOTIENT_EMAIL='user@quotientai.co';
 export QUOTIENT_PASSWORD='my_secret_password';
 ```
-Alternatively, pass credentials directly in commands:
-```bash
-quotient --email 'user@quotientai.co' --password 'my_secret_password' my-models
-```
 
 ### Viewing Resources
 Explore available datasets, models, templates, tasks, recipes, and jobs using the CLI:
 ```bash
-quotient my-models
+quotient list models
 ```
 **Documentation:** For a comprehensive list of commands and features, visit our [Documentation](<Docs page URL>).
 
 ### Submitting Jobs
 Submit an evaluation job:
 ```bash
-quotient create-job --task-id 1 --recipe-id 1 # returns a new job object
+quotient create job --task-id 1 --recipe-id 1 # returns a new job object
 ```
 Monitor job status:
 ```bash
-quotient my-jobs --filter id 43 # replace with your job ID
+quotient list jobs --filter id 43 # replace with your job ID
 ```
 
 ## Using `quotientai` as a Python Package

@@ -1,34 +1,41 @@
-from datetime import datetime
-from supabase import create_client
 import time
+from datetime import datetime
+
+from supabase import create_client
 
 
 class QuotientClient:
-    def __init__(self, email:str, password:str):
+    def __init__(self, email: str, password: str):
         self.email = email
         self.password = password
 
         # Public API key for the QuotientAI Supabase project
-        self.public_api_key = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhocXBwY3FsdGtsemZwZ2dkb2NiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MDEzNTU4MzgsImV4cCI6MjAxNjkzMTgzOH0.bpOtVl7co6B4wXQqt6Ec-WCz9FuO7tpVYbTa6PLoheI'
-        self.supabase_url = 'https://hhqppcqltklzfpggdocb.supabase.co'
+        self.public_api_key = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhocXBwY3FsdGtsemZwZ2dkb2NiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MDEzNTU4MzgsImV4cCI6MjAxNjkzMTgzOH0.bpOtVl7co6B4wXQqt6Ec-WCz9FuO7tpVYbTa6PLoheI"
+        self.supabase_url = "https://hhqppcqltklzfpggdocb.supabase.co"
         self.supabase_client = create_client(self.supabase_url, self.public_api_key)
 
         self.token = None
         self.token_expiry = 0
 
-    def sign_up(self, email:str, password:str):
-        response = self.supabase_client.auth.sign_up({
-            "email": email,
-            "password": password,
-        })
+    def sign_up(self, email: str, password: str):
+        response = self.supabase_client.auth.sign_up(
+            {
+                "email": email,
+                "password": password,
+            }
+        )
         return response
 
     def login_to_supabase(self):
-        response = self.supabase_client.auth.sign_in_with_password({"email": self.email, "password": self.password})
+        response = self.supabase_client.auth.sign_in_with_password(
+            {"email": self.email, "password": self.password}
+        )
         session = response.session
         self.supabase_client.postgrest.auth(token=session.access_token)
         self.token = response.session.access_token
-        self.token_expiry = time.time() + response.session.expires_in - 60 # 60 seconds buffer
+        self.token_expiry = (
+            time.time() + response.session.expires_in - 60
+        )  # 60 seconds buffer
 
     def sign_out(self):
         self.supabase_client.auth.sign_out()
@@ -60,7 +67,9 @@ class QuotientClient:
 
     def get_all_recipes(self, filters=None):
         self.check_token()
-        query = self.supabase_client.table("recipe").select("*,prompt_template(*),model(*)")
+        query = self.supabase_client.table("recipe").select(
+            "*,prompt_template(*),model(*)"
+        )
         if filters:
             for key, value in filters.items():
                 query = query.eq(key, value)
@@ -101,6 +110,5 @@ class QuotientClient:
         query = self.supabase_client.table("job").insert(job)
         response = query.execute()
         return response.data
-
 
     status = "Scheduled"
