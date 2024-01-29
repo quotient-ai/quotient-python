@@ -24,20 +24,24 @@ def cli():
     pass
 
 
-@cli.command(name="sign-up")
-@click.option("--email", prompt=True)
-@click.option("--password", prompt=True, hide_input=True)
-def sign_up(email, password):
+@cli.group()
+def register():
+    """Group of register commands"""
+    pass
+
+@register.command(name="user")
+def register_user():
     """Command to sign up."""
+    email =  os.environ.get("QUOTIENT_EMAIL")
+    password = os.environ.get("QUOTIENT_PASSWORD")
     client = QuotientClient(email, password)
-    print(client.sign_up(email, password))
+    client.register_user()
 
 
 @cli.group()
 def list():
     """Group of list commands."""
     pass
-
 
 @list.command(name="models")
 @click.option(

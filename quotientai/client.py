@@ -25,13 +25,20 @@ class QuotientClient:
         self.token = None
         self.token_expiry = 0
 
-    def sign_up(self, email: str, password: str):
+    def register_user(self):
         response = self.supabase_client.auth.sign_up(
             {
-                "email": email,
-                "password": password,
+                "email": self.email,
+                "password": self.password,
             }
         )
+
+        if response and hasattr(response, 'user'):
+            print("Success! User has been registered!")
+
+            if response.user.confirmed_at is None:
+                print("Please check your email for a verification email before continuing.")
+
         return response
 
     def login_to_supabase(self):

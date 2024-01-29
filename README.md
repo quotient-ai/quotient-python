@@ -18,20 +18,30 @@
 
 ## Using `quotientai` from the Command Line
 
-### Signing Up
+
+
+### Authentication
+To use Quotient's platform, you'll need to create an account to Authenicate or use your organization's API Key (Coming Soon).
+
+Authenticate your requests by setting environment variables for the email and password you want to register with:
+```bash
+export QUOTIENT_EMAIL='user@my_company.com';
+export QUOTIENT_PASSWORD='my_secret_password';
+```
+
+### Registering your account
+
 Create your `quotientai` account using the CLI:
 
 ```bash
-quotient sign-up --email 'user@quotientai.co' --password 'my_secret_password'
+quotient register
+
+Success! User has been registered!
+Please check your email for a verification email before continuing.
 ```
 **Note:** A verification email will be sent. Account verification is required to continue.
 
-### Authentication
-Authenticate your requests by setting environment variables:
-```bash
-export QUOTIENT_EMAIL='user@quotientai.co';
-export QUOTIENT_PASSWORD='my_secret_password';
-```
+
 
 ### Viewing Resources
 Explore available `models`, `datasets`, `prompt-templates`, `recipes`, `tasks`, and `jobs` using the CLI:
@@ -132,18 +142,18 @@ password = os.environ['QUOTIENT_PASSWORD']
 client = QuotientClient(email, password)
 ```
 
-### Sign Up
-To sign up for a new account programmatically:
+### Register new user
+To register for a new account programmatically:
 
 ```python
-client.sign_up(email, password)
+response = client.sign_up(email, password)
 ```
 **Note:** A verification email will be sent. Account verification is required to continue.
 
 ### Retrieving All Models
 Fetch all available models:
 ```python
-client.list_models()
+models = client.list_models()
 ```
 
 ### Creating a new Job
@@ -154,20 +164,20 @@ job_data = {
     "num_fewshot_examples": 0,
     "limit": 50,
 }
-client.create_job(job_data)
+job = client.create_job(job_data)
 ```
 
-### Retrieving Jobs ad Results
-Get details about all jobs, or filter by specific criteria like job ID:
+### Retrieving Jobs and Results
+Get details about all jobs, or filter by specific criteria such as job ID:
 
 ```python
-client.list_jobs(filters={'id':<your job id>})
+jobs = client.list_jobs(filters={'id':job_id})
 ```
 
 To explore your results data:
 
 ```python
-client.get_eval_results(<your job id>)
+results = client.get_eval_results(job_id)
 ```
 
 ## Support
