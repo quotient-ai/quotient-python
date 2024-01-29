@@ -113,16 +113,14 @@ class QuotientClient:
         job.update({"created_at": datetime.utcnow().isoformat()})
         query = self.supabase_client.table("job").insert(job)
         response = query.execute()
-        return response.data
+        return response.data[1]
 
 
     def get_eval_results(self, job_id):
         self.check_token()
-        # Define the URL for the API endpoint
 
         endpoint = 'get-eval-results'
         url = f'{self.eval_scheduler_url}/{endpoint}'
-
         headers = {
             'Authorization': f'Bearer {self.token}',
             'Accept': 'application/json'
