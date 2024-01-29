@@ -10,7 +10,8 @@
 - Python 3.10 or higher
 
 **Setup Guide:**
-1. Receive a token from your contace at Quotient AI.
+1. Receive a token from your contact at Quotient AI.
+
 2. Install `quotientai` client using pip:
    ```bash
    pip install git+https://{token}@github.com/quotient-ai/quotient-python.git@basic_cli
