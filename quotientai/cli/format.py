@@ -58,7 +58,7 @@ def print_pretty_jobs_table(data):
         owner_id = item["owner_profile_id"] if item["owner_profile_id"] is not None else "N/A"
         table.add_row([item["id"], item["task_id"], item["recipe_id"], item["status"], item["limit"], owner_id])
 
-    return(table)
+    return table
 
 def print_pretty_datasets_table(data):
     table = PrettyTable()
