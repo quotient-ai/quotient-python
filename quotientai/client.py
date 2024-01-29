@@ -117,7 +117,7 @@ class QuotientClient:
         job.update({"created_at": datetime.utcnow().isoformat()})
         query = self.supabase_client.table("job").insert(job)
         response = query.execute()
-        return response.data[1]
+        return response.data[0]
 
 
     def get_eval_results(self, job_id):

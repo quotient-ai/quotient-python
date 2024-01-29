@@ -137,6 +137,7 @@ def list_jobs(filter):
     # Convert tuple filters into a dictionary
     filter_dict = {key: value for key, value in filter}
     jobs = client.list_jobs(filter_dict)
+    jobs = sorted(jobs, key=lambda k: k["id"])
     print(print_pretty_jobs_table(jobs))
     client.sign_out()
 
@@ -181,7 +182,8 @@ def create_job(task_id, recipe_id, num_fewshot_examples, limit):
     }
 
     new_job = client.create_job(job_data)
-    print(json.dumps(new_job, indent=4, sort_keys=True))
+    print(print_pretty_jobs_table([new_job]))
+
     client.sign_out()
 
 
