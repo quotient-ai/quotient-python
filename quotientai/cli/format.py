@@ -113,9 +113,21 @@ def print_pretty_results_table(data):
 
     # Add rows to the results table
     for result in data["results"][:table_length]:  # Limit to first <table_length> results
-        question = truncate_string(result["content"]["input_text"], cell_char_limit) if isinstance(result["content"]["input_text"], str) else result["content"]["input_text"]
-        completion = truncate_string(result["content"]["completion"], cell_char_limit) if isinstance(result["content"]["completion"], str) else result["content"]["completion"]
-        expected_answer = truncate_string(result["content"]["answer"], cell_char_limit) if isinstance(result["content"]["answer"], str) else result["content"]["answer"]
+        question = (
+            truncate_string(result["content"]["input_text"], cell_char_limit) 
+            if isinstance(result["content"]["input_text"], str) 
+            else result["content"]["input_text"]
+        )
+        completion = (
+            truncate_string(result["content"]["completion"], cell_char_limit) 
+            if isinstance(result["content"]["completion"], str) 
+            else result["content"]["completion"]
+        )
+        expected_answer = (
+            truncate_string(result["content"]["answer"], cell_char_limit) 
+            if isinstance(result["content"]["answer"], str) 
+            else result["content"]["answer"]
+        )
         metric_score = result["value"]
         table.add_row([question, completion, expected_answer, metric_score])
 
