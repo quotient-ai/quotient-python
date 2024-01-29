@@ -4,7 +4,10 @@ import os
 import click
 from quotientai.client import QuotientClient
 
-client = QuotientClient(os.environ.get("QUOTIENT_EMAIL"), os.environ.get("QUOTIENT_PASSWORD"))
+client = QuotientClient(
+    os.environ.get("QUOTIENT_EMAIL"), os.environ.get("QUOTIENT_PASSWORD")
+)
+
 
 @click.group()
 def cli():
@@ -24,6 +27,7 @@ def sign_up(email, password):
 def list():
     """Group of list commands."""
     pass
+
 
 @list.command(name="models")
 @click.option(
@@ -50,7 +54,7 @@ def list_models(filter):
     type=(str, str),
     help="Add filters as key-value pairs.",
 )
-def list_prompt_templates( filter):
+def list_prompt_templates(filter):
     """Command to get all prompt templates with optional filters."""
     # Convert tuple filters into a dictionary
     filter_dict = {key: value for key, value in filter}
@@ -67,7 +71,7 @@ def list_prompt_templates( filter):
     type=(str, str),
     help="Add filters as key-value pairs.",
 )
-def list_recipes( filter):
+def list_recipes(filter):
     """Command to get all recipes with optional filters."""
     # Convert tuple filters into a dictionary
     filter_dict = {key: value for key, value in filter}
@@ -84,7 +88,7 @@ def list_recipes( filter):
     type=(str, str),
     help="Add filters as key-value pairs.",
 )
-def list_tasks( filter):
+def list_tasks(filter):
     """Command to get all tasks with optional filters."""
     # Convert tuple filters into a dictionary
     filter_dict = {key: value for key, value in filter}
@@ -118,7 +122,7 @@ def list_datasets(filter):
     type=(str, str),
     help="Add filters as key-value pairs.",
 )
-def list_jobs( filter):
+def list_jobs(filter):
     """Command to get all jobs with optional filters."""
     # Convert tuple filters into a dictionary
     filter_dict = {key: value for key, value in filter}
@@ -127,10 +131,19 @@ def list_jobs( filter):
     client.sign_out()
 
 
+@list.command(name="results")
+@click.option( "--job-id", required=True,type=int,help="Job ID to pull results for.")
+def list_results(job_id):
+    """Command to get results for a job."""
+    tasks = client.get_eval_results(job_id)
+    print(json.dumps(tasks, indent=4, sort_keys=True))
+    client.sign_out()
+
 @cli.group()
 def create():
     """Group of create commands."""
     pass
+
 
 @create.command(name="job")
 @click.option("--task-id", required=True, type=int, help="Task ID for the job.")
@@ -156,6 +169,8 @@ def create_job(task_id, recipe_id, num_fewshot_examples, limit):
     new_job = client.create_job(job_data)
     print(json.dumps(new_job, indent=4, sort_keys=True))
     client.sign_out()
+
+
 
 
 if __name__ == "__main__":

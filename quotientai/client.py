@@ -2,7 +2,7 @@ import time
 from datetime import datetime
 
 from supabase import create_client
-
+import requests
 
 class QuotientClient:
     def __init__(self, email: str, password: str):
@@ -14,6 +14,10 @@ class QuotientClient:
         self.supabase_url = "https://hhqppcqltklzfpggdocb.supabase.co"
         self.supabase_client = create_client(self.supabase_url, self.public_api_key)
 
+        # Eval Scheduler config
+        self.eval_scheduler_url = "http://eval-scheduler-alb-887401167.us-east-2.elb.amazonaws.com"
+
+        # Client Auth Token
         self.token = None
         self.token_expiry = 0
 
@@ -111,4 +115,22 @@ class QuotientClient:
         response = query.execute()
         return response.data
 
-    status = "Scheduled"
+
+    def get_eval_results(self, job_id):
+        self.check_token()
+        # Define the URL for the API endpoint
+
+        endpoint = 'get-eval-results'
+        url = f'{self.eval_scheduler_url}/{endpoint}'
+
+        headers = {
+            'Authorization': f'Bearer {self.token}',
+            'Accept': 'application/json'
+        }
+
+        response = requests.get(url, headers=headers, params={'job_id': job_id})
+
+        if response.status_code == 200:
+            return response.json()
+        else:
+            return f"Failed with status code: {response.status_code}"
