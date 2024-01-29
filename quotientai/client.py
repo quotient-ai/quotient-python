@@ -34,7 +34,7 @@ class QuotientClient:
         )
 
         if response and hasattr(response, 'user'):
-            print("Success! User has been registered!")
+            print(f"Success! {self.email} has been registered!")
 
             if response.user.confirmed_at is None:
                 print("Please check your inbox and verify your email before continuing.")
