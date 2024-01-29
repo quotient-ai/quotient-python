@@ -122,7 +122,7 @@ quotient list results --job-id 67
 | When were the Normans in ... | I have a question about t... | in the 10th and 11th cent... | 0.04210526315789474 |
 | From which countries did ... |             None             | Denmark, Iceland and Norw... |         None        |
 +------------------------------+------------------------------+------------------------------+---------------------+
-More results available. Use the SDK to view more results
+More results available -- use the SDK to view them.
 ```
 
 **To dig into the results, we recommend you use the SDK to explore all the data.**
