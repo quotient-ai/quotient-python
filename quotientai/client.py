@@ -37,7 +37,7 @@ class QuotientClient:
             print("Success! User has been registered!")
 
             if response.user.confirmed_at is None:
-                print("Please check your email for a verification email before continuing.")
+                print("Please check your inbox and verify your email before continuing.")
 
         return response
 
