@@ -21,6 +21,7 @@ typer = "^0.9.0"
 rich = "^13.7.0"
 click = "^8.1.7"
 supabase = "^2.3.2"
+prettytable = "^3.9.0"
 
 [build-system]
 requires = ["poetry-core"]

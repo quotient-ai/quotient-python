@@ -3,6 +3,16 @@ import os
 
 import click
 from quotientai.client import QuotientClient
+from quotientai.cli.format import (
+    print_pretty_datasets_table,
+    print_pretty_jobs_table,
+    print_pretty_models_table,
+    print_pretty_prompt_template_table,
+    print_pretty_recipes_table,
+    print_pretty_tasks_table,
+    print_pretty_results_summary_table,
+    print_pretty_results_table
+)
 
 client = QuotientClient(
     os.environ.get("QUOTIENT_EMAIL"), os.environ.get("QUOTIENT_PASSWORD")
@@ -42,7 +52,7 @@ def list_models(filter):
     # Convert tuple filters into a dictionary
     filter_dict = {key: value for key, value in filter}
     models = client.list_models(filter_dict)
-    print(json.dumps(models, indent=4, sort_keys=True))
+    print(print_pretty_models_table(models))
     client.sign_out()
 
 
@@ -59,7 +69,7 @@ def list_prompt_templates(filter):
     # Convert tuple filters into a dictionary
     filter_dict = {key: value for key, value in filter}
     prompt_templates = client.list_prompt_templates(filter_dict)
-    print(json.dumps(prompt_templates, indent=4, sort_keys=True))
+    print(print_pretty_prompt_template_table(prompt_templates))
     client.sign_out()
 
 
@@ -76,24 +86,7 @@ def list_recipes(filter):
     # Convert tuple filters into a dictionary
     filter_dict = {key: value for key, value in filter}
     recipes = client.list_recipes(filter_dict)
-    print(json.dumps(recipes, indent=4, sort_keys=True))
-    client.sign_out()
-
-
-@list.command(name="tasks")
-@click.option(
-    "--filter",
-    "-f",
-    multiple=True,
-    type=(str, str),
-    help="Add filters as key-value pairs.",
-)
-def list_tasks(filter):
-    """Command to get all tasks with optional filters."""
-    # Convert tuple filters into a dictionary
-    filter_dict = {key: value for key, value in filter}
-    tasks = client.list_tasks(filter_dict)
-    print(json.dumps(tasks, indent=4, sort_keys=True))
+    print(print_pretty_recipes_table(recipes))
     client.sign_out()
 
 
@@ -110,7 +103,24 @@ def list_datasets(filter):
     # Convert tuple filters into a dictionary
     filter_dict = {key: value for key, value in filter}
     datasets = client.list_datasets(filter_dict)
-    print(json.dumps(datasets, indent=4, sort_keys=True))
+    print(print_pretty_datasets_table(datasets))
+    client.sign_out()
+
+
+@list.command(name="tasks")
+@click.option(
+    "--filter",
+    "-f",
+    multiple=True,
+    type=(str, str),
+    help="Add filters as key-value pairs.",
+)
+def list_tasks(filter):
+    """Command to get all tasks with optional filters."""
+    # Convert tuple filters into a dictionary
+    filter_dict = {key: value for key, value in filter}
+    tasks = client.list_tasks(filter_dict)
+    print(print_pretty_tasks_table(tasks))
     client.sign_out()
 
 
@@ -127,7 +137,7 @@ def list_jobs(filter):
     # Convert tuple filters into a dictionary
     filter_dict = {key: value for key, value in filter}
     jobs = client.list_jobs(filter_dict)
-    print(json.dumps(jobs, indent=4, sort_keys=True))
+    print(print_pretty_jobs_table(jobs))
     client.sign_out()
 
 
@@ -135,8 +145,12 @@ def list_jobs(filter):
 @click.option( "--job-id", required=True,type=int,help="Job ID to pull results for.")
 def list_results(job_id):
     """Command to get results for a job."""
-    tasks = client.get_eval_results(job_id)
-    print(json.dumps(tasks, indent=4, sort_keys=True))
+    results = client.get_eval_results(job_id)
+    print(print_pretty_results_summary_table(results))
+    table, has_more_results = print_pretty_results_table(results)
+    print(table)
+    if has_more_results:
+        print("More results available. Use the SDK to view more results")
     client.sign_out()
 
 @cli.group()
@@ -169,7 +183,6 @@ def create_job(task_id, recipe_id, num_fewshot_examples, limit):
     new_job = client.create_job(job_data)
     print(json.dumps(new_job, indent=4, sort_keys=True))
     client.sign_out()
-
 
 
 
