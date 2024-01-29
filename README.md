@@ -34,7 +34,7 @@ export QUOTIENT_PASSWORD='my_secret_password';
 Create your `quotientai` account using the CLI:
 
 ```bash
-quotient register
+quotient register user
 
 Success! User has been registered!
 Please check your email for a verification email before continuing.
@@ -146,7 +146,7 @@ client = QuotientClient(email, password)
 To register for a new account programmatically:
 
 ```python
-response = client.sign_up(email, password)
+response = client.register(email, password)
 ```
 **Note:** A verification email will be sent. Account verification is required to continue.
 
