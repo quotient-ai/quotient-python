@@ -1,8 +1,13 @@
 import time
 from datetime import datetime
 
+import logging
+
+logging.basicConfig(level=logging.WARNING)
+
 from supabase import create_client
 import requests
+
 
 class QuotientClient:
     def __init__(self, email: str, password: str):
