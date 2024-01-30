@@ -20,6 +20,10 @@ def truncate_string(input_string, max_length=50):
     # Truncate the string to a maximum length with ellipsis
     return (input_string[:max_length] + '...') if len(input_string) > max_length else input_string
 
+def select_file_name_from_url(url):
+    # Select the file name from a URL
+    return url.split("/")[-1]
+
 
 def print_pretty_prompt_template_table(data):
     table = PrettyTable()
@@ -63,17 +67,17 @@ def print_pretty_jobs_table(data):
 
 def print_pretty_datasets_table(data):
     table = PrettyTable()
-    table.field_names = ["ID", "Name", "Dataset Type", "URL", "File Format", "Owner"]
+    table.field_names = ["ID", "Name", "File", "File Format", "Owner"]
 
     # Add rows to the table
     for item in data:
         id = item["id"]
         name = item["name"]
         dataset_type = item["dataset_type"]
-        url = truncate_string(item["url"]) if item["url"] is not None else "N/A"
+        url = truncate_string(select_file_name_from_url(item["url"])) if item["url"] is not None else "N/A"
         file_format = item["file_format"] if item["file_format"] is not None else "N/A"
         owner = item["owner_profile_id"] if item["owner_profile_id"] is not None else "N/A"
-        table.add_row([id, name, dataset_type, url, file_format, owner])
+        table.add_row([id, name, url, file_format, owner])
 
     return table
 
