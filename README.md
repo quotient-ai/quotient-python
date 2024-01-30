@@ -180,6 +180,11 @@ To explore your results data:
 
 ```python
 results = client.get_eval_results(jobs[0]['id'])
+for result in results['results']:
+  print("Model Input:", result["content"]["input_text"])
+  print("Model Output:", result["content"]["completion"])
+  print("Expected Answer:", result["content"]["answer"])
+  print("\n")
 ```
 
 ## Support
