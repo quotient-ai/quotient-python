@@ -3,7 +3,7 @@ from prettytable import PrettyTable
 
 def print_pretty_models_table(data):
     table = PrettyTable()
-    table.field_names = ["ID", "Name", "Model Type", "Description", "Owner Profile ID"]
+    table.field_names = ["ID", "Name", "Model Type", "Description", "Owner"]
 
     # Add rows to the table
     for item in data:
@@ -27,7 +27,7 @@ def select_file_name_from_url(url):
 
 def print_pretty_prompt_template_table(data):
     table = PrettyTable()
-    table.field_names = ["ID", "Name", "Template String", "Owner Profile ID"]
+    table.field_names = ["ID", "Name", "Template String", "Owner"]
 
     # Add rows to the table
     for item in data:
@@ -56,7 +56,7 @@ def print_pretty_recipes_table(data):
 
 def print_pretty_jobs_table(data):
     table = PrettyTable()
-    table.field_names = ["ID", "Task ID", "Task Name", "Recipe ID", "Recipe Name", "Status", "Limit", "Owner Profile ID"]
+    table.field_names = ["ID", "Task ID", "Task Name", "Recipe ID", "Recipe Name", "Status", "Limit", "Owner"]
 
     # Add rows to the table
     for item in data:
