@@ -22,7 +22,8 @@
 
 
 ### Authentication
-To use Quotient's platform, you'll need to create an account to Authenicate or use your organization's API Key (Coming Soon).
+To use Quotient's platform, you'll need to create an account to authenticate or use your organization's API Key (Coming Soon).
+
 
 Authenticate your requests by setting environment variables for the email and password you want to register with:
 ```bash
