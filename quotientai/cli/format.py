@@ -36,27 +36,28 @@ def print_pretty_prompt_template_table(data):
 
 def print_pretty_recipes_table(data):
     table = PrettyTable()
-    table.field_names = ["Recipe ID",  "Model Name", "Model ID",  "Prompt Template Name", "Prompt Template ID"]
+    table.field_names = ["Recipe ID",  "Recipe Name","Model ID", "Model Name", "Prompt Template ID", "Prompt Template Name" ]
 
     # Add rows to the table
     for item in data:
         recipe_id = item["id"]
+        recipe_name = item["name"]
         model_id = item["model"]["id"]
         model_name = item["model"]["name"]
         prompt_template_id = item["prompt_template"]["id"]
         prompt_template_name = item["prompt_template"]["name"]
-        table.add_row([recipe_id, model_name, model_id, prompt_template_name, prompt_template_id])
+        table.add_row([recipe_id, recipe_name, model_id, model_name, prompt_template_id, prompt_template_name])
 
     return table
 
 def print_pretty_jobs_table(data):
     table = PrettyTable()
-    table.field_names = ["ID", "Task ID", "Recipe ID", "Status", "Limit", "Owner Profile ID"]
+    table.field_names = ["ID", "Task ID", "Task Name", "Recipe ID", "Recipe Name", "Status", "Limit", "Owner Profile ID"]
 
     # Add rows to the table
     for item in data:
         owner_id = item["owner_profile_id"] if item["owner_profile_id"] is not None else "N/A"
-        table.add_row([item["id"], item["task_id"], item["recipe_id"], item["status"], item["limit"], owner_id])
+        table.add_row([item["id"], item["task_id"], item["task"]["name"], item["recipe_id"], item["recipe"]["name"], item["status"], item["limit"], owner_id])
 
     return table
 
@@ -96,7 +97,7 @@ def print_pretty_tasks_table(data):
 
 def print_pretty_results_summary_table(data):
     table = PrettyTable()
-    table.field_names = ["ID", "Model Name", "Task Name", "Metrics", "Task Type", "Sample Count", "Seed"]
+    table.field_names = ["ID", "Model Name", "Task Name", "Metrics", "Task Type", "# Samples", "Seed"]
 
     # Add row to the general table
     metrics = ', '.join(data["metrics"])
@@ -106,7 +107,7 @@ def print_pretty_results_summary_table(data):
 
 def print_pretty_results_table(data):
     table = PrettyTable()
-    table.field_names = ["Question", "Completion", "Expected Answer", "Metric Score"]
+    table.field_names = ["Model Input", "Model Output", "Expected Answer", "Metric Score"]
 
     table_length = 20
     cell_char_limit = 25
@@ -114,18 +115,18 @@ def print_pretty_results_table(data):
     # Add rows to the results table
     for result in data["results"][:table_length]:  # Limit to first <table_length> results
         question = (
-            truncate_string(result["content"]["input_text"], cell_char_limit) 
-            if isinstance(result["content"]["input_text"], str) 
+            truncate_string(result["content"]["input_text"], cell_char_limit)
+            if isinstance(result["content"]["input_text"], str)
             else result["content"]["input_text"]
         )
         completion = (
-            truncate_string(result["content"]["completion"], cell_char_limit) 
-            if isinstance(result["content"]["completion"], str) 
+            truncate_string(result["content"]["completion"], cell_char_limit)
+            if isinstance(result["content"]["completion"], str)
             else result["content"]["completion"]
         )
         expected_answer = (
-            truncate_string(result["content"]["answer"], cell_char_limit) 
-            if isinstance(result["content"]["answer"], str) 
+            truncate_string(result["content"]["answer"], cell_char_limit)
+            if isinstance(result["content"]["answer"], str)
             else result["content"]["answer"]
         )
         metric_score = result["value"]

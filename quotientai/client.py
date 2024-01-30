@@ -111,7 +111,7 @@ class QuotientClient:
 
     def list_jobs(self, filters=None):
         self.check_token()
-        query = self.supabase_client.table("job").select("*")
+        query = self.supabase_client.table("job").select("*,task(*),recipe(*)")
         if filters:
             for key, value in filters.items():
                 query = query.eq(key, value)
@@ -124,7 +124,11 @@ class QuotientClient:
         job.update({"created_at": datetime.utcnow().isoformat()})
         query = self.supabase_client.table("job").insert(job)
         response = query.execute()
-        return response.data[0]
+        job = response.data[0]
+        job_id = job["id"]
+        # Supabase does not support returning nested objects, so we need to
+        # manually fetch the task and recipe after create
+        return self.list_jobs({"id": job_id})[0]
 
 
     def get_eval_results(self, job_id):

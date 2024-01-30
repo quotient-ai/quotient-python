@@ -14,7 +14,7 @@
 
 2. Install `quotientai` client using pip:
    ```bash
-   pip install git+https://{token}@github.com/quotient-ai/quotient-python.git@basic_cli
+   pip install git+https://{token}@github.com/quotient-ai/quotient-python.git
    ```
 
 ## Using `quotientai` from the Command Line
@@ -178,7 +178,7 @@ jobs = client.list_jobs(filters={'id':job_id})
 To explore your results data:
 
 ```python
-results = client.get_eval_results(job_id)
+results = client.get_eval_results(jobs[0]['id'])
 ```
 
 ## Support
