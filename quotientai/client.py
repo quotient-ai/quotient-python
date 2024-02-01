@@ -1,11 +1,12 @@
+import logging
 import time
 from datetime import datetime
-import logging
 
 logging.basicConfig(level=logging.WARNING)
 
-from supabase import create_client
 import requests
+
+from supabase import create_client
 
 
 class QuotientClient:
@@ -19,7 +20,9 @@ class QuotientClient:
         self.supabase_client = create_client(self.supabase_url, self.public_api_key)
 
         # Eval Scheduler config
-        self.eval_scheduler_url = "http://eval-scheduler-alb-887401167.us-east-2.elb.amazonaws.com"
+        self.eval_scheduler_url = (
+            "http://eval-scheduler-alb-887401167.us-east-2.elb.amazonaws.com"
+        )
 
         # Client Auth Token
         self.token = None
@@ -33,11 +36,13 @@ class QuotientClient:
             }
         )
 
-        if response and hasattr(response, 'user'):
+        if response and hasattr(response, "user"):
             print(f"Success! {self.email} has been registered!")
 
             if response.user.confirmed_at is None:
-                print("Please check your inbox and verify your email before continuing.")
+                print(
+                    "Please check your inbox and verify your email before continuing."
+                )
 
         return response
 
@@ -130,18 +135,17 @@ class QuotientClient:
         # manually fetch the task and recipe after create
         return self.list_jobs({"id": job_id})[0]
 
-
     def get_eval_results(self, job_id):
         self.check_token()
 
-        endpoint = 'get-eval-results'
-        url = f'{self.eval_scheduler_url}/{endpoint}'
+        endpoint = "get-eval-results"
+        url = f"{self.eval_scheduler_url}/{endpoint}"
         headers = {
-            'Authorization': f'Bearer {self.token}',
-            'Accept': 'application/json'
+            "Authorization": f"Bearer {self.token}",
+            "Accept": "application/json",
         }
 
-        response = requests.get(url, headers=headers, params={'job_id': job_id})
+        response = requests.get(url, headers=headers, params={"job_id": job_id})
 
         if response.status_code == 200:
             return response.json()

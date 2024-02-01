@@ -2,17 +2,17 @@ import json
 import os
 
 import click
-from quotientai.client import QuotientClient
 from quotientai.cli.format import (
     print_pretty_datasets_table,
     print_pretty_jobs_table,
     print_pretty_models_table,
     print_pretty_prompt_template_table,
     print_pretty_recipes_table,
-    print_pretty_tasks_table,
     print_pretty_results_summary_table,
-    print_pretty_results_table
+    print_pretty_results_table,
+    print_pretty_tasks_table,
 )
+from quotientai.client import QuotientClient
 
 client = QuotientClient(
     os.environ.get("QUOTIENT_EMAIL"), os.environ.get("QUOTIENT_PASSWORD")
@@ -29,10 +29,11 @@ def register():
     """Group of register commands"""
     pass
 
+
 @register.command(name="user")
 def register_user():
     """Command to sign up."""
-    email =  os.environ.get("QUOTIENT_EMAIL")
+    email = os.environ.get("QUOTIENT_EMAIL")
     password = os.environ.get("QUOTIENT_PASSWORD")
     client = QuotientClient(email, password)
     client.register_user()
@@ -42,6 +43,7 @@ def register_user():
 def list():
     """Group of list commands."""
     pass
+
 
 @list.command(name="models")
 @click.option(
@@ -147,7 +149,7 @@ def list_jobs(filter):
 
 
 @list.command(name="results")
-@click.option( "--job-id", required=True,type=int,help="Job ID to pull results for.")
+@click.option("--job-id", required=True, type=int, help="Job ID to pull results for.")
 def list_results(job_id):
     """Command to get results for a job."""
     results = client.get_eval_results(job_id)
@@ -157,6 +159,7 @@ def list_results(job_id):
     if has_more_results:
         print("More results available. Use the SDK to view more results")
     client.sign_out()
+
 
 @cli.group()
 def create():
@@ -189,7 +192,6 @@ def create_job(task_id, recipe_id, num_fewshot_examples, limit):
     print(print_pretty_jobs_table([new_job]))
 
     client.sign_out()
-
 
 
 if __name__ == "__main__":
