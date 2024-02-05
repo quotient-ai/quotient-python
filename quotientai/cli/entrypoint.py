@@ -17,6 +17,7 @@ from quotientai.client import QuotientClient
 client = QuotientClient(
     os.environ.get("QUOTIENT_EMAIL"), os.environ.get("QUOTIENT_PASSWORD")
 )
+from quotientai.exceptions import QuotientAIAuthException, QuotientAIInvalidInputException
 
 
 @click.group()
@@ -193,6 +194,43 @@ def create_job(task_id, recipe_id, num_fewshot_examples, limit):
 
     client.sign_out()
 
+
+@create.command(name="prompt-template")
+@click.option("--prompt-template", type=str, help="Prompt template to use when sending samples to the model")
+@click.option("--name", type=str, help="A descriptive name for the prompt template.")
+def create_prompt_template(prompt_template, name):
+    """Command to create a new prompt template."""
+
+    try:
+        prompt_template = client.create_prompt_template(prompt_template, name)
+    except QuotientAIInvalidInputException as e:
+        print(e)
+        client.sign_out()
+        return
+    print("Created prompt template with the following details:")
+    print(print_pretty_prompt_template_table([prompt_template]))
+    client.sign_out()
+
+
+@cli.group()
+def delete():
+    """Group of delete commands."""
+    pass
+
+@delete.command(name="prompt-template")
+@click.option("--prompt-template-id", required=True, type=int, help="Prompt template ID to delete.")
+def delete_prompt_template(prompt_template_id):
+    """Command to delete a prompt template."""
+    try:
+        deleted_prompt_template = client.delete_prompt_template(prompt_template_id)
+    except QuotientAIAuthException as e:
+        print(e)
+        client.sign_out()
+        return
+
+    print("Removed prompt template with the following details:")
+    print(print_pretty_prompt_template_table(deleted_prompt_template))
+    client.sign_out()
 
 if __name__ == "__main__":
     cli()

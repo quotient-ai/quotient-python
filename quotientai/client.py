@@ -8,6 +8,9 @@ import requests
 
 from supabase import create_client
 
+from quotientai.exceptions import QuotientAIAuthException, QuotientAIInvalidInputException
+
+
 
 class QuotientClient:
     def __init__(self, email: str, password: str):
@@ -138,16 +141,40 @@ class QuotientClient:
     def get_eval_results(self, job_id):
         self.check_token()
 
-        endpoint = "get-eval-results"
-        url = f"{self.eval_scheduler_url}/{endpoint}"
+        endpoint = 'get-eval-results'
+        url = f'{self.eval_scheduler_url}/{endpoint}'
         headers = {
-            "Authorization": f"Bearer {self.token}",
-            "Accept": "application/json",
+            'Authorization': f'Bearer {self.token}',
+            'Accept': 'application/json'
         }
 
-        response = requests.get(url, headers=headers, params={"job_id": job_id})
+        response = requests.get(url, headers=headers, params={'job_id': job_id})
 
         if response.status_code == 200:
             return response.json()
         else:
             return f"Failed with status code: {response.status_code}"
+
+    def create_prompt_template(self, template, name):
+        self.check_token()
+
+        endpoint = 'create-prompt-template'
+        url = f'{self.eval_scheduler_url}/{endpoint}'
+        headers = {
+            'Authorization': f'Bearer {self.token}',
+            'Accept': 'application/json'
+        }
+
+        response = requests.post(url, headers=headers, params={'template': template, 'name':name})
+
+        if response.status_code != 200:
+            raise QuotientAIInvalidInputException(f"Failed to create prompt template for reason: {response.json()['detail']}")
+        return response.json()
+
+    def delete_prompt_template(self, template_id):
+        self.check_token()
+        query = self.supabase_client.table("prompt_template").delete().eq("id", template_id)
+        response = query.execute()
+        if not response.data:
+            raise QuotientAIAuthException(f"Failed to delete prompt template with id {template_id}. Does not exist or unauthorized.")
+        return response.data

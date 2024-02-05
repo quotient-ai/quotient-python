@@ -1,5 +1,5 @@
 from prettytable import PrettyTable
-
+import textwrap
 
 def print_pretty_models_table(data):
     table = PrettyTable()
@@ -23,9 +23,10 @@ def print_pretty_models_table(data):
     return table
 
 
-def sanitize_string(input_string):
+def sanitize_string(input_string, max_width=40):
     # Replace newlines and other special characters for display
-    return input_string.replace("\\n", "\n").replace("\\t", "\t")
+    sanitized = input_string.replace("\\n", "\n").replace("\\t", "\t")
+    return wrap_text(sanitized, max_width)
 
 
 def truncate_string(input_string, max_length=50):
@@ -40,6 +41,9 @@ def truncate_string(input_string, max_length=50):
 def select_file_name_from_url(url):
     # Select the file name from a URL
     return url.split("/")[-1]
+
+def wrap_text(text, max_width):
+    return '\n'.join(textwrap.wrap(text, max_width))
 
 
 def print_pretty_prompt_template_table(data):
