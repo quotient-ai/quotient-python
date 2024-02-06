@@ -1,2 +1,4 @@
-from quotientai.exceptions.api import QuotientAIAuthException
-from quotientai.exceptions.api import QuotientAIInvalidInputException
+from quotientai.exceptions.api import (
+    QuotientAIAuthException,
+    QuotientAIInvalidInputException,
+)

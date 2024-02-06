@@ -16,22 +16,28 @@ from quotientai.client import QuotientClient
 client = QuotientClient(
     os.environ.get("QUOTIENT_EMAIL"), os.environ.get("QUOTIENT_PASSWORD")
 )
-from quotientai.exceptions import QuotientAIAuthException, QuotientAIInvalidInputException
+from quotientai.exceptions import (
+    QuotientAIAuthException,
+    QuotientAIInvalidInputException,
+)
 
 
 @click.group()
 def cli():
     pass
 
+
 @cli.group()
 def list():
     """Group of list commands."""
     pass
 
+
 @cli.group()
 def create():
     """Group of create commands."""
     pass
+
 
 @cli.group()
 def register():
@@ -43,6 +49,7 @@ def register():
 def delete():
     """Group of delete commands."""
     pass
+
 
 @register.command(name="user")
 def register_user():
@@ -56,6 +63,7 @@ def register_user():
 ###########################
 #         Models          #
 ###########################
+
 
 @list.command(name="models")
 @click.option(
@@ -73,9 +81,11 @@ def list_models(filter):
     print(format_models_table(models))
     client.sign_out()
 
+
 ###########################
 #     Prompt Templates    #
 ###########################
+
 
 @list.command(name="prompt-templates")
 @click.option(
@@ -95,7 +105,11 @@ def list_prompt_templates(filter):
 
 
 @create.command(name="prompt-template")
-@click.option("--prompt-template", type=str, help="Prompt template to use when sending samples to the model")
+@click.option(
+    "--prompt-template",
+    type=str,
+    help="Prompt template to use when sending samples to the model",
+)
 @click.option("--name", type=str, help="A descriptive name for the prompt template.")
 def create_prompt_template(prompt_template, name):
     """Command to create a new prompt template."""
@@ -112,7 +126,12 @@ def create_prompt_template(prompt_template, name):
 
 
 @delete.command(name="prompt-template")
-@click.option("--prompt-template-id", required=True, type=int, help="Prompt template ID to delete.")
+@click.option(
+    "--prompt-template-id",
+    required=True,
+    type=int,
+    help="Prompt template ID to delete.",
+)
 def delete_prompt_template(prompt_template_id):
     """Command to delete a prompt template."""
     try:
@@ -126,9 +145,11 @@ def delete_prompt_template(prompt_template_id):
     print(format_prompt_template_table(deleted_prompt_template))
     client.sign_out()
 
+
 ###########################
 #         Recipes         #
 ###########################
+
 
 @list.command(name="recipes")
 @click.option(
@@ -149,19 +170,36 @@ def list_recipes(filter):
 
 @create.command(name="recipe")
 @click.option("--model-id", required=True, type=int, help="Model ID for the recipe.")
-@click.option("--prompt-template-id", required=True, type=int, help="Prompt Template ID for the recipe.")
+@click.option(
+    "--prompt-template-id",
+    required=True,
+    type=int,
+    help="Prompt Template ID for the recipe.",
+)
 @click.option("--name", required=True, type=str, help="A name for the recipe.")
-@click.option("--description", required=True, type=str, help="A description for the recipe.")
+@click.option(
+    "--description", required=True, type=str, help="A description for the recipe."
+)
 def create_recipe(model_id, prompt_template_id, name, description):
     """Command to create a new recie."""
-    new_recipe = client.create_recipe(model_id, prompt_template_id, name, description)
-    print(format_recipes_table([new_recipe]))
+    try:
+        new_recipe = client.create_recipe(
+            model_id, prompt_template_id, name, description
+        )
+    except QuotientAIInvalidInputException as e:
+        print(e)
+        client.sign_out()
+        return
 
+    print("Created recipe with the following details:")
+    print(format_recipes_table([new_recipe]))
     client.sign_out()
+
 
 ###########################
 #         Datasets        #
 ###########################
+
 
 @list.command(name="datasets")
 @click.option(
@@ -179,9 +217,11 @@ def list_datasets(filter):
     print(format_datasets_table(datasets))
     client.sign_out()
 
+
 ###########################
 #          Tasks          #
 ###########################
+
 
 @list.command(name="tasks")
 @click.option(
@@ -203,6 +243,7 @@ def list_tasks(filter):
 ###########################
 #          Jobs           #
 ###########################
+
 
 @list.command(name="jobs")
 @click.option(

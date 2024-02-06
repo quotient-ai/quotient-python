@@ -1,3 +1,5 @@
+import ast
+import json
 import logging
 import time
 from datetime import datetime
@@ -5,11 +7,13 @@ from datetime import datetime
 logging.basicConfig(level=logging.WARNING)
 
 import requests
+from postgrest import APIError
+from quotientai.exceptions import (
+    QuotientAIAuthException,
+    QuotientAIInvalidInputException,
+)
 
 from supabase import create_client
-
-from quotientai.exceptions import QuotientAIAuthException, QuotientAIInvalidInputException
-
 
 
 class QuotientClient:
@@ -70,9 +74,9 @@ class QuotientClient:
         if not self.token or current_time >= self.token_expiry:
             self.login_to_supabase()
 
-###########################
-#         Models          #
-###########################
+    ###########################
+    #         Models          #
+    ###########################
 
     def list_models(self, filters=None):
         self.check_token()
@@ -83,9 +87,9 @@ class QuotientClient:
         data = query.execute()
         return data.data
 
-###########################
-#     Prompt Templates    #
-###########################
+    ###########################
+    #     Prompt Templates    #
+    ###########################
 
     def list_prompt_templates(self, filters=None):
         self.check_token()
@@ -99,30 +103,43 @@ class QuotientClient:
     def create_prompt_template(self, template, name):
         self.check_token()
 
-        endpoint = 'create-prompt-template'
-        url = f'{self.eval_scheduler_url}/{endpoint}'
+        endpoint = "create-prompt-template"
+        url = f"{self.eval_scheduler_url}/{endpoint}"
         headers = {
-            'Authorization': f'Bearer {self.token}',
-            'Accept': 'application/json'
+            "Authorization": f"Bearer {self.token}",
+            "Accept": "application/json",
         }
 
-        response = requests.post(url, headers=headers, params={'template': template, 'name':name})
+        response = requests.post(
+            url, headers=headers, params={"template": template, "name": name}
+        )
 
         if response.status_code != 200:
-            raise QuotientAIInvalidInputException(f"Failed to create prompt template for reason: {response.json()['detail']}")
+            raise QuotientAIInvalidInputException(
+                f"Failed to create prompt template for reason: {response.json()['detail']}"
+            )
         return response.json()
 
     def delete_prompt_template(self, template_id):
         self.check_token()
-        query = self.supabase_client.table("prompt_template").delete().eq("id", template_id)
-        response = query.execute()
+        query = (
+            self.supabase_client.table("prompt_template").delete().eq("id", template_id)
+        )
+        try:
+            response = query.execute()
+        except APIError as e:
+            raise QuotientAIAuthException(
+                f"Failed to delete prompt template with id {template_id}. Resource is still in use."
+            )
         if not response.data:
-            raise QuotientAIAuthException(f"Failed to delete prompt template with id {template_id}. Does not exist or unauthorized.")
+            raise QuotientAIAuthException(
+                f"Failed to delete prompt template with id {template_id}. Does not exist or unauthorized."
+            )
         return response.data
 
-###########################
-#         Recipes         #
-###########################
+    ###########################
+    #         Recipes         #
+    ###########################
 
     def list_recipes(self, filters=None):
         self.check_token()
@@ -135,7 +152,13 @@ class QuotientClient:
         data = query.execute()
         return data.data
 
-    def create_recipe(self, model_id:int, prompt_template_id:int, name:str=None, description:str=None):
+    def create_recipe(
+        self,
+        model_id: int,
+        prompt_template_id: int,
+        name: str = None,
+        description: str = None,
+    ):
         self.check_token()
 
         recipe = {"model_id": model_id, "prompt_template_id": prompt_template_id}
@@ -145,16 +168,31 @@ class QuotientClient:
         if description:
             recipe.update({"description": description})
         query = self.supabase_client.table("recipe").insert(recipe)
-        response = query.execute()
+        try:
+            response = query.execute()
+        except APIError as e:
+            # print(e.args[0])
+            # error_data = json.loads(e.args[0])
+            error_data = ast.literal_eval(e.args[0])
+            error_code = error_data["code"]
+            if error_code == "42501":
+                raise QuotientAIInvalidInputException(
+                    "Failed to create recipe. Violated row-level security policy for table."
+                )
+            else:
+                raise QuotientAIInvalidInputException(
+                    f"Failed to create recipe. Error code: {error_code}"
+                )
+
         recipe_response = response.data[0]
         recipe_id = recipe_response["id"]
         # Supabase does not support returning nested objects, so we need to
         # manually fetch the prompt template and model after create
         return self.list_recipes({"id": recipe_id})[0]
 
-###########################
-#         Datasets        #
-###########################
+    ###########################
+    #         Datasets        #
+    ###########################
 
     def list_datasets(self, filters=None):
         self.check_token()
@@ -165,10 +203,9 @@ class QuotientClient:
         data = query.execute()
         return data.data
 
-
-###########################
-#          Tasks          #
-###########################
+    ###########################
+    #          Tasks          #
+    ###########################
 
     def list_tasks(self, filters=None):
         self.check_token()
@@ -179,10 +216,9 @@ class QuotientClient:
         data = query.execute()
         return data.data
 
-
-###########################
-#          Jobs           #
-###########################
+    ###########################
+    #          Jobs           #
+    ###########################
 
     def list_jobs(self, filters=None):
         self.check_token()
@@ -208,14 +244,14 @@ class QuotientClient:
     def get_eval_results(self, job_id):
         self.check_token()
 
-        endpoint = 'get-eval-results'
-        url = f'{self.eval_scheduler_url}/{endpoint}'
+        endpoint = "get-eval-results"
+        url = f"{self.eval_scheduler_url}/{endpoint}"
         headers = {
-            'Authorization': f'Bearer {self.token}',
-            'Accept': 'application/json'
+            "Authorization": f"Bearer {self.token}",
+            "Accept": "application/json",
         }
 
-        response = requests.get(url, headers=headers, params={'job_id': job_id})
+        response = requests.get(url, headers=headers, params={"job_id": job_id})
 
         if response.status_code == 200:
             return response.json()

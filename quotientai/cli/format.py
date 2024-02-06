@@ -1,5 +1,7 @@
-from prettytable import PrettyTable
 import textwrap
+
+from prettytable import PrettyTable
+
 
 def format_models_table(data):
     table = PrettyTable()
@@ -42,8 +44,9 @@ def select_file_name_from_url(url):
     # Select the file name from a URL
     return url.split("/")[-1]
 
+
 def wrap_text(text, max_width):
-    return '\n'.join(textwrap.wrap(text, max_width))
+    return "\n".join(textwrap.wrap(text, max_width))
 
 
 def format_prompt_template_table(data):
@@ -70,7 +73,7 @@ def format_recipes_table(data):
         "Model Name",
         "Prompt Template ID",
         "Prompt Template Name",
-        "Owner"
+        "Owner",
     ]
 
     # Add rows to the table
@@ -92,7 +95,7 @@ def format_recipes_table(data):
                 model_name,
                 prompt_template_id,
                 prompt_template_name,
-                owner_id
+                owner_id,
             ]
         )
 
