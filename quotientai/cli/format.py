@@ -70,6 +70,7 @@ def print_pretty_recipes_table(data):
         "Model Name",
         "Prompt Template ID",
         "Prompt Template Name",
+        "Owner"
     ]
 
     # Add rows to the table
@@ -80,6 +81,9 @@ def print_pretty_recipes_table(data):
         model_name = item["model"]["name"]
         prompt_template_id = item["prompt_template"]["id"]
         prompt_template_name = item["prompt_template"]["name"]
+        owner_id = (
+            item["owner_profile_id"] if item["owner_profile_id"] is not None else "N/A"
+        )
         table.add_row(
             [
                 recipe_id,
@@ -88,6 +92,7 @@ def print_pretty_recipes_table(data):
                 model_name,
                 prompt_template_id,
                 prompt_template_name,
+                owner_id
             ]
         )
 

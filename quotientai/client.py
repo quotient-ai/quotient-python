@@ -70,6 +70,10 @@ class QuotientClient:
         if not self.token or current_time >= self.token_expiry:
             self.login_to_supabase()
 
+###########################
+#         Models          #
+###########################
+
     def list_models(self, filters=None):
         self.check_token()
         query = self.supabase_client.table("model").select("*")
@@ -79,6 +83,10 @@ class QuotientClient:
         data = query.execute()
         return data.data
 
+###########################
+#     Prompt Templates    #
+###########################
+
     def list_prompt_templates(self, filters=None):
         self.check_token()
         query = self.supabase_client.table("prompt_template").select("*")
@@ -87,6 +95,34 @@ class QuotientClient:
                 query = query.eq(key, value)
         data = query.execute()
         return data.data
+
+    def create_prompt_template(self, template, name):
+        self.check_token()
+
+        endpoint = 'create-prompt-template'
+        url = f'{self.eval_scheduler_url}/{endpoint}'
+        headers = {
+            'Authorization': f'Bearer {self.token}',
+            'Accept': 'application/json'
+        }
+
+        response = requests.post(url, headers=headers, params={'template': template, 'name':name})
+
+        if response.status_code != 200:
+            raise QuotientAIInvalidInputException(f"Failed to create prompt template for reason: {response.json()['detail']}")
+        return response.json()
+
+    def delete_prompt_template(self, template_id):
+        self.check_token()
+        query = self.supabase_client.table("prompt_template").delete().eq("id", template_id)
+        response = query.execute()
+        if not response.data:
+            raise QuotientAIAuthException(f"Failed to delete prompt template with id {template_id}. Does not exist or unauthorized.")
+        return response.data
+
+###########################
+#         Recipes         #
+###########################
 
     def list_recipes(self, filters=None):
         self.check_token()
@@ -99,6 +135,27 @@ class QuotientClient:
         data = query.execute()
         return data.data
 
+    def create_recipe(self, model_id:int, prompt_template_id:int, name:str=None, description:str=None):
+        self.check_token()
+
+        recipe = {"model_id": model_id, "prompt_template_id": prompt_template_id}
+        recipe.update({"created_at": datetime.utcnow().isoformat()})
+        if name:
+            recipe.update({"name": name})
+        if description:
+            recipe.update({"description": description})
+        query = self.supabase_client.table("recipe").insert(recipe)
+        response = query.execute()
+        recipe_response = response.data[0]
+        recipe_id = recipe_response["id"]
+        # Supabase does not support returning nested objects, so we need to
+        # manually fetch the prompt template and model after create
+        return self.list_recipes({"id": recipe_id})[0]
+
+###########################
+#         Datasets        #
+###########################
+
     def list_datasets(self, filters=None):
         self.check_token()
         query = self.supabase_client.table("dataset").select("*")
@@ -108,6 +165,11 @@ class QuotientClient:
         data = query.execute()
         return data.data
 
+
+###########################
+#          Tasks          #
+###########################
+
     def list_tasks(self, filters=None):
         self.check_token()
         query = self.supabase_client.table("task").select("*,dataset(*)")
@@ -116,6 +178,11 @@ class QuotientClient:
                 query = query.eq(key, value)
         data = query.execute()
         return data.data
+
+
+###########################
+#          Jobs           #
+###########################
 
     def list_jobs(self, filters=None):
         self.check_token()
@@ -154,27 +221,3 @@ class QuotientClient:
             return response.json()
         else:
             return f"Failed with status code: {response.status_code}"
-
-    def create_prompt_template(self, template, name):
-        self.check_token()
-
-        endpoint = 'create-prompt-template'
-        url = f'{self.eval_scheduler_url}/{endpoint}'
-        headers = {
-            'Authorization': f'Bearer {self.token}',
-            'Accept': 'application/json'
-        }
-
-        response = requests.post(url, headers=headers, params={'template': template, 'name':name})
-
-        if response.status_code != 200:
-            raise QuotientAIInvalidInputException(f"Failed to create prompt template for reason: {response.json()['detail']}")
-        return response.json()
-
-    def delete_prompt_template(self, template_id):
-        self.check_token()
-        query = self.supabase_client.table("prompt_template").delete().eq("id", template_id)
-        response = query.execute()
-        if not response.data:
-            raise QuotientAIAuthException(f"Failed to delete prompt template with id {template_id}. Does not exist or unauthorized.")
-        return response.data

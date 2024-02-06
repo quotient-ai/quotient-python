@@ -194,6 +194,18 @@ def create_job(task_id, recipe_id, num_fewshot_examples, limit):
 
     client.sign_out()
 
+@create.command(name="recipe")
+@click.option("--model-id", required=True, type=int, help="Model ID for the recipe.")
+@click.option("--prompt-template-id", required=True, type=int, help="Prompt Template ID for the recipe.")
+@click.option("--name", required=True, type=str, help="A name for the recipe.")
+@click.option("--description", required=True, type=str, help="A description for the recipe.")
+def create_recipe(model_id, prompt_template_id, name, description):
+    """Command to create a new recie."""
+    new_recipe = client.create_recipe(model_id, prompt_template_id, name, description)
+    print(print_pretty_recipes_table([new_recipe]))
+
+    client.sign_out()
+
 
 @create.command(name="prompt-template")
 @click.option("--prompt-template", type=str, help="Prompt template to use when sending samples to the model")
