@@ -1,7 +1,7 @@
 from prettytable import PrettyTable
 import textwrap
 
-def print_pretty_models_table(data):
+def format_models_table(data):
     table = PrettyTable()
     table.field_names = ["ID", "Name", "Model Type", "Description", "Owner"]
 
@@ -46,7 +46,7 @@ def wrap_text(text, max_width):
     return '\n'.join(textwrap.wrap(text, max_width))
 
 
-def print_pretty_prompt_template_table(data):
+def format_prompt_template_table(data):
     table = PrettyTable()
     table.field_names = ["ID", "Name", "Template String", "Owner"]
 
@@ -61,7 +61,7 @@ def print_pretty_prompt_template_table(data):
     return table
 
 
-def print_pretty_recipes_table(data):
+def format_recipes_table(data):
     table = PrettyTable()
     table.field_names = [
         "Recipe ID",
@@ -99,7 +99,7 @@ def print_pretty_recipes_table(data):
     return table
 
 
-def print_pretty_jobs_table(data):
+def format_jobs_table(data):
     table = PrettyTable()
     table.field_names = [
         "ID",
@@ -133,7 +133,7 @@ def print_pretty_jobs_table(data):
     return table
 
 
-def print_pretty_datasets_table(data):
+def format_datasets_table(data):
     table = PrettyTable()
     table.field_names = ["ID", "Name", "File", "File Format", "Owner"]
 
@@ -156,7 +156,7 @@ def print_pretty_datasets_table(data):
     return table
 
 
-def print_pretty_tasks_table(data):
+def format_tasks_table(data):
     table = PrettyTable()
     table.field_names = [
         "ID",
@@ -186,7 +186,7 @@ def print_pretty_tasks_table(data):
     return table
 
 
-def print_pretty_results_summary_table(data):
+def format_results_summary_table(data):
     table = PrettyTable()
     table.field_names = [
         "ID",
@@ -215,7 +215,7 @@ def print_pretty_results_summary_table(data):
     return table
 
 
-def print_pretty_results_table(data):
+def format_results_table(data):
     table = PrettyTable()
     table.field_names = [
         "Model Input",
