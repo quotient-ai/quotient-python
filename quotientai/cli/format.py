@@ -5,19 +5,23 @@ from prettytable import PrettyTable
 
 def format_models_table(data):
     table = PrettyTable()
-    table.field_names = ["ID", "Name", "Model Type", "Description", "Owner"]
+    table.field_names = ["ID", "Name", "Provider", "Owner"]
 
     # Add rows to the table
     for item in data:
         owner_id = (
-            item["owner_profile_id"] if item["owner_profile_id"] is not None else "N/A"
+            item["owner_profile_id"] if item["owner_profile_id"] is not None else "Open to all"
         )
+        # XXX Hack for focus group.
+        if item["model_type"] == "placeholder":
+            provider = "OpenAI"
+        else:
+            provider = "HuggingFace"
         table.add_row(
             [
                 item["id"],
                 item["name"],
-                item["model_type"],
-                item["description"],
+                provider,
                 owner_id,
             ]
         )
@@ -56,7 +60,7 @@ def format_prompt_template_table(data):
     # Add rows to the table
     for item in data:
         owner_id = (
-            item["owner_profile_id"] if item["owner_profile_id"] is not None else "N/A"
+            item["owner_profile_id"] if item["owner_profile_id"] is not None else "Open to all"
         )
         sanitized_template = sanitize_string(item["template_string"])
         table.add_row([item["id"], item["name"], sanitized_template, owner_id])
@@ -85,7 +89,7 @@ def format_recipes_table(data):
         prompt_template_id = item["prompt_template"]["id"]
         prompt_template_name = item["prompt_template"]["name"]
         owner_id = (
-            item["owner_profile_id"] if item["owner_profile_id"] is not None else "N/A"
+            item["owner_profile_id"] if item["owner_profile_id"] is not None else "Open to all"
         )
         table.add_row(
             [
@@ -152,7 +156,7 @@ def format_datasets_table(data):
         )
         file_format = item["file_format"] if item["file_format"] is not None else "N/A"
         owner = (
-            item["owner_profile_id"] if item["owner_profile_id"] is not None else "N/A"
+            item["owner_profile_id"] if item["owner_profile_id"] is not None else "Open to all"
         )
         table.add_row([id, name, url, file_format, owner])
 
@@ -167,7 +171,6 @@ def format_tasks_table(data):
         "Dataset ID",
         "Dataset Name",
         "Task Type",
-        "Metrics",
         "Owner",
     ]
 
@@ -178,12 +181,11 @@ def format_tasks_table(data):
         dataset_id = item["dataset_id"]
         dataset_name = item["dataset_name"]
         task_type = item["task_type"]
-        metrics = item["metrics"]
         owner = (
-            item["owner_profile_id"] if item["owner_profile_id"] is not None else "N/A"
+            item["owner_profile_id"] if item["owner_profile_id"] is not None else "Open to all"
         )
         table.add_row(
-            [id, task_name, dataset_id, dataset_name, task_type, metrics, owner]
+            [id, task_name, dataset_id, dataset_name, task_type, owner]
         )
 
     return table
@@ -195,21 +197,18 @@ def format_results_summary_table(data):
         "ID",
         "Model Name",
         "Task Name",
-        "Metrics",
         "Task Type",
         "# Samples",
         "Seed",
     ]
 
     # Add row to the general table
-    metrics = ", ".join(data["metrics"])
     seed = data["seed"] if data["seed"] is not None else "N/A"
     table.add_row(
         [
             data["id"],
             data["model_name"],
             data["task_name"],
-            metrics,
             data["task_type"],
             len(data["results"]),
             seed,
@@ -223,8 +222,7 @@ def format_results_table(data):
     table.field_names = [
         "Model Input",
         "Model Output",
-        "Expected Answer",
-        "Metric Score",
+        "Expected Answer"
     ]
 
     table_length = 20
@@ -249,8 +247,7 @@ def format_results_table(data):
             if isinstance(result["content"]["answer"], str)
             else result["content"]["answer"]
         )
-        metric_score = result["value"]
-        table.add_row([question, completion, expected_answer, metric_score])
+        table.add_row([question, completion, expected_answer])
 
     has_more_results = len(data["results"]) > table_length
 

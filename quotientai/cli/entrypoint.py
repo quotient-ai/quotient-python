@@ -290,14 +290,7 @@ def list_results(job_id):
 def create_job(task_id, recipe_id, num_fewshot_examples, limit):
     """Command to create a new job."""
 
-    job_data = {
-        "task_id": task_id,
-        "recipe_id": recipe_id,
-        "num_fewshot_examples": num_fewshot_examples,
-        "limit": limit,
-    }
-
-    new_job = client.create_job(job_data)
+    new_job = client.create_job(task_id, recipe_id, num_fewshot_examples, limit)
     print(format_jobs_table([new_job]))
     client.sign_out()
 

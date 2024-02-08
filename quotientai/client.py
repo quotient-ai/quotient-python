@@ -229,11 +229,12 @@ class QuotientClient:
         data = query.execute()
         return data.data
 
-    def create_job(self, job):
+    def create_job(self, task_id, recipe_id, num_fewshot_examples, limit):
         self.check_token()
-        job.update({"status": "Scheduled"})
-        job.update({"created_at": datetime.utcnow().isoformat()})
-        query = self.supabase_client.table("job").insert(job)
+        job_data = {"task_id": task_id, "recipe_id": recipe_id, "num_fewshot_examples": num_fewshot_examples, "limit": limit}
+        job_data.update({"status": "Scheduled"})
+        job_data.update({"created_at": datetime.utcnow().isoformat()})
+        query = self.supabase_client.table("job").insert(job_data)
         response = query.execute()
         job = response.data[0]
         job_id = job["id"]
