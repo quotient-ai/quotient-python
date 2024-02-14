@@ -1,0 +1,10 @@
+SUPABASE_URL = "http://127.0.0.1:54321"
+SUPABASE_ADMIN_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImV4cCI6MTk4MzgxMjk5Nn0.EGIM96RAZx35lJzdJsyH-qQwv8Hdp7fsn3W0YpN81IU"
+TEST_USER_EMAIL = "demo@example.com"
+TEST_USER_PASSWORD = "testuser"
+TEST_USER_ID = "75672178-19c8-420c-840b-13d03af1a056"
+TEST_INVALID_PASSWORD = "wrongpassword"
+TEST_API_KEY_NAME = "testkeynamehere"
+
+TEST_BAD_PROMPT_TEMPLATE = "badprompttemplate"
+TEST_CREATE_PROMPT_TEMPLATE = "Customer question: {input_text}\n\nShakespearean styles: {context}\n\nAnswer as King Lear:"

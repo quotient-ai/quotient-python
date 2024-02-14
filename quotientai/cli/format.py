@@ -2,6 +2,19 @@ import textwrap
 
 from prettytable import PrettyTable
 
+def format_api_keys_table(data):
+    table = PrettyTable()
+    table.field_names = ["Name", "Revoked", "Created At", "Expires At"]
+    for item in data:
+        table.add_row(
+            [
+                item["key_name"],
+                item["revoked"],
+                item["created_at"],
+                item["expires_at"],
+            ]
+        )
+    return table
 
 def format_models_table(data):
     table = PrettyTable()

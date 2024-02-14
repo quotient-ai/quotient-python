@@ -2,6 +2,7 @@ import os
 
 import click
 from quotientai.cli.format import (
+    format_api_keys_table,
     format_datasets_table,
     format_jobs_table,
     format_models_table,
@@ -13,19 +14,21 @@ from quotientai.cli.format import (
 )
 from quotientai.client import QuotientClient
 
-client = QuotientClient(
-    os.environ.get("QUOTIENT_EMAIL"), os.environ.get("QUOTIENT_PASSWORD")
-)
 from quotientai.exceptions import (
     QuotientAIAuthException,
     QuotientAIInvalidInputException,
 )
 
+client = QuotientClient(os.environ.get("QUOTIENT_KEY"))
 
 @click.group()
 def cli():
     pass
 
+@cli.group()
+def auth():
+    """Group of auth commands."""
+    pass
 
 @cli.group()
 def list():
@@ -38,27 +41,85 @@ def create():
     """Group of create commands."""
     pass
 
-
-@cli.group()
-def register():
-    """Group of register commands"""
-    pass
-
-
 @cli.group()
 def delete():
     """Group of delete commands."""
     pass
 
+###########################
+#          Auth           #
+###########################
 
-@register.command(name="user")
-def register_user():
-    """Command to sign up."""
-    email = os.environ.get("QUOTIENT_EMAIL")
-    password = os.environ.get("QUOTIENT_PASSWORD")
-    client = QuotientClient(email, password)
-    client.register_user()
+# Remove until signups are public
+# @register.command(name="user")
+# def register_user():
+#     """Command to sign up."""
+#     email = os.environ.get("QUOTIENT_EMAIL")
+#     password = os.environ.get("QUOTIENT_PASSWORD")
+#     client = QuotientClient(email, password)
+#     client.register_user()
 
+@cli.command(name="authenticate")
+@click.option('--email', required=True, help='Email address for login.')
+def login(email):
+    """Flow to authenticate and generate an API key."""
+    try:
+        password = click.prompt("Enter your account password: ", type=str)
+        client.login(email, password)
+        click.echo('Login successful! Now to set an API key.')
+        key_name = click.prompt("Enter the name for your API key (12-60 chars): ", type=str)
+        key_lifetime = click.prompt("Enter the lifetime for your API key (30, 60, or 90) in days: ", type=int, default=30)
+        api_key_result = client.create_api_key(key_name, key_lifetime)
+        click.echo(f"Set the API key as environment variable QUOTIENT_KEY to continue\n{api_key_result}")
+    except ValueError as e:
+        click.echo(str(e))
+        click.Context.get_current().exit(code=1)
+    
+
+@auth.command(name="get_key")
+def get_key():
+    """Get the current API key."""
+    try:
+        current_key = client.get_api_key()
+        click.echo(current_key)
+    except ValueError as e:
+        click.echo(str(e))
+        click.Context.get_current().exit(code=1)
+
+
+@auth.command(name="set_key")
+@click.option('--api_key', required=True, help='API key to set.', type=str)
+def set_key(api_key):
+    """Set an API key."""
+    try:
+        result = client.set_api_key(api_key)
+        click.echo(result)
+    except ValueError as e:
+        click.echo(str(e))
+        click.Context.get_current().exit(code=1)
+
+
+@auth.command(name="revoke_key")
+@click.option('--key_name', required=True, help='Name of the API key to revoke.', type=str)
+def revoke_key(key_name):
+    """Revoke an API key."""
+    try:
+        result = client.revoke_api_key(key_name)
+        click.echo(result)
+    except ValueError as e:
+        click.echo(str(e))
+        click.Context.get_current().exit(code=1)
+
+###########################
+#        API keys         #
+###########################
+        
+@list.command(name="api-keys")
+def list_api_keys():
+    """Command to get all models with optional filters."""
+    # No filters for now
+    api_keys = client.list_api_keys()
+    print(format_api_keys_table(api_keys))
 
 ###########################
 #         Models          #
@@ -79,7 +140,6 @@ def list_models(filter):
     filter_dict = {key: value for key, value in filter}
     models = client.list_models(filter_dict)
     print(format_models_table(models))
-    client.sign_out()
 
 
 ###########################
@@ -101,7 +161,6 @@ def list_prompt_templates(filter):
     filter_dict = {key: value for key, value in filter}
     prompt_templates = client.list_prompt_templates(filter_dict)
     print(format_prompt_template_table(prompt_templates))
-    client.sign_out()
 
 
 @create.command(name="prompt-template")
@@ -113,16 +172,13 @@ def list_prompt_templates(filter):
 @click.option("--name", type=str, help="A descriptive name for the prompt template.")
 def create_prompt_template(prompt_template, name):
     """Command to create a new prompt template."""
-
     try:
         prompt_template = client.create_prompt_template(prompt_template, name)
     except QuotientAIInvalidInputException as e:
         print(e)
-        client.sign_out()
         return
     print("Created prompt template with the following details:")
     print(format_prompt_template_table([prompt_template]))
-    client.sign_out()
 
 
 @delete.command(name="prompt-template")
@@ -138,12 +194,10 @@ def delete_prompt_template(prompt_template_id):
         deleted_prompt_template = client.delete_prompt_template(prompt_template_id)
     except QuotientAIAuthException as e:
         print(e)
-        client.sign_out()
         return
 
     print("Removed prompt template with the following details:")
     print(format_prompt_template_table(deleted_prompt_template))
-    client.sign_out()
 
 
 ###########################
@@ -165,7 +219,6 @@ def list_recipes(filter):
     filter_dict = {key: value for key, value in filter}
     recipes = client.list_recipes(filter_dict)
     print(format_recipes_table(recipes))
-    client.sign_out()
 
 
 @create.command(name="recipe")
@@ -188,12 +241,10 @@ def create_recipe(model_id, prompt_template_id, name, description):
         )
     except QuotientAIInvalidInputException as e:
         print(e)
-        client.sign_out()
         return
 
     print("Created recipe with the following details:")
     print(format_recipes_table([new_recipe]))
-    client.sign_out()
 
 
 ###########################
@@ -215,7 +266,6 @@ def list_datasets(filter):
     filter_dict = {key: value for key, value in filter}
     datasets = client.list_datasets(filter_dict)
     print(format_datasets_table(datasets))
-    client.sign_out()
 
 
 ###########################
@@ -237,7 +287,6 @@ def list_tasks(filter):
     filter_dict = {key: value for key, value in filter}
     tasks = client.list_tasks(filter_dict)
     print(format_tasks_table(tasks))
-    client.sign_out()
 
 
 ###########################
@@ -260,7 +309,6 @@ def list_jobs(filter):
     jobs = client.list_jobs(filter_dict)
     jobs = sorted(jobs, key=lambda k: k["id"])
     print(format_jobs_table(jobs))
-    client.sign_out()
 
 
 @list.command(name="results")
@@ -273,7 +321,6 @@ def list_results(job_id):
     print(table)
     if has_more_results:
         print("More results available. Use the SDK to view more results")
-    client.sign_out()
 
 
 @create.command(name="job")
@@ -289,10 +336,8 @@ def list_results(job_id):
 @click.option("--limit", type=int, help="Limit for the job (optional).")
 def create_job(task_id, recipe_id, num_fewshot_examples, limit):
     """Command to create a new job."""
-
     new_job = client.create_job(task_id, recipe_id, num_fewshot_examples, limit)
     print(format_jobs_table([new_job]))
-    client.sign_out()
 
 
 if __name__ == "__main__":
