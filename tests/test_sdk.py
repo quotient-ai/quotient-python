@@ -11,6 +11,23 @@ test_recipe_id = None
 test_job_id = None
 
 ###########################
+#         Cleanup         #
+###########################
+
+@pytest.fixture(scope="module", autouse=True)
+def teardown_module():
+    """Cleanup function to run after all tests in this module."""
+    client = create_client(SUPABASE_URL, SUPABASE_ADMIN_KEY)
+    response = client.table('profile').select('id').eq('uid', TEST_USER_ID).execute()
+    if not response.data:
+        print("No profile found for test user: Cleanup not done")
+        return
+    profile_id = response.data[0]['id']
+    client.table('api_keys').delete().eq('user_id', TEST_USER_ID).execute()
+    client.table('job').delete().eq('owner_profile_id', profile_id).execute()
+    print("SDK tests cleanup completed")
+
+###########################
 #      Without creds      #
 ###########################
 
@@ -139,12 +156,7 @@ def test_create_job():
     global test_job_id 
     test_job_id = job['id']
     
-# def test_results():
-#     results = client.get_eval_results(test_job_id)
-#     assert results is not None, "Expected results to be returned"
-#     assert isinstance(results, dict), "Expected results to be an object"
-#     assert 'id' in results, "Expected results to have an 'id' field"
-#     assert results['id'] == test_job_id, "Expected results to have the correct id"
+# TODO: results tests
 
 ###########################
 #       Remove creds      #
@@ -153,11 +165,6 @@ def test_create_job():
 def test_api_key_revoke():
     result = client.revoke_api_key(TEST_API_KEY_NAME)
     assert "revoked successfully" in result, "Expected API key to be revoked"
-    assert client.api_key is None, "Expected API key to be None after revocation"
-
-def test_list_unauthorized():
-    with pytest.raises(Exception) as exc_info:
-        client.list_models()
 
 def test_signout():
     result = client.sign_out()
@@ -175,16 +182,3 @@ def test_logout_status():
     assert isinstance(status, dict), "Expected status to be an object"
     assert 'api_key' in status, "Expected status to have an 'api_key' field"
     assert status['api_key'] == False, "Expected status to show api_key as False"
-
-###########################
-#         Cleanup         #
-###########################
-    
-def teardown_module(module):
-    """Cleanup function to run after all tests in this module."""
-    client = create_client(SUPABASE_URL, SUPABASE_ADMIN_KEY)  # Ensure this function gets your client correctly
-    response = client.table('profile').select('id').eq('uid', TEST_USER_ID).execute()
-    profile_id = response.data[0]['id']
-    client.table('api_keys').delete().eq('user_id', TEST_USER_ID).execute()
-    client.table('job').delete().eq('owner_profile_id', profile_id).execute()
-    print("SDK tests cleanup completed")

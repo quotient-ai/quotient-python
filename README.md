@@ -2,7 +2,7 @@
 
 ## Overview
 
-`quotient` is an SDK and CLI built to manage your workflows on Quotient AI, the AI Evaluation Company.
+`quotientai` is an SDK and CLI built to manage your workflows on Quotient AI, the AI Evaluation Company.
 
 ## Installation
 
@@ -10,14 +10,16 @@
 - Python 3.10 or higher
 
 **Setup Guide:**
-1. Receive account information (email, password) from your contact at Quotient AI.
+1. Receive the following from your contact at Quotient AI:
+  - account information (email, password)
+  - Github repo token 
 
-2. Install `quotient` client using pip:
+2. Install `quotientai` client using pip:
    ```bash
    pip install git+https://{token}@github.com/quotient-ai/quotient-python.git
    ```
 
-## Using `quotient` from the Command Line
+## Using `quotientai` from the Command Line
 
 
 
@@ -29,7 +31,7 @@ quotient authenticate --email <account_email>
 
 Authenticate your requests by setting an environment variable for this API key:
 ```bash
-export QUOTIENT_KEY=<api_key>;
+export QUOTIENT_API_KEY=<api_key>;
 ```
 
 
