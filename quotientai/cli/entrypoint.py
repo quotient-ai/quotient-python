@@ -218,6 +218,28 @@ def list_datasets(filter):
     client.sign_out()
 
 
+@create.command(name="dataset")
+@click.option(
+    "--file-path",
+    type=str,
+    help="File path to the dataset",
+)
+@click.option(
+    "--name",
+    type=str,
+    help="A descriptive name for the dataset.",
+)
+def create_dataset(file_path, name):
+    """Command to get all tasks with optional filters."""
+    try:
+        datasets = client.create_dataset(file_path, name)
+        print(format_datasets_table([datasets]))
+    except QuotientAIInvalidInputException as e:
+        print("File size exceeds 2GB limit")
+
+    client.sign_out()
+
+
 ###########################
 #          Tasks          #
 ###########################

@@ -1,6 +1,8 @@
 import ast
 import json
 import logging
+import mimetypes
+import os
 import time
 from datetime import datetime
 
@@ -203,6 +205,45 @@ class QuotientClient:
         data = query.execute()
         return data.data
 
+    def create_dataset(self, file_path: str, name: str):
+        self.check_token()
+
+        endpoint = "upload-dataset"
+        url = f"{self.eval_scheduler_url}/{endpoint}"
+        headers = {
+            "Authorization": f"Bearer {self.token}",
+            "Accept": "application/json",
+        }
+
+        # Client side file size check
+        size_threshold = 2 * 1024 ** 3  # 2GB
+        file_size = os.path.getsize(file_path)
+        if file_size > size_threshold:
+            raise QuotientAIInvalidInputException(
+                "File size exceeds 2GB limit"
+            )
+
+        # Guess the MIME type of the file
+        mime_type, _ = mimetypes.guess_type(file_path)
+        if mime_type is None:
+            raise Exception("Could not determine the file's MIME type")
+
+        file_name = os.path.basename(file_path)
+        params = {
+            "name": name,
+        }
+        files = {"file": (file_name, open(file_path, "rb"), mime_type)}
+
+        try:
+            response = requests.post(url, headers=headers, params=params, files=files)
+            response.raise_for_status()
+            dataset_id = response.json()["id"]
+            return self.list_datasets({"id": dataset_id})[0]
+        except requests.RequestException as e:
+            raise Exception(f"Failed to upload dataset: {e}")
+        finally:
+            files["file"][1].close()
+
     ###########################
     #          Tasks          #
     ###########################
@@ -231,7 +272,12 @@ class QuotientClient:
 
     def create_job(self, task_id, recipe_id, num_fewshot_examples, limit):
         self.check_token()
-        job_data = {"task_id": task_id, "recipe_id": recipe_id, "num_fewshot_examples": num_fewshot_examples, "limit": limit}
+        job_data = {
+            "task_id": task_id,
+            "recipe_id": recipe_id,
+            "num_fewshot_examples": num_fewshot_examples,
+            "limit": limit,
+        }
         job_data.update({"status": "Scheduled"})
         job_data.update({"created_at": datetime.utcnow().isoformat()})
         query = self.supabase_client.table("job").insert(job_data)

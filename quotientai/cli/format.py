@@ -10,7 +10,9 @@ def format_models_table(data):
     # Add rows to the table
     for item in data:
         owner_id = (
-            item["owner_profile_id"] if item["owner_profile_id"] is not None else "Open to all"
+            item["owner_profile_id"]
+            if item["owner_profile_id"] is not None
+            else "Open to all"
         )
         # XXX Hack for focus group.
         if item["model_type"] == "placeholder":
@@ -60,7 +62,9 @@ def format_prompt_template_table(data):
     # Add rows to the table
     for item in data:
         owner_id = (
-            item["owner_profile_id"] if item["owner_profile_id"] is not None else "Open to all"
+            item["owner_profile_id"]
+            if item["owner_profile_id"] is not None
+            else "Open to all"
         )
         sanitized_template = sanitize_string(item["template_string"])
         table.add_row([item["id"], item["name"], sanitized_template, owner_id])
@@ -89,7 +93,9 @@ def format_recipes_table(data):
         prompt_template_id = item["prompt_template"]["id"]
         prompt_template_name = item["prompt_template"]["name"]
         owner_id = (
-            item["owner_profile_id"] if item["owner_profile_id"] is not None else "Open to all"
+            item["owner_profile_id"]
+            if item["owner_profile_id"] is not None
+            else "Open to all"
         )
         table.add_row(
             [
@@ -156,7 +162,9 @@ def format_datasets_table(data):
         )
         file_format = item["file_format"] if item["file_format"] is not None else "N/A"
         owner = (
-            item["owner_profile_id"] if item["owner_profile_id"] is not None else "Open to all"
+            item["owner_profile_id"]
+            if item["owner_profile_id"] is not None
+            else "Open to all"
         )
         table.add_row([id, name, url, file_format, owner])
 
@@ -182,11 +190,11 @@ def format_tasks_table(data):
         dataset_name = item["dataset_name"]
         task_type = item["task_type"]
         owner = (
-            item["owner_profile_id"] if item["owner_profile_id"] is not None else "Open to all"
+            item["owner_profile_id"]
+            if item["owner_profile_id"] is not None
+            else "Open to all"
         )
-        table.add_row(
-            [id, task_name, dataset_id, dataset_name, task_type, owner]
-        )
+        table.add_row([id, task_name, dataset_id, dataset_name, task_type, owner])
 
     return table
 
@@ -219,11 +227,7 @@ def format_results_summary_table(data):
 
 def format_results_table(data):
     table = PrettyTable()
-    table.field_names = [
-        "Model Input",
-        "Model Output",
-        "Expected Answer"
-    ]
+    table.field_names = ["Model Input", "Model Output", "Expected Answer"]
 
     table_length = 20
     cell_char_limit = 25
