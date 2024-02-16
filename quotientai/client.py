@@ -25,16 +25,16 @@ class FastAPIError(Exception):
 class QuotientClient:
     def __init__(self, api_key=None):
         # Public API key for the QuotientAI Supabase project
-        # self.public_api_key = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhocXBwY3FsdGtsemZwZ2dkb2NiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MDEzNTU4MzgsImV4cCI6MjAxNjkzMTgzOH0.bpOtVl7co6B4wXQqt6Ec-WCz9FuO7tpVYbTa6PLoheI"
-        self.public_api_key = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0"
+        self.public_api_key = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhocXBwY3FsdGtsemZwZ2dkb2NiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MDEzNTU4MzgsImV4cCI6MjAxNjkzMTgzOH0.bpOtVl7co6B4wXQqt6Ec-WCz9FuO7tpVYbTa6PLoheI"
+        
         # Base URL for the Supabase project
-        # self.supabase_url = "https://hhqppcqltklzfpggdocb.supabase.co"
-        self.supabase_url = "http://127.0.0.1:54321"
+        self.supabase_url = "https://hhqppcqltklzfpggdocb.supabase.co"
+
         # Eval Scheduler config
-        # self.eval_scheduler_url = (
-        #     "http://eval-scheduler-alb-887401167.us-east-2.elb.amazonaws.com"
-        # )
-        self.eval_scheduler_url = "http://127.0.0.1:8000"
+        self.eval_scheduler_url = (
+            "http://eval-scheduler-alb-887401167.us-east-2.elb.amazonaws.com"
+        )
+        
         self.supaclient = create_client(self.supabase_url, self.public_api_key)
 
         # Client Auth Token
