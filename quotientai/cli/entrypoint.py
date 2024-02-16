@@ -51,54 +51,48 @@ def delete():
 @cli.command(name="authenticate")
 def authenticate():
     """Flow to authenticate and generate an API key."""
-    try:
-        email = click.prompt("Enter your account email", type=str)
-        password = click.prompt("Enter your account password", type=str)
-        loginclient = QuotientClient()
-        loginclient.login(email, password)
-        click.echo('Login successful! Now to set an API key.')
-        key_name = click.prompt("Enter the name for your API key (12-60 chars)", type=str)
-        key_lifetime = click.prompt("Enter the lifetime for your API key (30, 60, or 90) in days", type=int, default=30)
-        api_key_result = loginclient.create_api_key(key_name, key_lifetime)
-        click.echo(f"Add to your shell: `export QUOTIENT_API_KEY=<api_key>`")
-        click.echo(api_key_result)
-    except Exception as e:
-        raise click.ClickException(str(e))
+    client = QuotientClient()
+    if client.api_key is not None:
+        return click.echo("API key found in environment variables. Setting up client with API key.")
+    email = click.prompt("Enter your account email", type=str)
+    password = click.prompt("Enter your account password", type=str)  
+    login_result = client.login(email, password)
+    if "Login failed" in login_result:
+        return click.echo("Login failed. Please check your credentials and try again.")
+    click.echo('Login successful! Now to set an API key.')
+    key_name = click.prompt("Enter the name for your API key (12-60 chars)", type=str)
+    key_lifetime = click.prompt("Enter the lifetime for your API key (30, 60, or 90) in days", type=int, default=30)
+    api_key_result = client.create_api_key(key_name, key_lifetime)
+    if "Failed" in api_key_result:
+        return click.echo(api_key_result)
+    click.echo(f"Add to your shell: `export QUOTIENT_API_KEY=<api_key>`")
+    click.echo(api_key_result)
     
 
 @auth.command(name="get-key")
 def get_key():
     """Get the current API key."""
-    try:
-        client = QuotientClient()
-        current_key = client.get_api_key()
-        click.echo(current_key)
-    except Exception as e:
-        raise click.ClickException(str(e))
+    client = QuotientClient()
+    current_key = client.get_api_key()
+    click.echo(current_key)
 
 
 @auth.command(name="set-key")
 @click.option('--api-key', required=True, help='API key to set.', type=str)
 def set_key(api_key):
     """Set an API key."""
-    try:
-        client = QuotientClient()
-        result = client.set_api_key(api_key)
-        click.echo(result)
-    except Exception as e:
-        raise click.ClickException(str(e))
+    client = QuotientClient()
+    result = client.set_api_key(api_key)
+    click.echo(result)
 
 
 @auth.command(name="revoke-key")
 @click.option('--key-name', required=True, help='Name of the API key to revoke.', type=str)
 def revoke_key(key_name):
     """Revoke an API key."""
-    try:
-        client = QuotientClient()
-        result = client.revoke_api_key(key_name)
-        click.echo(result)
-    except Exception as e:
-        raise click.ClickException(str(e))
+    client = QuotientClient()
+    result = client.revoke_api_key(key_name)
+    click.echo(result)
 
 ###########################
 #        API keys         #
@@ -107,13 +101,12 @@ def revoke_key(key_name):
 @list.command(name="api-keys")
 def list_api_keys():
     """Command to get all models with optional filters."""
-    try:
-        # No filters for now
-        client = QuotientClient()
-        api_keys = client.list_api_keys()
-        print(format_api_keys_table(api_keys))
-    except Exception as e:
-        raise click.ClickException(str(e))
+    # No filters for now
+    client = QuotientClient()
+    api_keys = client.list_api_keys()
+    if "Failed" in api_keys:
+        return print(api_keys)
+    print(format_api_keys_table(api_keys))
 
 ###########################
 #         Models          #
@@ -130,14 +123,13 @@ def list_api_keys():
 )
 def list_models(filter):
     """Command to get all models with optional filters."""
-    try:
-        # Convert tuple filters into a dictionary
-        filter_dict = {key: value for key, value in filter}
-        client = QuotientClient()
-        models = client.list_models(filter_dict)
-        print(format_models_table(models))
-    except Exception as e:
-        raise click.ClickException(str(e))
+    # Convert tuple filters into a dictionary
+    filter_dict = {key: value for key, value in filter}
+    client = QuotientClient()
+    models = client.list_models(filter_dict)
+    if "Failed" in models:
+        return print(models)
+    print(format_models_table(models))
 
 ###########################
 #     Prompt Templates    #
@@ -154,14 +146,13 @@ def list_models(filter):
 )
 def list_prompt_templates(filter):
     """Command to get all prompt templates with optional filters."""
-    try:
-        # Convert tuple filters into a dictionary
-        filter_dict = {key: value for key, value in filter}
-        client = QuotientClient()
-        prompt_templates = client.list_prompt_templates(filter_dict)
-        print(format_prompt_template_table(prompt_templates))
-    except Exception as e:
-        raise click.ClickException(str(e))
+    # Convert tuple filters into a dictionary
+    filter_dict = {key: value for key, value in filter}
+    client = QuotientClient()
+    prompt_templates = client.list_prompt_templates(filter_dict)
+    if "Failed" in prompt_templates:
+        return print(prompt_templates)
+    print(format_prompt_template_table(prompt_templates))
 
 
 @create.command(name="prompt-template")
@@ -173,13 +164,12 @@ def list_prompt_templates(filter):
 @click.option("--name", type=str, help="A descriptive name for the prompt template.")
 def create_prompt_template(prompt_template, name):
     """Command to create a new prompt template."""
-    try:
-        client = QuotientClient()
-        prompt_template = client.create_prompt_template(prompt_template, name)
-        print("Created prompt template with the following details:")
-        print(format_prompt_template_table([prompt_template]))
-    except Exception as e:
-        raise click.ClickException(str(e))
+    client = QuotientClient()
+    prompt_template = client.create_prompt_template(prompt_template, name)
+    if "Failed" in prompt_template:
+        return print(prompt_template)
+    print("Created prompt template with the following details:")
+    print(format_prompt_template_table([prompt_template]))
 
 
 @delete.command(name="prompt-template")
@@ -191,13 +181,12 @@ def create_prompt_template(prompt_template, name):
 )
 def delete_prompt_template(prompt_template_id):
     """Command to delete a prompt template."""
-    try:
-        client = QuotientClient()
-        deleted_prompt_template = client.delete_prompt_template(prompt_template_id)
-        print("Removed prompt template with the following details:")
-        print(format_prompt_template_table(deleted_prompt_template))
-    except Exception as e:
-        raise click.ClickException(str(e))
+    client = QuotientClient()
+    deleted_prompt_template = client.delete_prompt_template(prompt_template_id)
+    if "Failed" in deleted_prompt_template:
+        return print(deleted_prompt_template)
+    print("Removed prompt template with the following details:")
+    print(format_prompt_template_table(deleted_prompt_template))
 
 
 ###########################
@@ -215,14 +204,13 @@ def delete_prompt_template(prompt_template_id):
 )
 def list_recipes(filter):
     """Command to get all recipes with optional filters."""
-    try:
-        # Convert tuple filters into a dictionary
-        filter_dict = {key: value for key, value in filter}
-        client = QuotientClient()
-        recipes = client.list_recipes(filter_dict)
-        print(format_recipes_table(recipes))
-    except Exception as e:
-        raise click.ClickException(str(e))
+    # Convert tuple filters into a dictionary
+    filter_dict = {key: value for key, value in filter}
+    client = QuotientClient()
+    recipes = client.list_recipes(filter_dict)
+    if "Failed" in recipes:
+        return print(recipes)
+    print(format_recipes_table(recipes))
 
 
 @create.command(name="recipe")
@@ -239,15 +227,14 @@ def list_recipes(filter):
 )
 def create_recipe(model_id, prompt_template_id, name, description):
     """Command to create a new recie."""
-    try:
-        client = QuotientClient()
-        new_recipe = client.create_recipe(
-            model_id, prompt_template_id, name, description
-        )
-        print("Created recipe with the following details:")
-        print(format_recipes_table([new_recipe]))
-    except Exception as e:
-        raise click.ClickException(str(e))
+    client = QuotientClient()
+    new_recipe = client.create_recipe(
+        model_id, prompt_template_id, name, description
+    )
+    if "Failed" in new_recipe:
+        return print(new_recipe)
+    print("Created recipe with the following details:")
+    print(format_recipes_table([new_recipe]))
 
 
 ###########################
@@ -265,14 +252,13 @@ def create_recipe(model_id, prompt_template_id, name, description):
 )
 def list_datasets(filter):
     """Command to get all tasks with optional filters."""
-    try:
-        # Convert tuple filters into a dictionary
-        filter_dict = {key: value for key, value in filter}
-        client = QuotientClient()
-        datasets = client.list_datasets(filter_dict)
-        print(format_datasets_table(datasets))
-    except Exception as e:
-        raise click.ClickException(str(e))
+    # Convert tuple filters into a dictionary
+    filter_dict = {key: value for key, value in filter}
+    client = QuotientClient()
+    datasets = client.list_datasets(filter_dict)
+    if "Failed" in datasets:
+        return print(datasets)
+    print(format_datasets_table(datasets))
 
 
 ###########################
@@ -290,14 +276,13 @@ def list_datasets(filter):
 )
 def list_tasks(filter):
     """Command to get all tasks with optional filters."""
-    try:
-        # Convert tuple filters into a dictionary
-        filter_dict = {key: value for key, value in filter}
-        client = QuotientClient()
-        tasks = client.list_tasks(filter_dict)
-        print(format_tasks_table(tasks))
-    except Exception as e:
-        raise click.ClickException(str(e))
+    # Convert tuple filters into a dictionary
+    filter_dict = {key: value for key, value in filter}
+    client = QuotientClient()
+    tasks = client.list_tasks(filter_dict)
+    if "Failed" in tasks:
+        return print(tasks)
+    print(format_tasks_table(tasks))
 
 
 ###########################
@@ -315,31 +300,29 @@ def list_tasks(filter):
 )
 def list_jobs(filter):
     """Command to get all jobs with optional filters."""
-    try:
-        # Convert tuple filters into a dictionary
-        filter_dict = {key: value for key, value in filter}
-        client = QuotientClient()
-        jobs = client.list_jobs(filter_dict)
-        jobs = sorted(jobs, key=lambda k: k["id"])
-        print(format_jobs_table(jobs))
-    except Exception as e:
-        raise click.ClickException(str(e))
+    # Convert tuple filters into a dictionary
+    filter_dict = {key: value for key, value in filter}
+    client = QuotientClient()
+    jobs = client.list_jobs(filter_dict)
+    jobs = sorted(jobs, key=lambda k: k["id"])
+    if "Failed" in jobs:
+        return print(jobs)
+    print(format_jobs_table(jobs))
 
 
 @list.command(name="results")
 @click.option("--job-id", required=True, type=int, help="Job ID to pull results for.")
 def list_results(job_id):
     """Command to get results for a job."""
-    try:  
-        client = QuotientClient()
-        results = client.get_eval_results(job_id)
-        print(format_results_summary_table(results))
-        table, has_more_results = format_results_table(results)
-        print(table)
-        if has_more_results:
-            print("More results available. Use the SDK to view more results")
-    except Exception as e:
-        raise click.ClickException(str(e))
+    client = QuotientClient()
+    results = client.get_eval_results(job_id)
+    if "Failed" in results:
+        return print(results)
+    print(format_results_summary_table(results))
+    table, has_more_results = format_results_table(results)
+    print(table)
+    if has_more_results:
+        print("More results available. Use the SDK to view more results")
 
 
 @create.command(name="job")
@@ -355,12 +338,11 @@ def list_results(job_id):
 @click.option("--limit", type=int, help="Limit for the job (optional).")
 def create_job(task_id, recipe_id, num_fewshot_examples, limit):
     """Command to create a new job."""
-    try:  
-        client = QuotientClient()
-        new_job = client.create_job(task_id, recipe_id, num_fewshot_examples, limit)
-        print(format_jobs_table([new_job]))
-    except Exception as e:
-        raise click.ClickException(str(e))
+    client = QuotientClient()
+    new_job = client.create_job(task_id, recipe_id, num_fewshot_examples, limit)
+    if "Failed" in new_job:
+        return print(new_job)
+    print(format_jobs_table([new_job]))
 
 
 if __name__ == "__main__":

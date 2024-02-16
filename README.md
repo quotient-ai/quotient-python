@@ -26,7 +26,7 @@
 ### Authentication
 To use Quotient's platform, you'll need to create an API key:
 ```bash
-quotient authenticate --email <account_email>
+quotient authenticate
 ```
 
 Authenticate your requests by setting an environment variable for this API key:

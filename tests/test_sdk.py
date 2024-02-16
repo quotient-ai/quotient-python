@@ -1,8 +1,22 @@
 import pytest
+import os
 from supabase import create_client
 from quotientai import QuotientClient 
 
-from .constants import TEST_USER_EMAIL, TEST_INVALID_PASSWORD, TEST_USER_PASSWORD, TEST_API_KEY_NAME, TEST_BAD_PROMPT_TEMPLATE, TEST_CREATE_PROMPT_TEMPLATE, TEST_USER_ID, SUPABASE_URL, SUPABASE_ADMIN_KEY
+if 'QUOTIENT_API_KEY' in os.environ:
+    del os.environ['QUOTIENT_API_KEY']
+
+from .constants import (
+    TEST_USER_EMAIL, 
+    TEST_INVALID_PASSWORD, 
+    TEST_USER_PASSWORD, 
+    TEST_API_KEY_NAME, 
+    TEST_BAD_PROMPT_TEMPLATE,
+    TEST_CREATE_PROMPT_TEMPLATE, 
+    TEST_USER_ID, 
+    SUPABASE_URL, 
+    SUPABASE_ADMIN_KEY
+)
 
 client = QuotientClient()
 
@@ -17,6 +31,11 @@ test_job_id = None
 @pytest.fixture(scope="module", autouse=True)
 def teardown_module():
     """Cleanup function to run after all tests in this module."""
+    # Setup code
+    if 'QUOTIENT_API_KEY' in os.environ:
+        del os.environ['QUOTIENT_API_KEY']
+    yield
+     # Teardown code
     client = create_client(SUPABASE_URL, SUPABASE_ADMIN_KEY)
     response = client.table('profile').select('id').eq('uid', TEST_USER_ID).execute()
     if not response.data:
@@ -32,12 +51,13 @@ def teardown_module():
 ###########################
 
 def test_invalid_credentials():
-    with pytest.raises(Exception) as exc_info:
-        client.login(TEST_USER_EMAIL, TEST_INVALID_PASSWORD)
+    result = client.login(TEST_USER_EMAIL, TEST_INVALID_PASSWORD)
+    assert "Invalid login credentials" in result 
 
-def test_api_key_failure():
-    with pytest.raises(Exception) as exc_info:
-        client.create_api_key(TEST_API_KEY_NAME, 60)
+def test_missing_credentials():
+    result = client.create_api_key(TEST_API_KEY_NAME, 30)
+    assert "Not logged in" in result, "Expected key creation to fail without login"
+
 
 ###########################
 #       Create creds      #
@@ -45,13 +65,17 @@ def test_api_key_failure():
         
 def test_successful_login():
     result = client.login(TEST_USER_EMAIL, TEST_USER_PASSWORD)
-    assert "Login successful" in result, "Login unsuccessful"
+    assert "Login successful" in result, "Expected login to be successful"
     assert client.token is not None, "Expected token to be set after login"
 
-def test_api_key_creation():
+def test_api_key_failure():
     assert client.token is not None, "Expected user to be logged in for key creation"
+    result = client.create_api_key("badname", 60)
+    assert "Invalid key name length" in result, "Expected key creation to fail with invalid name"
+
+def test_api_key_creation():
     api_key = client.create_api_key(TEST_API_KEY_NAME, 60)
-    assert api_key is not None, "API key was not created"
+    assert api_key is not None, "Expected API key to be created"
     assert client.api_key is not None, "Expected API key to be set after creation"
 
 def test_get_api_key():
@@ -95,10 +119,8 @@ def test_list_prompt_templates():
         assert 'id' in prompt, "Expected each prompt to have an 'id' field"
 
 def test_fail_prompt_template():
-    with pytest.raises(Exception) as exc_info:
-        client.create_prompt_template(TEST_BAD_PROMPT_TEMPLATE, "Bad template A")
-    if hasattr(exc_info.value, 'status_code') and exc_info.value.status_code == 500:
-        pytest.fail("Encountered 500 error during test: Is the eval server running?")
+    result = client.create_prompt_template(TEST_BAD_PROMPT_TEMPLATE, "Bad template A")
+    assert "The template must include" in result, "Expected prompt template creation to fail with invalid template"
 
 def test_create_prompt_template():
     prompt_template = client.create_prompt_template(TEST_CREATE_PROMPT_TEMPLATE, "Good template B")

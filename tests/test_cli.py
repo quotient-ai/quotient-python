@@ -4,7 +4,15 @@ from click.testing import CliRunner
 import os
 from quotientai import cli 
 
-from .constants import TEST_API_KEY_NAME, TEST_USER_EMAIL, TEST_USER_PASSWORD, TEST_CREATE_PROMPT_TEMPLATE, TEST_USER_ID, SUPABASE_URL, SUPABASE_ADMIN_KEY
+from .constants import (
+    TEST_API_KEY_NAME, 
+    TEST_USER_EMAIL, 
+    TEST_USER_PASSWORD, 
+    TEST_CREATE_PROMPT_TEMPLATE, 
+    TEST_USER_ID, 
+    SUPABASE_URL, 
+    SUPABASE_ADMIN_KEY
+)
 
 runner = CliRunner()
 
@@ -14,9 +22,13 @@ runner = CliRunner()
 
 @pytest.fixture(scope="module", autouse=True)
 def cleanup():
-    # Setup code here [later?]
+    # Setup code
+    if 'QUOTIENT_API_KEY' in os.environ:
+        del os.environ['QUOTIENT_API_KEY']
     yield
-    del os.environ['QUOTIENT_API_KEY']
+    # Teardown code
+    if 'QUOTIENT_API_KEY' in os.environ:
+        del os.environ['QUOTIENT_API_KEY']
     client = create_client(SUPABASE_URL, SUPABASE_ADMIN_KEY)
     response = client.table('profile').select('id').eq('uid', TEST_USER_ID).execute()
     if not response.data:
@@ -30,11 +42,19 @@ def cleanup():
 ###########################
 #      Without creds      #
 ###########################
+    
+def test_authentication_api_key_exists():
+    # inputs = f"{TEST_USER_EMAIL}\nbadpassword\n{TEST_API_KEY_NAME}\n30\n"
+    os.environ['QUOTIENT_API_KEY'] = "mock_key"
+    result = runner.invoke(cli, ['authenticate'])
+    assert result.exit_code == 0
+    assert 'API key found in environment variables.' in result.output
+    del os.environ['QUOTIENT_API_KEY']
 
 def test_authentication_fail():
     inputs = f"{TEST_USER_EMAIL}\nbadpassword\n{TEST_API_KEY_NAME}\n30\n"
     result = runner.invoke(cli, ['authenticate'], input=inputs)
-    assert result.exit_code != 0
+    assert result.exit_code == 0
     assert 'Login failed' in result.output
 
 ###########################
@@ -113,7 +133,7 @@ def test_revoke_api_key():
     assert "revoked successfully" in result.output
 
 def test_list_fail():
-    """Test listing recipes without valid API key."""
-    result = runner.invoke(cli, ['list', 'recipes'])
-    assert result.exit_code == 1
+    """Test listing recipes with invalid API key."""
+    result = runner.invoke(cli, ['list', 'models'])
+    assert result.exit_code == 0
     assert 'Invalid or revoked API key' in result.output
