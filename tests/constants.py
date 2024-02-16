@@ -1,7 +1,7 @@
 SUPABASE_URL = "https://hhqppcqltklzfpggdocb.supabase.co"
 SUPABASE_ADMIN_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhocXBwY3FsdGtsemZwZ2dkb2NiIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTcwMTM1NTgzOCwiZXhwIjoyMDE2OTMxODM4fQ.nwMZQwEGST0fNVATc6PAm_TaQwc95YcM2W1BLVj-9rU"
-TEST_USER_EMAIL = "allison+cli_test@quotientai.co"
-TEST_USER_PASSWORD = "Foobarbaz3lt0N"
+TEST_USER_EMAIL = ""
+TEST_USER_PASSWORD = ""
 TEST_USER_ID = "0ffea1d7-482b-4696-a9e6-c8fef8afa7f3"
 
 TEST_INVALID_PASSWORD = "wrongpassword"
