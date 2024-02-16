@@ -1,4 +1,4 @@
-# quotient Python Client
+# quotientai Python Client
 
 ## Overview
 
