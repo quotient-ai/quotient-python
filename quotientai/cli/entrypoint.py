@@ -262,6 +262,27 @@ def list_tasks(filter):
     client.sign_out()
 
 
+@create.command(name="task")
+@click.option("--dataset-id", required=True, type=int, help="Dataset ID for the Task.")
+@click.option(
+    "--name",
+    type=str,
+    help="A descriptive name for the task.",
+)
+@click.option(
+    "--task-type",
+    help="Type of task.",
+    default="question_answering",
+    show_default=True,
+    type=click.Choice(["question_answering", "summarization"]),
+)
+def create_task(dataset_id, name, task_type):
+    """Command to create a new task."""
+    datasets = client.create_task(dataset_id, name, task_type)
+    print(format_tasks_table([datasets]))
+    client.sign_out()
+
+
 ###########################
 #          Jobs           #
 ###########################

@@ -257,6 +257,24 @@ class QuotientClient:
         data = query.execute()
         return data.data
 
+    def create_task(self, dataset_id, name, task_type):
+        self.check_token()
+        task_data = {
+            "dataset_id": dataset_id,
+            "name": name,
+            "metrics": ["f1_score", "rouge", "sacrebleu", "jaccard_similarity", "exact_match", "normalized_exact_match"], # to be removed when removed from the platform
+            "task_type": task_type,
+            "dataset_name": "place_holder" # to be removed when removed from the platform
+        }
+        task_data.update({"created_at": datetime.utcnow().isoformat()})
+        query = self.supabase_client.table("task").insert(task_data)
+        response = query.execute()
+        task = response.data[0]
+        task_id = task["id"]
+        # Supabase does not support returning nested objects, so we need to
+        # manually fetch the dataset after create
+        return self.list_tasks({"id": task_id})[0]
+
     ###########################
     #          Jobs           #
     ###########################
