@@ -53,18 +53,21 @@ def authenticate():
     """Flow to authenticate and generate an API key."""
     client = QuotientClient()
     if client.api_key is not None:
-        return click.echo("API key found in environment variables. Setting up client with API key.")
+        click.echo("API key found in environment variables. Setting up client with API key.")
+        return
     email = click.prompt("Enter your account email", type=str)
     password = click.prompt("Enter your account password", type=str)  
     login_result = client.login(email, password)
     if "Login failed" in login_result:
-        return click.echo("Login failed. Please check your credentials and try again.")
+        click.echo("Login failed. Please check your credentials and try again.")
+        return
     click.echo('Login successful! Now to set an API key.')
     key_name = click.prompt("Enter the name for your API key (12-60 chars)", type=str)
     key_lifetime = click.prompt("Enter the lifetime for your API key (30, 60, or 90) in days", type=int, default=30)
     api_key_result = client.create_api_key(key_name, key_lifetime)
     if "Failed" in api_key_result:
-        return click.echo(api_key_result)
+        click.echo(api_key_result)
+        return
     click.echo(f"Add to your shell: `export QUOTIENT_API_KEY=<api_key>`")
     click.echo(api_key_result)
     
@@ -105,7 +108,8 @@ def list_api_keys():
     client = QuotientClient()
     api_keys = client.list_api_keys()
     if "Failed" in api_keys:
-        return print(api_keys)
+        print(api_keys)
+        return
     print(format_api_keys_table(api_keys))
 
 ###########################
@@ -128,7 +132,8 @@ def list_models(filter):
     client = QuotientClient()
     models = client.list_models(filter_dict)
     if "Failed" in models:
-        return print(models)
+        print(models)
+        return
     print(format_models_table(models))
 
 ###########################
@@ -151,7 +156,8 @@ def list_prompt_templates(filter):
     client = QuotientClient()
     prompt_templates = client.list_prompt_templates(filter_dict)
     if "Failed" in prompt_templates:
-        return print(prompt_templates)
+        print(prompt_templates)
+        return
     print(format_prompt_template_table(prompt_templates))
 
 
@@ -167,7 +173,8 @@ def create_prompt_template(prompt_template, name):
     client = QuotientClient()
     prompt_template = client.create_prompt_template(prompt_template, name)
     if "Failed" in prompt_template:
-        return print(prompt_template)
+        print(prompt_template)
+        return
     print("Created prompt template with the following details:")
     print(format_prompt_template_table([prompt_template]))
 
@@ -184,7 +191,8 @@ def delete_prompt_template(prompt_template_id):
     client = QuotientClient()
     deleted_prompt_template = client.delete_prompt_template(prompt_template_id)
     if "Failed" in deleted_prompt_template:
-        return print(deleted_prompt_template)
+        print(deleted_prompt_template)
+        return
     print("Removed prompt template with the following details:")
     print(format_prompt_template_table(deleted_prompt_template))
 
@@ -209,7 +217,8 @@ def list_recipes(filter):
     client = QuotientClient()
     recipes = client.list_recipes(filter_dict)
     if "Failed" in recipes:
-        return print(recipes)
+        print(recipes)
+        return
     print(format_recipes_table(recipes))
 
 
@@ -232,7 +241,8 @@ def create_recipe(model_id, prompt_template_id, name, description):
         model_id, prompt_template_id, name, description
     )
     if "Failed" in new_recipe:
-        return print(new_recipe)
+        print(new_recipe)
+        return
     print("Created recipe with the following details:")
     print(format_recipes_table([new_recipe]))
 
@@ -257,7 +267,8 @@ def list_datasets(filter):
     client = QuotientClient()
     datasets = client.list_datasets(filter_dict)
     if "Failed" in datasets:
-        return print(datasets)
+        print(datasets)
+        return
     print(format_datasets_table(datasets))
 
 
@@ -281,7 +292,8 @@ def list_tasks(filter):
     client = QuotientClient()
     tasks = client.list_tasks(filter_dict)
     if "Failed" in tasks:
-        return print(tasks)
+        print(tasks)
+        return
     print(format_tasks_table(tasks))
 
 
@@ -306,7 +318,8 @@ def list_jobs(filter):
     jobs = client.list_jobs(filter_dict)
     jobs = sorted(jobs, key=lambda k: k["id"])
     if "Failed" in jobs:
-        return print(jobs)
+        print(jobs)
+        return
     print(format_jobs_table(jobs))
 
 
@@ -317,7 +330,8 @@ def list_results(job_id):
     client = QuotientClient()
     results = client.get_eval_results(job_id)
     if "Failed" in results:
-        return print(results)
+        print(results)
+        return
     print(format_results_summary_table(results))
     table, has_more_results = format_results_table(results)
     print(table)
@@ -341,7 +355,8 @@ def create_job(task_id, recipe_id, num_fewshot_examples, limit):
     client = QuotientClient()
     new_job = client.create_job(task_id, recipe_id, num_fewshot_examples, limit)
     if "Failed" in new_job:
-        return print(new_job)
+        print(new_job)
+        return
     print(format_jobs_table([new_job]))
 
 

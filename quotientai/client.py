@@ -23,7 +23,7 @@ class FastAPIError(Exception):
         super().__init__(f"Status code: {status_code}, Detail: {detail}")
 
 class QuotientClient:
-    def __init__(self, api_key=None):
+    def __init__(self):
         # Public API key for the QuotientAI Supabase project
         self.public_api_key = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhocXBwY3FsdGtsemZwZ2dkb2NiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MDEzNTU4MzgsImV4cCI6MjAxNjkzMTgzOH0.bpOtVl7co6B4wXQqt6Ec-WCz9FuO7tpVYbTa6PLoheI"
         
