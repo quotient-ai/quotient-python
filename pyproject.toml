@@ -1,9 +1,10 @@
 [tool.poetry]
 name = "quotientai"
-version = "0.0.3"
+version = "0.0.4"
 authors = [
     "Vic Weiss <vic@quotientai.co>",
     "Freddie Vargus <freddie@quotientai.co>",
+    "Allison Kunz <allison@quotient.co>",
 ]
 description = "CLI for evaluating large language models with Quotient"
 readme = "README.md"
@@ -23,6 +24,9 @@ click = "^8.1.7"
 supabase = "^2.3.2"
 prettytable = "^3.9.0"
 requests = "^2.31.0"
+
+[tool.poetry.group.dev.dependencies]
+pytest = "^8.0.0"
 
 [build-system]
 requires = ["poetry-core"]

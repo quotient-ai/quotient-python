@@ -2,7 +2,7 @@
 
 ## Overview
 
-`quotientai` is a SDK and CLI built to manage your workflows on Quotient AI, the AI Evaluation Company.
+`quotientai` is an SDK and CLI built to manage your workflows on Quotient AI, the AI Evaluation Company.
 
 ## Installation
 
@@ -10,7 +10,9 @@
 - Python 3.10 or higher
 
 **Setup Guide:**
-1. Receive a token from your contact at Quotient AI.
+1. Receive the following from your contact at Quotient AI:
+  - account information (email, password)
+  - Github repo token 
 
 2. Install `quotientai` client using pip:
    ```bash
@@ -22,26 +24,20 @@
 
 
 ### Authentication
-To use Quotient's platform, you'll need to create an account to authenticate or use your organization's API Key (Coming Soon).
-
-
-Authenticate your requests by setting environment variables for the email and password you want to register with:
+To use Quotient's platform, you'll need to create an API key:
 ```bash
-export QUOTIENT_EMAIL='user@my_company.com';
-export QUOTIENT_PASSWORD='my_secret_password';
+quotient authenticate
 ```
+
+Authenticate your requests by setting an environment variable for this API key:
+```bash
+export QUOTIENT_API_KEY=<api_key>;
+```
+
 
 ### Registering your account
 
-Create your `quotientai` account using the CLI:
-
-```bash
-quotient register user
-
-Success! User has been registered!
-Please check your email for a verification email before continuing.
-```
-**Note:** A verification email will be sent. Account verification is required to continue.
+We are provisioning accounts until the open beta.
 
 
 
@@ -144,22 +140,11 @@ More results available. Use the SDK to view more results
 Import and initialize the QuotientClient with your credentials:
 
 ```python
-import os
-
 from quotientai.client import QuotientClient
 
-email = os.environ['QUOTIENT_EMAIL']
-password = os.environ['QUOTIENT_PASSWORD']
-client = QuotientClient(email, password)
+client = QuotientClient()
 ```
 
-### Register new user
-To register for a new account programmatically:
-
-```python
-response = client.register(email, password)
-```
-**Note:** A verification email will be sent. Account verification is required to continue.
 
 ### Retrieving All Models
 Fetch all available models:

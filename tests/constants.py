@@ -1,0 +1,10 @@
+SUPABASE_URL = "https://xxx.supabase.co"
+SUPABASE_ADMIN_KEY = ""
+TEST_USER_EMAIL = ""
+TEST_USER_PASSWORD = ""
+TEST_USER_ID = ""
+
+TEST_INVALID_PASSWORD = "wrongpassword"
+TEST_API_KEY_NAME = "testkeynamehere"
+TEST_BAD_PROMPT_TEMPLATE = "badprompttemplate"
+TEST_CREATE_PROMPT_TEMPLATE = "Customer question: {input_text}\n\nShakespearean styles: {context}\n\nAnswer as King Lear:"
