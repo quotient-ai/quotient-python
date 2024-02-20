@@ -216,12 +216,10 @@ class QuotientClient:
         }
 
         # Client side file size check
-        size_threshold = 2 * 1024 ** 3  # 2GB
+        size_threshold = 2 * 1024**3  # 2GB
         file_size = os.path.getsize(file_path)
         if file_size > size_threshold:
-            raise QuotientAIInvalidInputException(
-                "File size exceeds 2GB limit"
-            )
+            raise QuotientAIInvalidInputException("File size exceeds 2GB limit")
 
         # Guess the MIME type of the file
         mime_type, _ = mimetypes.guess_type(file_path)
@@ -262,9 +260,16 @@ class QuotientClient:
         task_data = {
             "dataset_id": dataset_id,
             "name": name,
-            "metrics": ["f1_score", "rouge", "sacrebleu", "jaccard_similarity", "exact_match", "normalized_exact_match"], # to be removed when removed from the platform
+            "metrics": [
+                "f1_score",
+                "rouge",
+                "sacrebleu",
+                "jaccard_similarity",
+                "exact_match",
+                "normalized_exact_match",
+            ],  # to be removed when removed from the platform
             "task_type": task_type,
-            "dataset_name": "place_holder" # to be removed when removed from the platform
+            "dataset_name": "place_holder",  # to be removed when removed from the platform
         }
         task_data.update({"created_at": datetime.utcnow().isoformat()})
         query = self.supabase_client.table("task").insert(task_data)
