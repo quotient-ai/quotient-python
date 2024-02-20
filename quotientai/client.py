@@ -160,8 +160,9 @@ class QuotientClient:
     def remove_api_key(self):
         self.api_key = None
         if self.token and self.token_expiry > time.time():
-            return "API key removed. You are still logged in."
-        return "API key removed"
+            print("API key removed. You are still logged in.")
+        else:
+            print("API key removed")
     
     def list_api_keys(self):
         try:     
@@ -247,7 +248,7 @@ class QuotientClient:
             response = self.supaclient.table("prompt_template").delete().eq("id", template_id).execute()
             if not response.data:
                 raise ValueError("Prompt template not deleted (unknown error)")
-            return f"Prompt template {response.data[0]['name']} deleted"
+            print(f"Prompt template {response.data[0]['name']} deleted")
         except PostgrestAPIError as api_err:
             raise QuotientAIException(f"Failed to delete prompt template: {api_err.message} ({api_err.code})") from api_err
         except Exception as e:
@@ -303,7 +304,7 @@ class QuotientClient:
             response = self.supaclient.table("recipe").delete().eq("id", recipe_id).execute()
             if not response.data:
                 raise ValueError("Recipe not deleted (unknown error)")
-            return f"Recipe {response.data[0]['name']} deleted"
+            print(f"Recipe {response.data[0]['name']} deleted")
         except PostgrestAPIError as api_err:
             raise QuotientAIException(f"Failed to delete recipe: {api_err.message} ({api_err.code})") from api_err
         except Exception as e:

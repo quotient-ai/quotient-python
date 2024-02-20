@@ -22,13 +22,19 @@ from .constants import (
 
 client = QuotientClient()
 
-test_template_id = None
-test_recipe_id = None
-test_job_id = None
 
 ###########################
-#         Cleanup         #
+#      Setup/Cleanup      #
 ###########################
+
+@pytest.fixture(scope="module")
+def test_ids():
+    keys = {
+        'test_template_id': None,
+        'test_recipe_id': None,
+        'test_job_id': None
+    }
+    yield keys
 
 @pytest.fixture(scope="module", autouse=True)
 def teardown_module():
@@ -73,10 +79,6 @@ def test_successful_login():
     assert client.token is not None, "Expected token to be set after login"
 
 def test_api_key_failure():
-    # assert client.token is not None, "Expected user to be logged in for key creation"
-    # result = client.create_api_key("badname", 60)
-    # assert "Invalid key name length" in result, "Expected key creation to fail with invalid name"
-    # refactor the above to test for exception handling:
     with pytest.raises(QuotientAIException) as exc_info:
         client.create_api_key("badname", 60)
     assert "Invalid key name length" in str(exc_info.value), "Expected key creation to fail with invalid name"
@@ -127,24 +129,20 @@ def test_list_prompt_templates():
         assert 'id' in prompt, "Expected each prompt to have an 'id' field"
 
 def test_fail_prompt_template():
-    # result = client.create_prompt_template(TEST_BAD_PROMPT_TEMPLATE, "Bad template A")
-    # assert "The template must include" in result, "Expected prompt template creation to fail with invalid template"
-    # refactor the above to test for prompt template creation exception handling:
     with pytest.raises(QuotientAIException) as exc_info:
         client.create_prompt_template(TEST_BAD_PROMPT_TEMPLATE, "Bad template A")
     assert "The template must include" in str(exc_info.value), "Expected prompt template creation to fail with invalid template"
 
-def test_create_prompt_template():
+def test_create_prompt_template(test_ids):
     prompt_template = client.create_prompt_template(TEST_CREATE_PROMPT_TEMPLATE, "Good template B")
     assert prompt_template is not None, "Prompt template was not created"
     assert isinstance(prompt_template, dict), "Expected prompt template to be an object"
     assert 'template_string' in prompt_template, "Expected prompt template to have a 'template_string' field"
-    global test_template_id 
-    test_template_id = prompt_template['id']
+    test_ids['test_template_id'] = prompt_template['id']
 
-def test_delete_prompt_template():
-    response = client.delete_prompt_template(test_template_id)
-    assert f"Prompt template Good template B deleted" in response, "Expected prompt template to be deleted"
+def test_delete_prompt_template(test_ids):
+    response = client.delete_prompt_template(test_ids['test_template_id'])
+    assert response is None, "Expected prompt template to be deleted"
 
 def test_list_tasks():
     tasks = client.list_tasks()
@@ -162,17 +160,16 @@ def test_list_recipes():
         assert isinstance(recipe, dict), "Expected each recipe to be an object"
         assert 'id' in recipe, "Expected each recipe to have an 'id' field"
 
-def test_create_recipe():
+def test_create_recipe(test_ids):
     recipe = client.create_recipe(name="Test recipe", description="Test recipe description", model_id=1, prompt_template_id=2)
     assert recipe is not None, "Recipe was not created"
     assert isinstance(recipe, dict), "Expected recipe to be an object"
     assert 'id' in recipe, "Expected recipe to have an 'id' field"
-    global test_recipe_id 
-    test_recipe_id = recipe['id']
+    test_ids['test_recipe_id'] = recipe['id']
 
-def test_delete_recipe():
-    response = client.delete_recipe(test_recipe_id)
-    assert f"Recipe Test recipe deleted" in response, "Expected recipe to be deleted"
+def test_delete_recipe(test_ids):
+    response = client.delete_recipe(test_ids['test_recipe_id'])
+    assert response is None, "Expected recipe to be deleted"
 
 def test_list_jobs():
     jobs = client.list_jobs()
@@ -182,13 +179,12 @@ def test_list_jobs():
         assert isinstance(job, dict), "Expected each job to be an object"
         assert 'id' in job, "Expected each job to have an 'id' field"
 
-def test_create_job():
+def test_create_job(test_ids):
     job = client.create_job(task_id=2, recipe_id=1, num_fewshot_examples=2, limit=1)
     assert job is not None, "Job was not created"
     assert isinstance(job, dict), "Expected job to be an object"
     assert 'id' in job, "Expected job to have an 'id' field"
-    global test_job_id 
-    test_job_id = job['id']
+    test_ids['test_job_id'] = job['id'] 
     
 # TODO: results tests
 
@@ -207,7 +203,7 @@ def test_signout():
 
 def test_remove_api_key():
     result = client.remove_api_key()
-    assert "API key removed" in result, "Expected successful removal of API key"
+    assert result is None, "Expected successful removal of API key"
     assert client.api_key is None, "Expected API key to be None after removal"
 
 def test_logout_status():
