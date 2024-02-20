@@ -3,6 +3,8 @@ import os
 from supabase import create_client
 from quotientai import QuotientClient 
 
+from quotientai.exceptions import QuotientAIException
+
 if 'QUOTIENT_API_KEY' in os.environ:
     del os.environ['QUOTIENT_API_KEY']
 
@@ -51,12 +53,14 @@ def teardown_module():
 ###########################
 
 def test_invalid_credentials():
-    result = client.login(TEST_USER_EMAIL, TEST_INVALID_PASSWORD)
-    assert "Invalid login credentials" in result 
+    with pytest.raises(QuotientAIException) as exc_info:
+        client.login(TEST_USER_EMAIL, TEST_INVALID_PASSWORD)
+    assert "Invalid login credentials" in str(exc_info.value), "Expected invalid credentials to raise an exception"
 
 def test_missing_credentials():
-    result = client.create_api_key(TEST_API_KEY_NAME, 30)
-    assert "Not logged in" in result, "Expected key creation to fail without login"
+    with pytest.raises(QuotientAIException) as exc_info:
+        client.create_api_key(TEST_API_KEY_NAME, 30)
+    assert "Not logged in" in str(exc_info.value), "Expected missing credentials to raise an exception"
 
 
 ###########################
@@ -69,9 +73,13 @@ def test_successful_login():
     assert client.token is not None, "Expected token to be set after login"
 
 def test_api_key_failure():
-    assert client.token is not None, "Expected user to be logged in for key creation"
-    result = client.create_api_key("badname", 60)
-    assert "Invalid key name length" in result, "Expected key creation to fail with invalid name"
+    # assert client.token is not None, "Expected user to be logged in for key creation"
+    # result = client.create_api_key("badname", 60)
+    # assert "Invalid key name length" in result, "Expected key creation to fail with invalid name"
+    # refactor the above to test for exception handling:
+    with pytest.raises(QuotientAIException) as exc_info:
+        client.create_api_key("badname", 60)
+    assert "Invalid key name length" in str(exc_info.value), "Expected key creation to fail with invalid name"
 
 def test_api_key_creation():
     api_key = client.create_api_key(TEST_API_KEY_NAME, 60)
@@ -119,8 +127,12 @@ def test_list_prompt_templates():
         assert 'id' in prompt, "Expected each prompt to have an 'id' field"
 
 def test_fail_prompt_template():
-    result = client.create_prompt_template(TEST_BAD_PROMPT_TEMPLATE, "Bad template A")
-    assert "The template must include" in result, "Expected prompt template creation to fail with invalid template"
+    # result = client.create_prompt_template(TEST_BAD_PROMPT_TEMPLATE, "Bad template A")
+    # assert "The template must include" in result, "Expected prompt template creation to fail with invalid template"
+    # refactor the above to test for prompt template creation exception handling:
+    with pytest.raises(QuotientAIException) as exc_info:
+        client.create_prompt_template(TEST_BAD_PROMPT_TEMPLATE, "Bad template A")
+    assert "The template must include" in str(exc_info.value), "Expected prompt template creation to fail with invalid template"
 
 def test_create_prompt_template():
     prompt_template = client.create_prompt_template(TEST_CREATE_PROMPT_TEMPLATE, "Good template B")
