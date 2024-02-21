@@ -387,7 +387,7 @@ class QuotientClient:
             response = requests.get(url, headers=headers, params={"job_id": job_id})
             response.raise_for_status() 
             results = response.json()
-            return results[0]
+            return results
         except (ConnectionError, Timeout) as exc:
             raise QuotientAIException("Failed to get eval results: Network error. Please check your connection and try again.") from exc
         except HTTPError as http_err:
