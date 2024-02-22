@@ -378,6 +378,37 @@ class QuotientClient:
         except Exception as e:
             raise QuotientAIException(f"Failed to list tasks: {str(e)}") from e
 
+    def create_task(self, dataset_id, name, task_type):
+        try:
+            task_data = {
+                "dataset_id": dataset_id,
+                "name": name,
+                "metrics": [
+                    "f1_score",
+                    "rouge",
+                    "sacrebleu",
+                    "jaccard_similarity",
+                    "exact_match",
+                    "normalized_exact_match",
+                ], # to be removed once metrics moves off the task
+                "task_type": task_type,
+                "created_at": datetime.utcnow().isoformat(),
+            }
+            response = self.supaclient.table("task").insert(task_data).execute()
+            if not response.data:
+                raise ValueError("Task creation failed, no data returned.")
+            task_id = response.data[0]["id"]
+            # Supabase does not support returning nested objects, so we need to
+            # manually fetch the dataset after create
+            return self.list_tasks({"id": task_id})[0]
+
+        except ValueError as e:
+            raise QuotientAIException(f"Failed to create task: {e}") from e
+        except Exception as e:
+            # Catch-all for unexpected errors
+            raise QuotientAIException(f"An unexpected error occurred during task creation: {str(e)}") from e
+
+
     ###########################
     #          Jobs           #
     ###########################

@@ -332,6 +332,29 @@ def list_tasks(filter):
         click.echo(str(e))
 
 
+@create.command(name="task")
+@click.option("--dataset-id", required=True, type=int, help="Dataset ID for the Task.")
+@click.option(
+    "--name",
+    type=str,
+    help="A descriptive name for the task.",
+)
+@click.option(
+    "--task-type",
+    help="Type of task.",
+    default="question_answering",
+    show_default=True,
+    type=click.Choice(["question_answering", "summarization"]), # replace with enum eventually or remove
+)
+def create_task(dataset_id, name, task_type):
+    """Command to create a new task."""
+    try:
+        client = QuotientClient()
+        task = client.create_task(dataset_id, name, task_type)
+        print(format_tasks_table([task]))
+    except QuotientAIException as e:
+        click.echo(str(e))
+
 ###########################
 #          Jobs           #
 ###########################
