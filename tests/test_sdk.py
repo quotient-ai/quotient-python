@@ -1,5 +1,6 @@
 import pytest
 import os
+import time
 from supabase import create_client
 from quotientai import QuotientClient 
 
@@ -185,6 +186,21 @@ def test_create_job(test_ids):
     assert isinstance(job, dict), "Expected job to be an object"
     assert 'id' in job, "Expected job to have an 'id' field"
     test_ids['test_job_id'] = job['id'] 
+
+def test_filter_by_job_id(test_ids):
+    jobs = client.list_jobs(filters={'id': test_ids['test_job_id']})
+    for job in jobs:
+        assert 'status' in job, "Expected each job to have a 'status' field"
+        assert job['status'] == "Scheduled", "Expected job to have status Scheduled"
+
+def test_create_job_rate_limit(test_ids):
+    # Assuming the rate limit is 3 jobs per hour, create 3 more jobs to surpass the limit
+    for _ in range(2):
+        job = client.create_job(task_id=2, recipe_id=1, num_fewshot_examples=0, limit=1)
+        assert job['status'] == "Scheduled", "Expected job to be created"
+    with pytest.raises(QuotientAIException) as exc_info:
+        client.create_job(task_id=2, recipe_id=2, num_fewshot_examples=0, limit=1)
+    assert "Rate limit exceeded" in str(exc_info.value), "Expected job creation to fail with rate limit exceeded"
     
 # TODO: results tests
 

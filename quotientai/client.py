@@ -17,11 +17,13 @@ from quotientai.exceptions import (
 
 from supabase import create_client, PostgrestAPIError, PostgrestAPIResponse
 
+
 class FastAPIError(Exception):
     def __init__(self, status_code: int, detail: str):
         self.status_code = status_code
         self.detail = detail
         super().__init__(f"Status code: {status_code}, Detail: {detail}")
+
 
 class QuotientClient:
     def __init__(self):
@@ -44,8 +46,7 @@ class QuotientClient:
 
         # Use API key if provided
         if self.api_key:
-            self.supaclient._auth_token = {'Authorization': f'Bearer {self.api_key}'}
-
+            self.supaclient._auth_token = {"Authorization": f"Bearer {self.api_key}"}
 
     def status(self):
         current_time = time.time()
@@ -61,35 +62,56 @@ class QuotientClient:
         login_data = {"email": email, "password": password}
         login_headers = {"apikey": self.public_api_key}
         try:
-            response = requests.post(self.supabase_url + "/auth/v1/token?grant_type=password",
-                                     json=login_data, headers=login_headers)
+            response = requests.post(
+                self.supabase_url + "/auth/v1/token?grant_type=password",
+                json=login_data,
+                headers=login_headers,
+            )
             if 400 <= response.status_code < 500:
-                raise ValueError(f"Login failed with code {response.status_code}: {response.json()['error_description']}")
+                raise ValueError(
+                    f"Login failed with code {response.status_code}: {response.json()['error_description']}"
+                )
             response.raise_for_status()  # Raises HTTPError for all non-4xx bad responses
             session = response.json()
 
-            if 'access_token' not in session or not session['access_token']:
+            if "access_token" not in session or not session["access_token"]:
                 raise ValueError("Login failed: No authentication token received")
 
-            self.token = session['access_token']
-            self.token_expiry = time.time() + session['expires_in'] - 60  # Extra 60 seconds for buffer
+            self.token = session["access_token"]
+            self.token_expiry = (
+                time.time() + session["expires_in"] - 60
+            )  # Extra 60 seconds for buffer
             return "Login successful"
 
         except (ConnectionError, Timeout) as exc:
-            raise QuotientAIException("Login failed: Network error. Please check your connection and try again.") from exc
+            raise QuotientAIException(
+                "Login failed: Network error. Please check your connection and try again."
+            ) from exc
         except HTTPError as http_err:
-            raise QuotientAIException(f"Login failed: Server error {http_err.response.status_code}") from http_err
+            raise QuotientAIException(
+                f"Login failed: Server error {http_err.response.status_code}"
+            ) from http_err
         except Exception as ve:
             raise QuotientAIException(str(ve)) from ve
 
     def sign_out(self) -> str:
-        logout_headers = {"apikey": self.public_api_key, "Authorization": f"Bearer {self.token}"}
+        logout_headers = {
+            "apikey": self.public_api_key,
+            "Authorization": f"Bearer {self.token}",
+        }
         try:
-            response = requests.post(self.supabase_url + "/auth/v1/logout?scope=global", headers=logout_headers)
+            response = requests.post(
+                self.supabase_url + "/auth/v1/logout?scope=global",
+                headers=logout_headers,
+            )
 
             if response.status_code != 204:
-                error_message = response.json().get('error_description', 'Unknown error')
-                raise ValueError(f"Sign out failed with code {response.status_code}: {error_message}")
+                error_message = response.json().get(
+                    "error_description", "Unknown error"
+                )
+                raise ValueError(
+                    f"Sign out failed with code {response.status_code}: {error_message}"
+                )
 
             # Clear the token and expiry
             self.token = None
@@ -102,19 +124,21 @@ class QuotientClient:
             return "Sign out successful."
 
         except (ConnectionError, Timeout) as exc:
-            raise QuotientAIException("Sign out failed: Network error. Please check your connection and try again.") from exc
+            raise QuotientAIException(
+                "Sign out failed: Network error. Please check your connection and try again."
+            ) from exc
         except HTTPError as http_err:
-            raise QuotientAIException(f"Sign out failed: Server error {http_err.response.status_code}") from http_err
+            raise QuotientAIException(
+                f"Sign out failed: Server error {http_err.response.status_code}"
+            ) from http_err
         except Exception as e:
             raise QuotientAIException(f"Sign out failed: {str(e)}") from e
-
 
     ###########################
     #         API Keys        #
     ###########################
 
     def create_api_key(self, key_name: str, key_lifetime: int = 30) -> str:
-
         try:
             if not self.token:
                 raise ValueError("Not logged in. Please log in first.")
@@ -122,7 +146,7 @@ class QuotientClient:
             if self.api_key:
                 raise ValueError("API key already exists. Please remove it first.")
 
-            self.supaclient._auth_token = {'Authorization': f'Bearer {self.token}'}
+            self.supaclient._auth_token = {"Authorization": f"Bearer {self.token}"}
             params = {"key_name": key_name, "key_lifetime": key_lifetime}
             response = self.supaclient.rpc("create_api_key", params=params).execute()
 
@@ -130,12 +154,16 @@ class QuotientClient:
                 raise ValueError("API key not returned. Unknown error.")
 
             self.api_key = response.data
-            self.supaclient._auth_token = {'Authorization': f'Bearer {self.api_key}'}
+            self.supaclient._auth_token = {"Authorization": f"Bearer {self.api_key}"}
 
-            print(f"API keys are only returned once. Please store this key and its name in a secure location, and add it to your environment variables.")
+            print(
+                f"API keys are only returned once. Please store this key and its name in a secure location, and add it to your environment variables."
+            )
             return response.data
         except PostgrestAPIError as api_err:
-            raise QuotientAIException(f"Failed to create API key: {api_err.message} ({api_err.code})") from api_err
+            raise QuotientAIException(
+                f"Failed to create API key: {api_err.message} ({api_err.code})"
+            ) from api_err
         except Exception as e:
             raise QuotientAIException(f"Failed to create API key: {str(e)}") from e
 
@@ -149,13 +177,17 @@ class QuotientClient:
             self.api_key = None
             return "No API key set"
         try:
-            response = self.supaclient.table('api_keys').select("*").execute()
+            response = self.supaclient.table("api_keys").select("*").execute()
             # TODO: JWT tid filter
-            return response.data[0]['key_name']
+            return response.data[0]["key_name"]
         except PostgrestAPIError as api_err:
-            raise QuotientAIException(f"Failed to get API key information: {api_err.message} ({api_err.code})") from api_err
+            raise QuotientAIException(
+                f"Failed to get API key information: {api_err.message} ({api_err.code})"
+            ) from api_err
         except Exception as e:
-            raise QuotientAIException(f"Failed to get API key information: {str(e)}") from e
+            raise QuotientAIException(
+                f"Failed to get API key information: {str(e)}"
+            ) from e
 
     def remove_api_key(self):
         self.api_key = None
@@ -166,21 +198,27 @@ class QuotientClient:
 
     def list_api_keys(self):
         try:
-            response = self.supaclient.table('api_keys').select("*").execute()
+            response = self.supaclient.table("api_keys").select("*").execute()
             if not response.data:
                 raise ValueError("API keys not returned")
             return response.data
         except PostgrestAPIError as api_err:
-            raise QuotientAIException(f"Failed to list API keys: {api_err.message} ({api_err.code})") from api_err
+            raise QuotientAIException(
+                f"Failed to list API keys: {api_err.message} ({api_err.code})"
+            ) from api_err
         except Exception as e:
             raise QuotientAIException(f"Failed to list API keys: {str(e)}") from e
 
     def revoke_api_key(self, key_name: str):
         try:
-            self.supaclient.table('api_keys').update({ "revoked": True }).eq('key_name', key_name).execute()
+            self.supaclient.table("api_keys").update({"revoked": True}).eq(
+                "key_name", key_name
+            ).execute()
             return f"API key {key_name} revoked successfully"
         except PostgrestAPIError as api_err:
-            raise QuotientAIException(f"Failed to revoke API key: {api_err.message} ({api_err.code})") from api_err
+            raise QuotientAIException(
+                f"Failed to revoke API key: {api_err.message} ({api_err.code})"
+            ) from api_err
         except Exception as e:
             raise QuotientAIException(f"Failed to revoke API key: {str(e)}") from e
 
@@ -197,7 +235,9 @@ class QuotientClient:
             data = query.execute()
             return data.data
         except PostgrestAPIError as api_err:
-            raise QuotientAIException(f"Failed to list models: {api_err.message} ({api_err.code})") from api_err
+            raise QuotientAIException(
+                f"Failed to list models: {api_err.message} ({api_err.code})"
+            ) from api_err
         except Exception as e:
             raise QuotientAIException(f"Failed to list models: {str(e)}") from e
 
@@ -214,9 +254,13 @@ class QuotientClient:
             data = query.execute()
             return data.data
         except PostgrestAPIError as api_err:
-            raise QuotientAIException(f"Failed to list prompt templates: {api_err.message} ({api_err.code})") from api_err
+            raise QuotientAIException(
+                f"Failed to list prompt templates: {api_err.message} ({api_err.code})"
+            ) from api_err
         except Exception as e:
-            raise QuotientAIException(f"Failed to list prompt templates: {str(e)}") from e
+            raise QuotientAIException(
+                f"Failed to list prompt templates: {str(e)}"
+            ) from e
 
     def create_prompt_template(self, template, name):
         try:
@@ -235,24 +279,39 @@ class QuotientClient:
                     response.raise_for_status()
             return result
         except FastAPIError as fast_err:
-            raise QuotientAIException(f"Failed to create prompt template: {fast_err.status_code} {fast_err.detail}") from fast_err
+            raise QuotientAIException(
+                f"Failed to create prompt template: {fast_err.status_code} {fast_err.detail}"
+            ) from fast_err
         except (ConnectionError, Timeout) as exc:
-            raise QuotientAIException("Failed to create prompt template: Network error. Please check your connection and try again.") from exc
+            raise QuotientAIException(
+                "Failed to create prompt template: Network error. Please check your connection and try again."
+            ) from exc
         except HTTPError as http_err:
-            raise QuotientAIException(f"Failed to create prompt template: Server error {http_err.response.status_code}") from http_err
+            raise QuotientAIException(
+                f"Failed to create prompt template: Server error {http_err.response.status_code}"
+            ) from http_err
         except ValueError as ve:
             raise QuotientAIException(str(ve)) from ve
 
     def delete_prompt_template(self, template_id):
         try:
-            response = self.supaclient.table("prompt_template").delete().eq("id", template_id).execute()
+            response = (
+                self.supaclient.table("prompt_template")
+                .delete()
+                .eq("id", template_id)
+                .execute()
+            )
             if not response.data:
                 raise ValueError("Prompt template not deleted (unknown error)")
             print(f"Prompt template {response.data[0]['name']} deleted")
         except PostgrestAPIError as api_err:
-            raise QuotientAIException(f"Failed to delete prompt template: {api_err.message} ({api_err.code})") from api_err
+            raise QuotientAIException(
+                f"Failed to delete prompt template: {api_err.message} ({api_err.code})"
+            ) from api_err
         except Exception as e:
-            raise QuotientAIException(f"Failed to delete prompt template: {str(e)}") from e
+            raise QuotientAIException(
+                f"Failed to delete prompt template: {str(e)}"
+            ) from e
 
     ###########################
     #         Recipes         #
@@ -269,7 +328,9 @@ class QuotientClient:
             data = query.execute()
             return data.data
         except PostgrestAPIError as api_err:
-            raise QuotientAIException(f"Failed to list recipes: {api_err.message} ({api_err.code})") from api_err
+            raise QuotientAIException(
+                f"Failed to list recipes: {api_err.message} ({api_err.code})"
+            ) from api_err
         except Exception as e:
             raise QuotientAIException(f"Failed to list recipes: {str(e)}") from e
 
@@ -294,19 +355,24 @@ class QuotientClient:
             # manually fetch the prompt template and model after create
             return self.list_recipes({"id": recipe_id})[0]
         except PostgrestAPIError as api_err:
-            raise QuotientAIException(f"Failed to create recipe: {api_err.message} ({api_err.code})") from api_err
+            raise QuotientAIException(
+                f"Failed to create recipe: {api_err.message} ({api_err.code})"
+            ) from api_err
         except Exception as e:
             raise QuotientAIException(f"Failed to create recipe: {str(e)}") from e
 
-
     def delete_recipe(self, recipe_id):
         try:
-            response = self.supaclient.table("recipe").delete().eq("id", recipe_id).execute()
+            response = (
+                self.supaclient.table("recipe").delete().eq("id", recipe_id).execute()
+            )
             if not response.data:
                 raise ValueError("Recipe not deleted (unknown error)")
             print(f"Recipe {response.data[0]['name']} deleted")
         except PostgrestAPIError as api_err:
-            raise QuotientAIException(f"Failed to delete recipe: {api_err.message} ({api_err.code})") from api_err
+            raise QuotientAIException(
+                f"Failed to delete recipe: {api_err.message} ({api_err.code})"
+            ) from api_err
         except Exception as e:
             raise QuotientAIException(f"Failed to delete recipe: {str(e)}") from e
 
@@ -323,7 +389,9 @@ class QuotientClient:
             data = query.execute()
             return data.data
         except PostgrestAPIError as api_err:
-            raise QuotientAIException(f"Failed to list datasets: {api_err.message} ({api_err.code})") from api_err
+            raise QuotientAIException(
+                f"Failed to list datasets: {api_err.message} ({api_err.code})"
+            ) from api_err
         except Exception as e:
             raise QuotientAIException(f"Failed to list datasets: {str(e)}") from e
 
@@ -374,7 +442,9 @@ class QuotientClient:
             data = query.execute()
             return data.data
         except PostgrestAPIError as api_err:
-            raise QuotientAIException(f"Failed to list tasks: {api_err.message} ({api_err.code})") from api_err
+            raise QuotientAIException(
+                f"Failed to list tasks: {api_err.message} ({api_err.code})"
+            ) from api_err
         except Exception as e:
             raise QuotientAIException(f"Failed to list tasks: {str(e)}") from e
 
@@ -422,23 +492,37 @@ class QuotientClient:
             data = query.execute()
             return data.data
         except PostgrestAPIError as api_err:
-            raise QuotientAIException(f"Failed to list jobs: {api_err.message} ({api_err.code})") from api_err
+            raise QuotientAIException(
+                f"Failed to list jobs: {api_err.message} ({api_err.code})"
+            ) from api_err
         except Exception as e:
             raise QuotientAIException(f"Failed to list jobs: {str(e)}") from e
 
     def create_job(self, task_id, recipe_id, num_fewshot_examples, limit):
-        job_data = {"task_id": task_id, "recipe_id": recipe_id, "num_fewshot_examples": num_fewshot_examples, "limit": limit}
-        job_data.update({"status": "Scheduled"})
-        job_data.update({"created_at": datetime.utcnow().isoformat()})
+        job_data = {
+            "task_id": task_id,
+            "recipe_id": recipe_id,
+            "num_fewshot_examples": num_fewshot_examples,
+            "limit": limit,
+        }
         try:
-            response = self.supaclient.table("job").insert(job_data).execute()
-            job = response.data[0]
-            job_id = job["id"]
-            # Supabase does not support returning nested objects, so we need to
-            # manually fetch the task and recipe after create
-            return self.list_jobs({"id": job_id})[0]
-        except PostgrestAPIError as api_err:
-            raise QuotientAIException(f"Failed to create job: {api_err.message} ({api_err.code})") from api_err
+            url = f"{self.eval_scheduler_url}/create-eval-job"
+            headers = {
+                "Authorization": f"Bearer {self.api_key}",
+                "Accept": "application/json",
+            }
+            response = requests.post(url, headers=headers, params=job_data)
+            result = response.json()
+            if response.status_code != 200:
+                if "detail" in result:
+                    raise FastAPIError(response.status_code, result["detail"])
+                else:
+                    response.raise_for_status()
+            return result
+        except FastAPIError as fast_err:
+            raise QuotientAIException(
+                f"Failed to create job: {fast_err.status_code} {fast_err.detail}"
+            ) from fast_err
         except Exception as e:
             raise QuotientAIException(f"Failed to create job: {str(e)}") from e
 
@@ -454,8 +538,12 @@ class QuotientClient:
             results = response.json()
             return results
         except (ConnectionError, Timeout) as exc:
-            raise QuotientAIException("Failed to get eval results: Network error. Please check your connection and try again.") from exc
+            raise QuotientAIException(
+                "Failed to get eval results: Network error. Please check your connection and try again."
+            ) from exc
         except HTTPError as http_err:
-            raise QuotientAIException(f"Failed to get eval results: Server error {http_err.response.status_code}") from http_err
+            raise QuotientAIException(
+                f"Failed to get eval results: Server error {http_err.response.status_code}"
+            ) from http_err
         except ValueError as ve:
             raise QuotientAIException(str(ve)) from ve
