@@ -58,7 +58,7 @@ def authenticate():
             click.echo("API key found in environment variables. Setting up client with API key.")
             return
         email = click.prompt("Enter your account email", type=str)
-        password = click.prompt("Enter your account password", type=str)  
+        password = click.prompt("Enter your account password", type=str)
         login_result = client.login(email, password)
         if "Login failed" in login_result:
             click.echo("Login failed. Please check your credentials and try again.")
@@ -75,7 +75,7 @@ def authenticate():
     except QuotientAIException as e:
         click.echo(str(e))
 
-    
+
 
 @auth.command(name="get-key")
 def get_key():
@@ -114,7 +114,7 @@ def revoke_key(key_name):
 ###########################
 #        API keys         #
 ###########################
-        
+
 @list.command(name="api-keys")
 def list_api_keys():
     """Command to get all models with optional filters."""
@@ -285,6 +285,27 @@ def list_datasets(filter):
     except QuotientAIException as e:
         click.echo(str(e))
 
+
+@create.command(name="dataset")
+@click.option(
+    "--file-path",
+    type=str,
+    help="File path to the dataset",
+)
+@click.option(
+    "--name",
+    type=str,
+    help="A descriptive name for the dataset.",
+)
+def create_dataset(file_path, name):
+    """Command to get all tasks with optional filters."""
+    try:
+        client = QuotientClient()
+        datasets = client.create_dataset(file_path, name)
+        print("Created dataset with the following details:")
+        print(format_datasets_table([datasets]))
+    except QuotientAIException as e:
+        click.echo(str(e))
 
 ###########################
 #          Tasks          #

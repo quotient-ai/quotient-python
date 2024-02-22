@@ -3,12 +3,12 @@ import os
 import logging
 import time
 from datetime import datetime
-
+import mimetypes
+import os
 logging.basicConfig(level=logging.WARNING)
 
 import requests
-from requests.exceptions import ConnectionError, Timeout, HTTPError
-
+from requests.exceptions import ConnectionError, Timeout, HTTPError, RequestException
 from quotientai.exceptions import (
     QuotientAIException,
     QuotientAIAuthException,
@@ -27,7 +27,7 @@ class QuotientClient:
     def __init__(self):
         # Public API key for the QuotientAI Supabase project
         self.public_api_key = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhocXBwY3FsdGtsemZwZ2dkb2NiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MDEzNTU4MzgsImV4cCI6MjAxNjkzMTgzOH0.bpOtVl7co6B4wXQqt6Ec-WCz9FuO7tpVYbTa6PLoheI"
-        
+
         # Base URL for the Supabase project
         self.supabase_url = "https://hhqppcqltklzfpggdocb.supabase.co"
 
@@ -46,7 +46,7 @@ class QuotientClient:
         if self.api_key:
             self.supaclient._auth_token = {'Authorization': f'Bearer {self.api_key}'}
 
-        
+
     def status(self):
         current_time = time.time()
         if current_time >= self.token_expiry:
@@ -56,7 +56,7 @@ class QuotientClient:
             "active_login": self.token is not None,
             "api_key": self.api_key is not None,
         }
-    
+
     def login(self, email: str, password: str) -> str:
         login_data = {"email": email, "password": password}
         login_headers = {"apikey": self.public_api_key}
@@ -100,7 +100,7 @@ class QuotientClient:
             if self.api_key:
                 return "Sign out successful. API key still in place."
             return "Sign out successful."
-        
+
         except (ConnectionError, Timeout) as exc:
             raise QuotientAIException("Sign out failed: Network error. Please check your connection and try again.") from exc
         except HTTPError as http_err:
@@ -112,23 +112,23 @@ class QuotientClient:
     ###########################
     #         API Keys        #
     ###########################
-    
+
     def create_api_key(self, key_name: str, key_lifetime: int = 30) -> str:
-        
+
         try:
             if not self.token:
                 raise ValueError("Not logged in. Please log in first.")
-            
+
             if self.api_key:
                 raise ValueError("API key already exists. Please remove it first.")
-            
+
             self.supaclient._auth_token = {'Authorization': f'Bearer {self.token}'}
             params = {"key_name": key_name, "key_lifetime": key_lifetime}
             response = self.supaclient.rpc("create_api_key", params=params).execute()
 
             if not response.data:
                 raise ValueError("API key not returned. Unknown error.")
-            
+
             self.api_key = response.data
             self.supaclient._auth_token = {'Authorization': f'Bearer {self.api_key}'}
 
@@ -138,12 +138,12 @@ class QuotientClient:
             raise QuotientAIException(f"Failed to create API key: {api_err.message} ({api_err.code})") from api_err
         except Exception as e:
             raise QuotientAIException(f"Failed to create API key: {str(e)}") from e
-    
+
     def set_api_key(self, api_key: str):
         # TODO: Check if key is valid
         self.api_key = api_key
         return f"Workspace set with API key."
-    
+
     def get_api_key(self):
         if not self.api_key:
             self.api_key = None
@@ -156,16 +156,16 @@ class QuotientClient:
             raise QuotientAIException(f"Failed to get API key information: {api_err.message} ({api_err.code})") from api_err
         except Exception as e:
             raise QuotientAIException(f"Failed to get API key information: {str(e)}") from e
-    
+
     def remove_api_key(self):
         self.api_key = None
         if self.token and self.token_expiry > time.time():
             print("API key removed. You are still logged in.")
         else:
             print("API key removed")
-    
+
     def list_api_keys(self):
-        try:     
+        try:
             response = self.supaclient.table('api_keys').select("*").execute()
             if not response.data:
                 raise ValueError("API keys not returned")
@@ -174,7 +174,7 @@ class QuotientClient:
             raise QuotientAIException(f"Failed to list API keys: {api_err.message} ({api_err.code})") from api_err
         except Exception as e:
             raise QuotientAIException(f"Failed to list API keys: {str(e)}") from e
-    
+
     def revoke_api_key(self, key_name: str):
         try:
             self.supaclient.table('api_keys').update({ "revoked": True }).eq('key_name', key_name).execute()
@@ -232,7 +232,7 @@ class QuotientClient:
                 if "detail" in result:
                     raise FastAPIError(response.status_code, result["detail"])
                 else:
-                    response.raise_for_status() 
+                    response.raise_for_status()
             return result
         except FastAPIError as fast_err:
             raise QuotientAIException(f"Failed to create prompt template: {fast_err.status_code} {fast_err.detail}") from fast_err
@@ -297,8 +297,8 @@ class QuotientClient:
             raise QuotientAIException(f"Failed to create recipe: {api_err.message} ({api_err.code})") from api_err
         except Exception as e:
             raise QuotientAIException(f"Failed to create recipe: {str(e)}") from e
-        
-    
+
+
     def delete_recipe(self, recipe_id):
         try:
             response = self.supaclient.table("recipe").delete().eq("id", recipe_id).execute()
@@ -326,6 +326,40 @@ class QuotientClient:
             raise QuotientAIException(f"Failed to list datasets: {api_err.message} ({api_err.code})") from api_err
         except Exception as e:
             raise QuotientAIException(f"Failed to list datasets: {str(e)}") from e
+
+    def create_dataset(self, file_path: str, name: str):
+        try:
+            url = f"{self.eval_scheduler_url}/upload-dataset"
+            headers = {
+                "Authorization": f"Bearer {self.api_key}",
+                "Accept": "application/json",
+            }
+
+            # Client-side file size check
+            size_threshold = 2 * 1024**3  # 2GB
+            file_size = os.path.getsize(file_path)
+            if file_size > size_threshold:
+                raise QuotientAIInvalidInputException("File size exceeds 2GB limit")
+
+            # Guess the MIME type of the file
+            mime_type, _ = mimetypes.guess_type(file_path)
+            if mime_type is None:
+                raise QuotientAIException("Could not determine the file's MIME type")
+
+            file_name = os.path.basename(file_path)
+            with open(file_path, "rb") as file:
+                files = {"file": (file_name, file, mime_type)}
+                response = requests.post(url, headers=headers, params={"name": name}, files=files)
+                response.raise_for_status()
+                dataset_id = response.json()["id"]
+                return self.list_datasets({"id": dataset_id})[0]
+        except QuotientAIInvalidInputException as e:
+            raise QuotientAIException(f"Failed to create dataset: {str(e)}") from e
+        except RequestException as e:
+            raise QuotientAIException(f"Failed to upload dataset: {e.response.text}") from e
+        except Exception as e:
+            raise QuotientAIException(f"Failed to create dataset: {str(e)}") from e
+
 
     ###########################
     #          Tasks          #
@@ -385,7 +419,7 @@ class QuotientClient:
                 "Accept": "application/json",
             }
             response = requests.get(url, headers=headers, params={"job_id": job_id})
-            response.raise_for_status() 
+            response.raise_for_status()
             results = response.json()
             return results
         except (ConnectionError, Timeout) as exc:
