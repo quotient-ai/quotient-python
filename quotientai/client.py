@@ -3,12 +3,12 @@ import os
 import logging
 import time
 from datetime import datetime
-
+import mimetypes
+import os
 logging.basicConfig(level=logging.WARNING)
 
 import requests
-from requests.exceptions import ConnectionError, Timeout, HTTPError
-
+from requests.exceptions import ConnectionError, Timeout, HTTPError, RequestException
 from quotientai.exceptions import (
     QuotientAIException,
     QuotientAIAuthException,
@@ -395,6 +395,40 @@ class QuotientClient:
         except Exception as e:
             raise QuotientAIException(f"Failed to list datasets: {str(e)}") from e
 
+    def create_dataset(self, file_path: str, name: str):
+        try:
+            url = f"{self.eval_scheduler_url}/upload-dataset"
+            headers = {
+                "Authorization": f"Bearer {self.api_key}",
+                "Accept": "application/json",
+            }
+
+            # Client-side file size check
+            size_threshold = 2 * 1024**3  # 2GB
+            file_size = os.path.getsize(file_path)
+            if file_size > size_threshold:
+                raise QuotientAIInvalidInputException("File size exceeds 2GB limit")
+
+            # Guess the MIME type of the file
+            mime_type, _ = mimetypes.guess_type(file_path)
+            if mime_type is None:
+                raise QuotientAIException("Could not determine the file's MIME type. Make sure your file is a `.csv` and try again")
+
+            file_name = os.path.basename(file_path)
+            with open(file_path, "rb") as file:
+                files = {"file": (file_name, file, mime_type)}
+                response = requests.post(url, headers=headers, params={"name": name}, files=files)
+                response.raise_for_status()
+                dataset_id = response.json()["id"]
+                return self.list_datasets({"id": dataset_id})[0]
+        except QuotientAIInvalidInputException as e:
+            raise QuotientAIException(f"Failed to create dataset: {str(e)}") from e
+        except RequestException as e:
+            raise QuotientAIException(f"Failed to upload dataset: {e.response.text}") from e
+        except Exception as e:
+            raise QuotientAIException(f"Failed to create dataset: {str(e)}") from e
+
+
     ###########################
     #          Tasks          #
     ###########################
@@ -413,6 +447,37 @@ class QuotientClient:
             ) from api_err
         except Exception as e:
             raise QuotientAIException(f"Failed to list tasks: {str(e)}") from e
+
+    def create_task(self, dataset_id, name, task_type):
+        try:
+            task_data = {
+                "dataset_id": dataset_id,
+                "name": name,
+                "metrics": [
+                    "f1_score",
+                    "rouge",
+                    "sacrebleu",
+                    "jaccard_similarity",
+                    "exact_match",
+                    "normalized_exact_match",
+                ], # to be removed once metrics moves off the task
+                "task_type": task_type,
+                "created_at": datetime.utcnow().isoformat(),
+            }
+            response = self.supaclient.table("task").insert(task_data).execute()
+            if not response.data:
+                raise ValueError("Task creation failed, no data returned.")
+            task_id = response.data[0]["id"]
+            # Supabase does not support returning nested objects, so we need to
+            # manually fetch the dataset after create
+            return self.list_tasks({"id": task_id})[0]
+
+        except ValueError as e:
+            raise QuotientAIException(f"Failed to create task: {e}") from e
+        except Exception as e:
+            # Catch-all for unexpected errors
+            raise QuotientAIException(f"An unexpected error occurred during task creation: {str(e)}") from e
+
 
     ###########################
     #          Jobs           #
@@ -471,7 +536,7 @@ class QuotientClient:
             response = requests.get(url, headers=headers, params={"job_id": job_id})
             response.raise_for_status()
             results = response.json()
-            return results[0]
+            return results
         except (ConnectionError, Timeout) as exc:
             raise QuotientAIException(
                 "Failed to get eval results: Network error. Please check your connection and try again."

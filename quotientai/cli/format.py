@@ -182,7 +182,6 @@ def format_tasks_table(data):
         "ID",
         "Task Name",
         "Dataset ID",
-        "Dataset Name",
         "Task Type",
         "Owner",
     ]
@@ -192,13 +191,12 @@ def format_tasks_table(data):
         id = item["id"]
         task_name = item["name"]
         dataset_id = item["dataset_id"]
-        dataset_name = item["dataset_name"]
         task_type = item["task_type"]
         owner = (
             item["owner_profile_id"] if item["owner_profile_id"] is not None else "Open to all"
         )
         table.add_row(
-            [id, task_name, dataset_id, dataset_name, task_type, owner]
+            [id, task_name, dataset_id, task_type, owner]
         )
 
     return table
