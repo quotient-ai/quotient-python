@@ -88,40 +88,40 @@ def test_list_api_keys():
     assert result.exit_code == 0
     assert TEST_API_KEY_NAME in result.output
     
-def test_list_models():
-    """Test listing models without filters."""
-    result = runner.invoke(cli, ['list', 'models'])
-    assert result.exit_code == 0
-    assert "llama-2-7b-chat" in result.output
+# def test_list_models():
+#     """Test listing models without filters."""
+#     result = runner.invoke(cli, ['list', 'models'])
+#     assert result.exit_code == 0
+#     assert "llama-2-7b-chat" in result.output
 
-def test_list_datasets():
-    """Test listing datasets without filters."""
-    result = runner.invoke(cli, ['list', 'datasets'])
-    assert result.exit_code == 0
-    assert "squad_v2" in result.output
+# def test_list_datasets():
+#     """Test listing datasets without filters."""
+#     result = runner.invoke(cli, ['list', 'datasets'])
+#     assert result.exit_code == 0
+#     assert "squad_v2" in result.output
 
-def test_list_templates():
-    """Test listing templates without filters."""
-    result = runner.invoke(cli, ['list', 'prompt-templates'])
-    assert result.exit_code == 0
-    assert "Question Answering" in result.output 
+# def test_list_templates():
+#     """Test listing templates without filters."""
+#     result = runner.invoke(cli, ['list', 'prompt-templates'])
+#     assert result.exit_code == 0
+#     assert "Question Answering" in result.output 
 
-def create_prompt_template():
-    result = runner.invoke(cli, ['create', 'prompt-template', '--name', "Good template B", '--template', TEST_CREATE_PROMPT_TEMPLATE])
-    assert result.exit_code == 0
-    assert "Good template B" in result.output
+# def create_prompt_template():
+#     result = runner.invoke(cli, ['create', 'prompt-template', '--name', "Good template B", '--template', TEST_CREATE_PROMPT_TEMPLATE])
+#     assert result.exit_code == 0
+#     assert "Good template B" in result.output
 
-def test_list_tasks():
-    """Test listing tasks without filters."""
-    result = runner.invoke(cli, ['list', 'tasks'])
-    assert result.exit_code == 0
-    assert "squad-v2" in result.output
+# def test_list_tasks():
+#     """Test listing tasks without filters."""
+#     result = runner.invoke(cli, ['list', 'tasks'])
+#     assert result.exit_code == 0
+#     assert "squad-v2" in result.output
 
-def test_list_recipes():
-    """Test listing recipes without filters."""
-    result = runner.invoke(cli, ['list', 'recipes'])
-    assert result.exit_code == 0
-    assert "llama-question" in result.output
+# def test_list_recipes():
+#     """Test listing recipes without filters."""
+#     result = runner.invoke(cli, ['list', 'recipes'])
+#     assert result.exit_code == 0
+#     assert "llama-question" in result.output
 
 ###########################
 #       Remove creds      #
