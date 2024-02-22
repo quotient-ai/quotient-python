@@ -344,7 +344,7 @@ class QuotientClient:
             # Guess the MIME type of the file
             mime_type, _ = mimetypes.guess_type(file_path)
             if mime_type is None:
-                raise QuotientAIException("Could not determine the file's MIME type")
+                raise QuotientAIException("Could not determine the file's MIME type. Make sure your file is a `.csv` and try again")
 
             file_name = os.path.basename(file_path)
             with open(file_path, "rb") as file:
