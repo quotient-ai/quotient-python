@@ -506,7 +506,7 @@ class QuotientClient:
             "limit": limit,
         }
         try:
-            url = f"{self.eval_scheduler_url}/submit-eval-job"
+            url = f"{self.eval_scheduler_url}/create-eval-job"
             headers = {
                 "Authorization": f"Bearer {self.api_key}",
                 "Accept": "application/json",
