@@ -512,7 +512,7 @@ class QuotientClient:
                     response.raise_for_status()
             job_id = result["id"]
             # Supabase does not support returning nested objects, so we need to
-            # manually fetch the dataset after create
+            # manually fetch the task after create
             return self.list_jobs({"id": job_id})[0]
         except FastAPIError as fast_err:
             raise QuotientAIException(
