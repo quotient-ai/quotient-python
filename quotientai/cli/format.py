@@ -25,11 +25,8 @@ def format_models_table(data):
         owner_id = (
             item["owner_profile_id"] if item["owner_profile_id"] is not None else "Open to all"
         )
-        # XXX Hack for focus group.
-        if item["model_type"] == "placeholder":
-            provider = "OpenAI"
-        else:
-            provider = "HuggingFace"
+        provider = item["model_type"]
+        
         table.add_row(
             [
                 item["id"],
