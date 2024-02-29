@@ -510,7 +510,6 @@ class QuotientClient:
                     raise FastAPIError(response.status_code, result["detail"])
                 else:
                     response.raise_for_status()
-            # return result
             job_id = result["id"]
             # Supabase does not support returning nested objects, so we need to
             # manually fetch the dataset after create
