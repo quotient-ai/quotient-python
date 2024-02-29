@@ -453,14 +453,6 @@ class QuotientClient:
             task_data = {
                 "dataset_id": dataset_id,
                 "name": name,
-                "metrics": [
-                    "f1_score",
-                    "rouge",
-                    "sacrebleu",
-                    "jaccard_similarity",
-                    "exact_match",
-                    "normalized_exact_match",
-                ], # to be removed once metrics moves off the task
                 "task_type": task_type,
                 "created_at": datetime.utcnow().isoformat(),
             }
@@ -518,7 +510,10 @@ class QuotientClient:
                     raise FastAPIError(response.status_code, result["detail"])
                 else:
                     response.raise_for_status()
-            return result
+            job_id = result["id"]
+            # Supabase does not support returning nested objects, so we need to
+            # manually fetch the task after create
+            return self.list_jobs({"id": job_id})[0]
         except FastAPIError as fast_err:
             raise QuotientAIException(
                 f"Failed to create job: {fast_err.status_code} {fast_err.detail}"
