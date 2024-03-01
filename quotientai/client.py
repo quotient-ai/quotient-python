@@ -48,6 +48,14 @@ class QuotientClient:
         if self.api_key:
             self.supaclient._auth_token = {"Authorization": f"Bearer {self.api_key}"}
 
+    def require_api_key(func):
+        """Decorator to ensure an API key is present before calling the function."""
+        def wrapper(self, *args, **kwargs):
+            if not self.supaclient._auth_token.get("Authorization"):
+                raise QuotientAIException("Invalid request: Missing API key")
+            return func(self, *args, **kwargs)
+        return wrapper
+
     def status(self):
         current_time = time.time()
         if current_time >= self.token_expiry:
@@ -196,6 +204,7 @@ class QuotientClient:
         else:
             print("API key removed")
 
+    @require_api_key
     def list_api_keys(self):
         try:
             response = self.supaclient.table("api_keys").select("*").execute()
@@ -209,6 +218,7 @@ class QuotientClient:
         except Exception as e:
             raise QuotientAIException(f"Failed to list API keys: {str(e)}") from e
 
+    @require_api_key
     def revoke_api_key(self, key_name: str):
         try:
             self.supaclient.table("api_keys").update({"revoked": True}).eq(
@@ -226,6 +236,7 @@ class QuotientClient:
     #         Models          #
     ###########################
 
+    @require_api_key
     def list_models(self, filters=None):
         try:
             query = self.supaclient.table("model").select("*")
@@ -245,6 +256,7 @@ class QuotientClient:
     #     Prompt Templates    #
     ###########################
 
+    @require_api_key
     def list_prompt_templates(self, filters=None):
         try:
             query = self.supaclient.table("prompt_template").select("*")
@@ -262,6 +274,7 @@ class QuotientClient:
                 f"Failed to list prompt templates: {str(e)}"
             ) from e
 
+    @require_api_key
     def create_prompt_template(self, template, name):
         try:
             url = f"{self.eval_scheduler_url}/create-prompt-template"
@@ -293,6 +306,7 @@ class QuotientClient:
         except ValueError as ve:
             raise QuotientAIException(str(ve)) from ve
 
+    @require_api_key
     def delete_prompt_template(self, template_id):
         try:
             response = (
@@ -317,6 +331,7 @@ class QuotientClient:
     #         Recipes         #
     ###########################
 
+    @require_api_key
     def list_recipes(self, filters=None):
         try:
             query = self.supaclient.table("recipe").select(
@@ -334,6 +349,7 @@ class QuotientClient:
         except Exception as e:
             raise QuotientAIException(f"Failed to list recipes: {str(e)}") from e
 
+    @require_api_key
     def create_recipe(
         self,
         model_id: int,
@@ -361,6 +377,7 @@ class QuotientClient:
         except Exception as e:
             raise QuotientAIException(f"Failed to create recipe: {str(e)}") from e
 
+    @require_api_key
     def delete_recipe(self, recipe_id):
         try:
             response = (
@@ -380,6 +397,7 @@ class QuotientClient:
     #         Datasets        #
     ###########################
 
+    @require_api_key
     def list_datasets(self, filters=None):
         try:
             query = self.supaclient.table("dataset").select("*")
@@ -395,6 +413,7 @@ class QuotientClient:
         except Exception as e:
             raise QuotientAIException(f"Failed to list datasets: {str(e)}") from e
 
+    @require_api_key
     def create_dataset(self, file_path: str, name: str):
         try:
             url = f"{self.eval_scheduler_url}/upload-dataset"
@@ -433,6 +452,7 @@ class QuotientClient:
     #          Tasks          #
     ###########################
 
+    @require_api_key
     def list_tasks(self, filters=None):
         try:
             query = self.supaclient.table("task").select("*,dataset(*)")
@@ -448,6 +468,7 @@ class QuotientClient:
         except Exception as e:
             raise QuotientAIException(f"Failed to list tasks: {str(e)}") from e
 
+    @require_api_key
     def create_task(self, dataset_id, name, task_type):
         try:
             task_data = {
@@ -475,6 +496,7 @@ class QuotientClient:
     #          Jobs           #
     ###########################
 
+    @require_api_key
     def list_jobs(self, filters=None):
         try:
             query = self.supaclient.table("job").select("*,task(*),recipe(*)")
@@ -490,6 +512,7 @@ class QuotientClient:
         except Exception as e:
             raise QuotientAIException(f"Failed to list jobs: {str(e)}") from e
 
+    @require_api_key
     def create_job(self, task_id, recipe_id, num_fewshot_examples, limit):
         job_data = {
             "task_id": task_id,
@@ -521,6 +544,7 @@ class QuotientClient:
         except Exception as e:
             raise QuotientAIException(f"Failed to create job: {str(e)}") from e
 
+    @require_api_key
     def get_eval_results(self, job_id):
         try:
             url = f"{self.eval_scheduler_url}/get-eval-results"
