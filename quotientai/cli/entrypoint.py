@@ -502,11 +502,14 @@ def list_results(job_id):
     help="Number of few-shot examples.",
 )
 @click.option("--limit", type=int, help="Limit for the job (optional).")
-def create_job(task_id, recipe_id, num_fewshot_examples, limit):
+@click.option("--seed", type=int, help="Seed for the job (optional).")
+def create_job(task_id, recipe_id, num_fewshot_examples, limit, seed):
     """Command to create a new job."""
     try:
         client = QuotientClient()
-        new_job = client.create_job(task_id, recipe_id, num_fewshot_examples, limit)
+        new_job = client.create_job(
+            task_id, recipe_id, num_fewshot_examples, limit, seed
+        )
         print(format_jobs_table([new_job]))
     except QuotientAIException as e:
         click.echo(str(e))

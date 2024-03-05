@@ -588,12 +588,13 @@ class QuotientClient:
             raise QuotientAIException(f"Failed to list jobs: {str(e)}") from e
 
     @require_api_key
-    def create_job(self, task_id, recipe_id, num_fewshot_examples, limit):
+    def create_job(self, task_id, recipe_id, num_fewshot_examples, limit, seed=None):
         job_data = {
             "task_id": task_id,
             "recipe_id": recipe_id,
             "num_fewshot_examples": num_fewshot_examples,
             "limit": limit,
+            "seed": seed,
         }
         try:
             url = f"{self.eval_scheduler_url}/create-eval-job"
