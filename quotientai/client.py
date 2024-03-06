@@ -418,6 +418,7 @@ class QuotientClient:
         self,
         model_id: int,
         prompt_template_id: int,
+        system_prompt_id: int | None = None,
         name: str = None,
         description: str = None,
     ):
@@ -427,6 +428,8 @@ class QuotientClient:
             recipe.update({"name": name})
         if description:
             recipe.update({"description": description})
+        if system_prompt_id:
+            recipe.update({"system_prompt_id": system_prompt_id})
         try:
             response = self.supaclient.table("recipe").insert(recipe).execute()
             recipe_response = response.data[0]
