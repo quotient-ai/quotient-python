@@ -62,6 +62,20 @@ def wrap_text(text, max_width):
     return "\n".join(textwrap.wrap(text, max_width))
 
 
+def format_system_prompt_table(data):
+    table = PrettyTable()
+    table.field_names = ["ID", "Name", "Message String", "Owner"]
+
+    # Add rows to the table
+    for item in data:
+        owner_id = (
+            item["owner_profile_id"] if item["owner_profile_id"] is not None else "Open to all"
+        )
+        sanitized_template = sanitize_string(item["message_string"])
+        table.add_row([item["id"], item["name"], sanitized_template, owner_id])
+
+    return table
+
 def format_prompt_template_table(data):
     table = PrettyTable()
     table.field_names = ["ID", "Name", "Template String", "Owner"]

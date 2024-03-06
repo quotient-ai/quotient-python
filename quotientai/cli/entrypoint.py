@@ -7,6 +7,7 @@ from quotientai.cli.format import (
     format_jobs_table,
     format_models_table,
     format_prompt_template_table,
+    format_system_prompt_table,
     format_recipes_table,
     format_results_summary_table,
     format_results_table,
@@ -149,6 +150,68 @@ def list_models(filter):
         print(format_models_table(models))
     except QuotientAIException as e:
         click.echo(str(e))
+
+
+###########################
+#      System Prompts     #
+###########################
+
+
+@list.command(name="system-prompts")
+@click.option(
+    "--filter",
+    "-f",
+    multiple=True,
+    type=(str, str),
+    help="Add filters as key-value pairs.",
+)
+def list_system_prompts(filter):
+    """Command to get all prompt templates with optional filters."""
+    try:
+        # Convert tuple filters into a dictionary
+        filter_dict = {key: value for key, value in filter}
+        client = QuotientClient()
+        system_prompts = client.list_system_prompts(filter_dict)
+        print(format_system_prompt_table(system_prompts))
+    except QuotientAIException as e:
+        click.echo(str(e))
+
+
+@create.command(name="system-prompt")
+@click.option(
+    "--system-prompt",
+    type=str,
+    help="Message string to use when sending samples to the model",
+)
+@click.option("--name", type=str, help="A descriptive name for the system prompt.")
+def create_system_prompt(system_prompt, name):
+    """Command to create a new system prompt."""
+    try:
+        client = QuotientClient()
+        system_prompt = client.create_system_prompt(system_prompt, name)
+        print("Created system prompt with the following details:")
+        print(format_system_prompt_table([system_prompt]))
+    except QuotientAIException as e:
+        click.echo(str(e))
+
+
+@delete.command(name="system-prompt")
+@click.option(
+    "--system-prompt-id",
+    required=True,
+    type=int,
+    help="system prompt ID to delete.",
+)
+def delete_system_prompt(system_prompt_id):
+    """Command to delete a system prompt."""
+    try:
+        client = QuotientClient()
+        deleted_system_prompt = client.delete_system_prompt(system_prompt_id)
+        print("Removed system prompt with the following details:")
+        print(format_system_prompt_table(deleted_system_prompt))
+    except QuotientAIException as e:
+        click.echo(str(e))
+
 
 ###########################
 #     Prompt Templates    #

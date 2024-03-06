@@ -14,6 +14,7 @@ from .constants import (
     TEST_INVALID_PASSWORD, 
     TEST_USER_PASSWORD, 
     TEST_API_KEY_NAME, 
+    TEST_CREATE_SYSTEM_PROMPT,
     TEST_BAD_PROMPT_TEMPLATE,
     TEST_CREATE_PROMPT_TEMPLATE, 
     TEST_USER_ID, 
@@ -32,6 +33,7 @@ client = QuotientClient()
 def test_ids():
     keys = {
         'test_template_id': None,
+        'test_prompt_id': None,
         'test_recipe_id': None,
         'test_job_id': None
     }
@@ -117,14 +119,36 @@ def test_list_models():
     models = client.list_models()
     assert models is not None, "Expected models to be returned"
     assert isinstance(models, list), "Expected models to be a list"
+    assert len(models) > 0, "Expected at least one model to be returned"
     for model in models:
         assert isinstance(model, dict), "Expected each model to be an object"
         assert 'id' in model, "Expected each model to have an 'id' field"
+
+def test_list_system_prompts():
+    system_prompts = client.list_system_prompts()
+    assert system_prompts is not None, "Expected system prompts to be returned"
+    assert isinstance(system_prompts, list), "Expected system prompts to be a list"
+    assert len(system_prompts) > 0, "Expected at least one system prompt to be returned"
+    for prompt in system_prompts:
+        assert isinstance(prompt, dict), "Expected each prompt to be an object"
+        assert 'id' in prompt, "Expected each prompt to have an 'id' field"
+
+def test_create_system_prompt(test_ids):
+    system_prompt = client.create_system_prompt(TEST_CREATE_SYSTEM_PROMPT, "New system prompt")
+    assert system_prompt is not None, "system prompt was not created"
+    assert isinstance(system_prompt, dict), "Expected system prompt to be an object"
+    assert 'message_string' in system_prompt, "Expected system prompt to have a 'message_string' field"
+    test_ids['test_prompt_id'] = system_prompt['id']
+
+def test_delete_system_prompt(test_ids):
+    response = client.delete_system_prompt(test_ids['test_prompt_id'])
+    assert response is None, "Expected system prompt to be deleted"
 
 def test_list_prompt_templates():
     prompt_templates = client.list_prompt_templates()
     assert prompt_templates is not None, "Expected prompt templates to be returned"
     assert isinstance(prompt_templates, list), "Expected prompt templates to be a list"
+    assert len(prompt_templates) > 0, "Expected at least one prompt template to be returned"
     for prompt in prompt_templates:
         assert isinstance(prompt, dict), "Expected each prompt to be an object"
         assert 'id' in prompt, "Expected each prompt to have an 'id' field"

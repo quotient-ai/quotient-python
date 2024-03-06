@@ -253,6 +253,70 @@ class QuotientClient:
             raise QuotientAIException(f"Failed to list models: {str(e)}") from e
 
     ###########################
+    #     System Prompts     #
+    ###########################
+
+    @require_api_key
+    def list_system_prompts(self, filters=None):
+        try:
+            query = self.supaclient.table("system_prompt").select("*")
+            if filters:
+                for key, value in filters.items():
+                    query = query.eq(key, value)
+            data = query.execute()
+            return data.data
+        except PostgrestAPIError as api_err:
+            raise QuotientAIException(
+                f"Failed to list system prompts: {api_err.message} ({api_err.code})"
+            ) from api_err
+        except Exception as e:
+            raise QuotientAIException(
+                f"Failed to list system prompts: {str(e)}"
+            ) from e
+
+    @require_api_key
+    def create_system_prompt(self, message_string: str, name: str):
+        try:
+            params = {
+                "name": name,
+                "message_string": message_string,
+                "created_at": datetime.utcnow().isoformat(),
+            }
+            response = self.supaclient.table("system_prompt").insert(params).execute()
+
+            if not response.data:
+                raise ValueError("System prompt record not returned. Unknown error.")
+
+            return response.data
+        except PostgrestAPIError as api_err:
+            raise QuotientAIException(
+                f"Failed to create system prompt: {api_err.message} ({api_err.code})"
+            ) from api_err
+        except Exception as e:
+            raise QuotientAIException(f"Failed to create system prompt: {str(e)}") from e
+
+    @require_api_key
+    def delete_system_prompt(self, system_prompt_id: int):
+        try:
+            response = (
+                self.supaclient.table("system_prompt")
+                .delete()
+                .eq("id", system_prompt_id)
+                .execute()
+            )
+            if not response.data:
+                raise ValueError("system prompt not deleted (unknown error)")
+            print(f"system prompt {response.data[0]['name']} deleted")
+        except PostgrestAPIError as api_err:
+            raise QuotientAIException(
+                f"Failed to delete system prompt: {api_err.message} ({api_err.code})"
+            ) from api_err
+        except Exception as e:
+            raise QuotientAIException(
+                f"Failed to delete system prompt: {str(e)}"
+            ) from e
+        
+    ###########################
     #     Prompt Templates    #
     ###########################
 

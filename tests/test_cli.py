@@ -8,6 +8,7 @@ from .constants import (
     TEST_API_KEY_NAME, 
     TEST_USER_EMAIL, 
     TEST_USER_PASSWORD, 
+    TEST_CREATE_SYSTEM_PROMPT,
     TEST_CREATE_PROMPT_TEMPLATE, 
     TEST_USER_ID, 
     SUPABASE_URL, 
@@ -37,6 +38,7 @@ def cleanup():
     profile_id = response.data[0]['id']
     client.table('api_keys').delete().eq('user_id', TEST_USER_ID).execute()
     client.table('prompt_template').delete().eq('owner_profile_id', profile_id).execute()
+    client.table('system_prompt').delete().eq('owner_profile_id', profile_id).execute()
     print("CLI tests cleanup completed")
 
 ###########################
@@ -92,13 +94,24 @@ def test_list_models():
     """Test listing models without filters."""
     result = runner.invoke(cli, ['list', 'models'])
     assert result.exit_code == 0
-    assert "llama-2-7b-chat" in result.output
+    assert "Llama-2-7b-chat" in result.output
 
 def test_list_datasets():
     """Test listing datasets without filters."""
     result = runner.invoke(cli, ['list', 'datasets'])
     assert result.exit_code == 0
     assert "squad_v2" in result.output
+
+def test_list_prompts():
+    """Test listing system prompts without filters."""
+    result = runner.invoke(cli, ['list', 'system-prompts'])
+    assert result.exit_code == 0
+    assert "Default System Prompt" in result.output 
+
+def create_system_prompt():
+    result = runner.invoke(cli, ['create', 'system-prompt', '--name', "Good system prompt", '--message_string', TEST_CREATE_SYSTEM_PROMPT])
+    assert result.exit_code == 0
+    assert "Good system prompt" in result.output
 
 def test_list_templates():
     """Test listing templates without filters."""
