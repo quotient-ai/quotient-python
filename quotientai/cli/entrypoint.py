@@ -322,7 +322,11 @@ def create_recipe(model_id, prompt_template_id, system_prompt_id, name, descript
     try:
         client = QuotientClient()
         new_recipe = client.create_recipe(
-            model_id, prompt_template_id, system_prompt_id, name, description
+            model_id=model_id,
+            prompt_template_id=prompt_template_id,
+            system_prompt_id=system_prompt_id,
+            name=name,
+            description=description
         )
         print("Created recipe with the following details:")
         print(format_recipes_table([new_recipe]))
