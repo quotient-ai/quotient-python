@@ -307,16 +307,26 @@ def list_recipes(filter):
     type=int,
     help="Prompt Template ID for the recipe.",
 )
+@click.option(
+    "--system-prompt-id",
+    required=False,
+    type=int,
+    help="System prompt ID for the recipe.",
+)
 @click.option("--name", required=True, type=str, help="A name for the recipe.")
 @click.option(
     "--description", required=True, type=str, help="A description for the recipe."
 )
-def create_recipe(model_id, prompt_template_id, name, description):
+def create_recipe(model_id, prompt_template_id, system_prompt_id, name, description):
     """Command to create a new recie."""
     try:
         client = QuotientClient()
         new_recipe = client.create_recipe(
-            model_id, prompt_template_id, name, description
+            model_id=model_id,
+            prompt_template_id=prompt_template_id,
+            system_prompt_id=system_prompt_id,
+            name=name,
+            description=description
         )
         print("Created recipe with the following details:")
         print(format_recipes_table([new_recipe]))
