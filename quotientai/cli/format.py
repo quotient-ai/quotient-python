@@ -258,7 +258,7 @@ def format_results_table(data):
     table = PrettyTable()
     table.field_names = ["Model Input", "Model Output", "Expected Answer"]
 
-    table_length = 20
+    table_length = 1
     cell_char_limit = 25
 
     # Add rows to the results table
