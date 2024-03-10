@@ -311,7 +311,6 @@ def save_metrics_to_file(data):
     print(f"Metrics saved to {file_name}")
 
 def save_eval_metadata_to_file(data):
-    # Extract the desired information
     selected_info = {
         "model_name": data.get("model_name"),
         "task_name": data.get("task_name"),
@@ -321,7 +320,6 @@ def save_eval_metadata_to_file(data):
         "seed": data.get("seed")
     }
 
-    # Save the selected information to a JSON file
     file_name = f"quotient-eval-metadata-{data['id']}.json"
     with open(file_name, 'w') as json_file:
         json.dump(selected_info, json_file, indent=4)
