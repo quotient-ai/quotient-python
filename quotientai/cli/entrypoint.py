@@ -12,6 +12,9 @@ from quotientai.cli.format import (
     format_results_table,
     format_system_prompt_table,
     format_tasks_table,
+    save_eval_metadata_to_file,
+    save_metrics_to_file,
+    save_results_to_file,
 )
 from quotientai.client import QuotientClient
 from quotientai.exceptions import (
@@ -477,7 +480,8 @@ def list_jobs(filter):
 
 @list.command(name="results")
 @click.option("--job-id", required=True, type=int, help="Job ID to pull results for.")
-def list_results(job_id):
+@click.option('--save', '-s', is_flag=True, help="Save results locally")
+def list_results(job_id, save):
     """Command to get results for a job."""
     try:
         client = QuotientClient()
@@ -487,6 +491,12 @@ def list_results(job_id):
         print(table)
         if has_more_results:
             print("More results available. Use the SDK to view more results")
+
+        if save:
+            save_results_to_file(results)
+            save_metrics_to_file(results)
+            save_eval_metadata_to_file(results)
+
     except QuotientAIException as e:
         click.echo(str(e))
 
