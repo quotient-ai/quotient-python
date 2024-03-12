@@ -49,8 +49,8 @@ class QuotientClient:
             self.supaclient._auth_token = {"Authorization": f"Bearer {self.api_key}"}
         else:
             raise QuotientAIAuthException(
-                "API key not found. Double check that you set your API key " 
-                "after running `quotient authenticate` from the CLI"
+                "API key not found. Double check that you set your API key as an "
+                "environment variable after running `quotient authenticate` from the CLI"
             )
 
     def require_api_key(func):
