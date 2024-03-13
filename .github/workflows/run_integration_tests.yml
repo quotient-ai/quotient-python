@@ -1,0 +1,46 @@
+name: Integration Tests
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        python-version: [3.10.13]
+
+    steps:
+    - uses: actions/checkout@v3
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v3
+      with:
+        python-version: ${{ matrix.python-version }}
+
+    - name: Install dependencies
+      run: |
+        pip install poetry==1.6.1
+        poetry config virtualenvs.create false \
+          && poetry install --no-interaction
+
+    - name: Create or overwrite .env.test file
+      run: |
+        echo "SUPABASE_URL=https://hhqppcqltklzfpggdocb.supabase.co" > .env.test
+        echo "SUPABASE_ADMIN_KEY=${{ secrets.SUPABASE_ADMIN_KEY }}" >> .env.test
+        echo "TEST_USER_EMAIL=demo@example.com" >> .env.test
+        echo "TEST_USER_PASSWORD=${{ secrets.TEST_USER_PASSWORD }}" >> .env.test
+        echo "TEST_USER_ID=d20cd6b4-2e67-43b9-b3b9-db5848a80546" >> .env.test
+        echo "TEST_INVALID_PASSWORD=wrongpassword" >> .env.test
+        echo "TEST_API_KEY_NAME=testkeynamehere" >> .env.test
+        echo "TEST_CREATE_SYSTEM_PROMPT=\"You are a Shakespearean chatbot responding to queries as King Lear.\"" >> .env.test
+        echo "TEST_BAD_PROMPT_TEMPLATE=badprompttemplate" >> .env.test
+        echo "TEST_CREATE_PROMPT_TEMPLATE=\"Customer question: {input_text}\n\nShakespearean styles: {context}\n\nAnswer as King Lear:\"" >> .env.test
+
+
+    - name: Run pytest integration tests
+      run: |
+        pytest
