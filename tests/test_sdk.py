@@ -46,7 +46,6 @@ def teardown_module():
     # Teardown code
     client = create_client(os.getenv("SUPABASE_URL"), os.getenv("SUPABASE_ADMIN_KEY"))
 
-    # test user
     response = (
         client.table("profile")
         .select("id")
@@ -59,26 +58,7 @@ def teardown_module():
     profile_id = response.data[0]["id"]
     client.table("api_keys").delete().eq("user_id", os.getenv("TEST_USER_ID")).execute()
     client.table("job").delete().eq("owner_profile_id", profile_id).execute()
-    client.table("recipe").delete().eq("owner_profile_id", profile_id).execute()
     print("SDK tests cleanup completed")
-
-    # # test user 2
-    # response = (
-    #     client.table("profile")
-    #     .select("id")
-    #     .eq("uid", os.getenv("TEST_USER_ID_2"))
-    #     .execute()
-    # )
-    # if not response.data:
-    #     print("No profile found for test user: Cleanup not done")
-    #     return
-    # profile_id = response.data[0]["id"]
-    # client.table("api_keys").delete().eq(
-    #     "user_id", os.getenv("TEST_USER_ID_2")
-    # ).execute()
-    # client.table("job").delete().eq("owner_profile_id", profile_id).execute()
-    # client.table("recipe").delete().eq("owner_profile_id", profile_id).execute()
-    # print("SDK tests cleanup completed")
 
 
 ###########################
