@@ -47,11 +47,6 @@ class QuotientClient:
         # Use API key if provided
         if self.api_key:
             self.supaclient._auth_token = {"Authorization": f"Bearer {self.api_key}"}
-        else:
-            raise QuotientAIAuthException(
-                "API key not found. Double check that you set your API key as an "
-                "environment variable after running `quotient authenticate` from the CLI"
-            )
 
     def require_api_key(func):
         """Decorator to ensure an API key is present before calling the function."""
