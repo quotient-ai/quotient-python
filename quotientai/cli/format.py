@@ -1,6 +1,9 @@
 import textwrap
 
 from prettytable import PrettyTable
+import pandas as pd
+import json
+import os
 
 
 def format_api_keys_table(data):
@@ -282,3 +285,52 @@ def format_results_table(data):
     has_more_results = len(data["results"]) > table_length
 
     return table, has_more_results
+
+
+def save_results_to_file(data):
+    data_to_frame = []
+    for item in data["results"]:
+        content = item["content"]
+        row = {
+            "id": content["id"],
+            "input_text": content["input_text"],
+            "answer": content["answer"],
+            "completion": content["completion"],
+            "context": content["context"],
+            "formatted_content": content["formatted_content"],
+        }
+        data_to_frame.append(row)
+
+    df = pd.DataFrame(data_to_frame)
+    file_name = f"quotient-results-{data['id']}.csv"
+    df.to_csv(file_name, index=False)
+    full_path = os.path.abspath(file_name)
+    print(f"Results saved to {full_path}")
+
+
+def save_metrics_to_file(data):
+    df = pd.json_normalize(data, "results")
+    df = df[df.columns[df.columns.str.contains("metric")]]
+    df.columns = df.columns.str.replace("metric.", "")
+    description = df.describe()
+    file_name = f"quotient-metrics-{data['id']}.csv"
+    description.to_csv(file_name, index=False)
+    full_path = os.path.abspath(file_name)
+    print(f"Metrics saved to {full_path}")
+
+
+def save_eval_metadata_to_file(data):
+    selected_info = {
+        "model_name": data.get("model_name"),
+        "task_name": data.get("task_name"),
+        "completed_at": data.get("completed_at"),
+        "id": data.get("id"),
+        "task_type": data.get("task_type"),
+        "seed": data.get("seed"),
+    }
+
+    file_name = f"quotient-eval-metadata-{data['id']}.json"
+    with open(file_name, "w") as json_file:
+        json.dump(selected_info, json_file, indent=4)
+    full_path = os.path.abspath(file_name)
+    print(f"Evaluation metadata saved to {full_path}")
