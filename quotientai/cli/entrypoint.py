@@ -43,7 +43,7 @@ def list():
 
 @cli.group()
 def save():
-    """Group of save commands."""
+    """Group of commands for saving data to your local disk."""
     pass
 
 
