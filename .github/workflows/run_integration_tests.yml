@@ -41,6 +41,6 @@ jobs:
         echo "TEST_CREATE_PROMPT_TEMPLATE=\"Customer question: {input_text}\n\nShakespearean styles: {context}\n\nAnswer as King Lear:\"" >> .env.test
 
 
-    - name: Run PyTest
+    - name: Run pytest integration tests
       run: |
         pytest
