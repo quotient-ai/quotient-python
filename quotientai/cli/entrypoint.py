@@ -7,28 +7,30 @@ from quotientai.cli.format import (
     format_jobs_table,
     format_models_table,
     format_prompt_template_table,
-    format_system_prompt_table,
     format_recipes_table,
     format_results_summary_table,
     format_results_table,
+    format_system_prompt_table,
     format_tasks_table,
 )
 from quotientai.client import QuotientClient
-
 from quotientai.exceptions import (
-    QuotientAIException,
     QuotientAIAuthException,
+    QuotientAIException,
     QuotientAIInvalidInputException,
 )
+
 
 @click.group()
 def cli():
     pass
 
+
 @cli.group()
 def auth():
     """Group of auth commands."""
     pass
+
 
 @cli.group()
 def list():
@@ -41,14 +43,17 @@ def create():
     """Group of create commands."""
     pass
 
+
 @cli.group()
 def delete():
     """Group of delete commands."""
     pass
 
+
 ###########################
 #          Auth           #
 ###########################
+
 
 @cli.command(name="authenticate")
 def authenticate():
@@ -56,7 +61,9 @@ def authenticate():
     try:
         client = QuotientClient()
         if client.api_key is not None:
-            click.echo("API key found in environment variables. Setting up client with API key.")
+            click.echo(
+                "API key found in environment variables. Setting up client with API key."
+            )
             return
         email = click.prompt("Enter your account email", type=str)
         password = click.prompt("Enter your account password", type=str)
@@ -64,9 +71,15 @@ def authenticate():
         if "Login failed" in login_result:
             click.echo("Login failed. Please check your credentials and try again.")
             return
-        click.echo('Login successful! Now to set an API key.')
-        key_name = click.prompt("Enter the name for your API key (12-60 chars)", type=str)
-        key_lifetime = click.prompt("Enter the lifetime for your API key (30, 60, or 90) in days", type=int, default=30)
+        click.echo("Login successful! Now to set an API key.")
+        key_name = click.prompt(
+            "Enter the name for your API key (12-60 chars)", type=str
+        )
+        key_lifetime = click.prompt(
+            "Enter the lifetime for your API key (30, 60, or 90) in days",
+            type=int,
+            default=30,
+        )
         api_key_result = client.create_api_key(key_name, key_lifetime)
         # if "Failed" in api_key_result:
         #     click.echo(api_key_result)
@@ -75,7 +88,6 @@ def authenticate():
         click.echo(api_key_result)
     except QuotientAIException as e:
         click.echo(str(e))
-
 
 
 @auth.command(name="get-key")
@@ -90,7 +102,7 @@ def get_key():
 
 
 @auth.command(name="set-key")
-@click.option('--api-key', required=True, help='API key to set.', type=str)
+@click.option("--api-key", required=True, help="API key to set.", type=str)
 def set_key(api_key):
     """Set an API key."""
     try:
@@ -102,7 +114,9 @@ def set_key(api_key):
 
 
 @auth.command(name="revoke-key")
-@click.option('--key-name', required=True, help='Name of the API key to revoke.', type=str)
+@click.option(
+    "--key-name", required=True, help="Name of the API key to revoke.", type=str
+)
 def revoke_key(key_name):
     """Revoke an API key."""
     try:
@@ -112,9 +126,11 @@ def revoke_key(key_name):
     except QuotientAIException as e:
         click.echo(str(e))
 
+
 ###########################
 #        API keys         #
 ###########################
+
 
 @list.command(name="api-keys")
 def list_api_keys():
@@ -126,6 +142,7 @@ def list_api_keys():
         print(format_api_keys_table(api_keys))
     except QuotientAIException as e:
         click.echo(str(e))
+
 
 ###########################
 #         Models          #
@@ -326,7 +343,7 @@ def create_recipe(model_id, prompt_template_id, system_prompt_id, name, descript
             prompt_template_id=prompt_template_id,
             system_prompt_id=system_prompt_id,
             name=name,
-            description=description
+            description=description,
         )
         print("Created recipe with the following details:")
         print(format_recipes_table([new_recipe]))
@@ -380,6 +397,7 @@ def create_dataset(file_path, name):
     except QuotientAIException as e:
         click.echo(str(e))
 
+
 ###########################
 #          Tasks          #
 ###########################
@@ -417,7 +435,9 @@ def list_tasks(filter):
     help="Type of task.",
     default="question_answering",
     show_default=True,
-    type=click.Choice(["question_answering", "summarization"]), # replace with enum eventually or remove
+    type=click.Choice(
+        ["question_answering", "summarization"]
+    ),  # replace with enum eventually or remove
 )
 def create_task(dataset_id, name, task_type):
     """Command to create a new task."""
@@ -427,6 +447,7 @@ def create_task(dataset_id, name, task_type):
         print(format_tasks_table([task]))
     except QuotientAIException as e:
         click.echo(str(e))
+
 
 ###########################
 #          Jobs           #
@@ -468,6 +489,7 @@ def list_results(job_id):
             print("More results available. Use the SDK to view more results")
     except QuotientAIException as e:
         click.echo(str(e))
+
 
 @create.command(name="job")
 @click.option("--task-id", required=True, type=int, help="Task ID for the job.")

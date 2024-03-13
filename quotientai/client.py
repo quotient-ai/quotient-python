@@ -1,22 +1,21 @@
 import ast
-import os
 import logging
-import time
-from datetime import datetime
 import mimetypes
 import os
+import time
+from datetime import datetime
 
 logging.basicConfig(level=logging.WARNING)
 
 import requests
-from requests.exceptions import ConnectionError, Timeout, HTTPError, RequestException
 from quotientai.exceptions import (
-    QuotientAIException,
     QuotientAIAuthException,
+    QuotientAIException,
     QuotientAIInvalidInputException,
 )
+from requests.exceptions import ConnectionError, HTTPError, RequestException, Timeout
 
-from supabase import create_client, PostgrestAPIError, PostgrestAPIResponse
+from supabase import PostgrestAPIError, PostgrestAPIResponse, create_client
 
 
 class FastAPIError(Exception):

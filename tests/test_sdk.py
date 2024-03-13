@@ -1,10 +1,12 @@
-import pytest
 import os
 import time
-from supabase import create_client
-from quotientai import QuotientClient
+
+import pytest
 from dotenv import load_dotenv
+from quotientai import QuotientClient
 from quotientai.exceptions import QuotientAIException
+
+from supabase import create_client
 
 if "QUOTIENT_API_KEY" in os.environ:
     del os.environ["QUOTIENT_API_KEY"]

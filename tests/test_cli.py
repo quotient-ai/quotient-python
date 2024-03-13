@@ -1,10 +1,11 @@
-import pytest
-from supabase import create_client
-from click.testing import CliRunner
 import os
-from quotientai import cli
-from dotenv import load_dotenv
 
+import pytest
+from click.testing import CliRunner
+from dotenv import load_dotenv
+from quotientai import cli
+
+from supabase import create_client
 
 runner = CliRunner()
 
