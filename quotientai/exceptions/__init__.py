@@ -1,5 +1,5 @@
 from quotientai.exceptions.api import (
-    QuotientAIException,
     QuotientAIAuthException,
+    QuotientAIException,
     QuotientAIInvalidInputException,
 )
