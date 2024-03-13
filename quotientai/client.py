@@ -5,6 +5,7 @@ import time
 from datetime import datetime
 import mimetypes
 import os
+
 logging.basicConfig(level=logging.WARNING)
 
 import requests
@@ -50,10 +51,12 @@ class QuotientClient:
 
     def require_api_key(func):
         """Decorator to ensure an API key is present before calling the function."""
+
         def wrapper(self, *args, **kwargs):
             if not self.supaclient._auth_token.get("Authorization"):
                 raise QuotientAIException("Invalid request: Missing API key")
             return func(self, *args, **kwargs)
+
         return wrapper
 
     def status(self):
@@ -270,9 +273,7 @@ class QuotientClient:
                 f"Failed to list system prompts: {api_err.message} ({api_err.code})"
             ) from api_err
         except Exception as e:
-            raise QuotientAIException(
-                f"Failed to list system prompts: {str(e)}"
-            ) from e
+            raise QuotientAIException(f"Failed to list system prompts: {str(e)}") from e
 
     @require_api_key
     def create_system_prompt(self, message_string: str, name: str):
@@ -287,13 +288,15 @@ class QuotientClient:
             if not response.data:
                 raise ValueError("System prompt record not returned. Unknown error.")
 
-            return response.data
+            return response.data[0]
         except PostgrestAPIError as api_err:
             raise QuotientAIException(
                 f"Failed to create system prompt: {api_err.message} ({api_err.code})"
             ) from api_err
         except Exception as e:
-            raise QuotientAIException(f"Failed to create system prompt: {str(e)}") from e
+            raise QuotientAIException(
+                f"Failed to create system prompt: {str(e)}"
+            ) from e
 
     @require_api_key
     def delete_system_prompt(self, system_prompt_id: int):
@@ -315,7 +318,7 @@ class QuotientClient:
             raise QuotientAIException(
                 f"Failed to delete system prompt: {str(e)}"
             ) from e
-        
+
     ###########################
     #     Prompt Templates    #
     ###########################
@@ -498,22 +501,27 @@ class QuotientClient:
             # Guess the MIME type of the file
             mime_type, _ = mimetypes.guess_type(file_path)
             if mime_type is None:
-                raise QuotientAIException("Could not determine the file's MIME type. Make sure your file is a `.csv` and try again")
+                raise QuotientAIException(
+                    "Could not determine the file's MIME type. Make sure your file is a `.csv` and try again"
+                )
 
             file_name = os.path.basename(file_path)
             with open(file_path, "rb") as file:
                 files = {"file": (file_name, file, mime_type)}
-                response = requests.post(url, headers=headers, params={"name": name}, files=files)
+                response = requests.post(
+                    url, headers=headers, params={"name": name}, files=files
+                )
                 response.raise_for_status()
                 dataset_id = response.json()["id"]
                 return self.list_datasets({"id": dataset_id})[0]
         except QuotientAIInvalidInputException as e:
             raise QuotientAIException(f"Failed to create dataset: {str(e)}") from e
         except RequestException as e:
-            raise QuotientAIException(f"Failed to upload dataset: {e.response.text}") from e
+            raise QuotientAIException(
+                f"Failed to upload dataset: {e.response.text}"
+            ) from e
         except Exception as e:
             raise QuotientAIException(f"Failed to create dataset: {str(e)}") from e
-
 
     ###########################
     #          Tasks          #
@@ -556,8 +564,9 @@ class QuotientClient:
             raise QuotientAIException(f"Failed to create task: {e}") from e
         except Exception as e:
             # Catch-all for unexpected errors
-            raise QuotientAIException(f"An unexpected error occurred during task creation: {str(e)}") from e
-
+            raise QuotientAIException(
+                f"An unexpected error occurred during task creation: {str(e)}"
+            ) from e
 
     ###########################
     #          Jobs           #
