@@ -588,7 +588,9 @@ class QuotientClient:
             raise QuotientAIException(f"Failed to list jobs: {str(e)}") from e
 
     @require_api_key
-    def create_job(self, task_id, recipe_id, num_fewshot_examples, limit, seed=None):
+    def create_job(
+        self, task_id, recipe_id, num_fewshot_examples=0, limit=100, seed=42
+    ):
         job_data = {
             "task_id": task_id,
             "recipe_id": recipe_id,
