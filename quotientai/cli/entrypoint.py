@@ -42,6 +42,12 @@ def list():
 
 
 @cli.group()
+def save():
+    """Group of save commands."""
+    pass
+
+
+@cli.group()
 def create():
     """Group of create commands."""
     pass
@@ -480,8 +486,7 @@ def list_jobs(filter):
 
 @list.command(name="results")
 @click.option("--job-id", required=True, type=int, help="Job ID to pull results for.")
-@click.option('--save', '-s', is_flag=True, help="Save results locally")
-def list_results(job_id, save):
+def list_results(job_id):
     """Command to get results for a job."""
     try:
         client = QuotientClient()
@@ -492,10 +497,20 @@ def list_results(job_id, save):
         if has_more_results:
             print("More results available. Use the SDK to view more results")
 
-        if save:
-            save_results_to_file(results)
-            save_metrics_to_file(results)
-            save_eval_metadata_to_file(results)
+    except QuotientAIException as e:
+        click.echo(str(e))
+
+
+@save.command(name="results")
+@click.option("--job-id", required=True, type=int, help="Job ID to pull results for.")
+def save_results(job_id):
+    """Command to save results for a job."""
+    try:
+        client = QuotientClient()
+        results = client.get_eval_results(job_id)
+        save_results_to_file(results)
+        save_metrics_to_file(results)
+        save_eval_metadata_to_file(results)
 
     except QuotientAIException as e:
         click.echo(str(e))
