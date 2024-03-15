@@ -3,16 +3,17 @@ import time
 
 import pytest
 from dotenv import load_dotenv
+from supabase import create_client
+
 from quotientai import QuotientClient
 from quotientai.exceptions import QuotientAIException
-
-from supabase import create_client
 
 if "QUOTIENT_API_KEY" in os.environ:
     del os.environ["QUOTIENT_API_KEY"]
 
 
 client = QuotientClient()
+alternate_client = QuotientClient()
 
 
 ###########################
@@ -89,6 +90,13 @@ def test_successful_login():
     result = client.login(os.getenv("TEST_USER_EMAIL"), os.getenv("TEST_USER_PASSWORD"))
     assert "Login successful" in result, "Expected login to be successful"
     assert client.token is not None, "Expected token to be set after login"
+
+    result = alternate_client.login(
+        os.getenv("TEST_USER_EMAIL_2"), os.getenv("TEST_USER_PASSWORD")
+    )
+    assert "Login successful" in result, "Expected login to be successful"
+    assert alternate_client.token is not None, "Expected token to be set after login"
+    alternate_client.create_api_key(os.getenv("TEST_API_KEY_NAME"), 60)
 
 
 def test_api_key_failure():
@@ -272,12 +280,15 @@ def test_filter_by_job_id(test_ids):
 
 
 def test_create_job_rate_limit(test_ids):
-    # Assuming the rate limit is 3 jobs per hour, create 3 more jobs to surpass the limit
-    for _ in range(2):
-        job = client.create_job(task_id=2, recipe_id=1, num_fewshot_examples=0, limit=1)
-        assert job["status"] == "Scheduled", "Expected job to be created"
+    # Assuming the rate limit is 3 jobs per hour, create 4 jobs to surpass the limit
+    for _ in range(3):
+        alternate_client.create_job(
+            task_id=2, recipe_id=1, num_fewshot_examples=0, limit=1
+        )
     with pytest.raises(QuotientAIException) as exc_info:
-        client.create_job(task_id=2, recipe_id=2, num_fewshot_examples=0, limit=1)
+        alternate_client.create_job(
+            task_id=2, recipe_id=1, num_fewshot_examples=0, limit=1
+        )
     assert "Rate limit exceeded" in str(
         exc_info.value
     ), "Expected job creation to fail with rate limit exceeded"
