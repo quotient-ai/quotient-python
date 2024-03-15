@@ -402,12 +402,13 @@ def update_progress(progress, data, inference_task, metrics_task):
     ) = get_progress_and_parallelization(data, "Metrics")
 
     progress.update(
-        inference_task, completed=completed_inference, total=total_inference
+        inference_task,
+        completed=completed_inference,
+        total=total_inference,
+        refresh=True,
     )
     progress.update(
-        metrics_task,
-        completed=completed_metrics,
-        total=total_metrics,
+        metrics_task, completed=completed_metrics, total=total_metrics, refresh=True
     )
 
     return (
