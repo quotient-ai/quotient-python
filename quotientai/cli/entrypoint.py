@@ -1,6 +1,5 @@
-import os
-
 import click
+
 from quotientai.cli.format import (
     format_api_keys_table,
     format_datasets_table,
@@ -12,16 +11,13 @@ from quotientai.cli.format import (
     format_results_table,
     format_system_prompt_table,
     format_tasks_table,
+    monitor_job_progress,
     save_eval_metadata_to_file,
     save_metrics_to_file,
     save_results_to_file,
 )
 from quotientai.client import QuotientClient
-from quotientai.exceptions import (
-    QuotientAIAuthException,
-    QuotientAIException,
-    QuotientAIInvalidInputException,
-)
+from quotientai.exceptions import QuotientAIException
 
 
 @click.group()
@@ -534,7 +530,8 @@ def save_results(job_id):
     type=int,
     help="Seed for the job (optional).",
 )
-def create_job(task_id, recipe_id, num_fewshot_examples, limit, seed):
+@click.option("--monitor", "-m", is_flag=True, help="Monitor the job progress.")
+def create_job(task_id, recipe_id, num_fewshot_examples, limit, seed, monitor):
     """Command to create a new job."""
     try:
         client = QuotientClient()
@@ -542,6 +539,27 @@ def create_job(task_id, recipe_id, num_fewshot_examples, limit, seed):
             task_id, recipe_id, num_fewshot_examples, limit, seed
         )
         print(format_jobs_table([new_job]))
+
+        if monitor:
+            monitor_job_progress(client, new_job["id"])
+
+    except QuotientAIException as e:
+        click.echo(str(e))
+
+
+###########################
+#          Progress       #
+###########################
+
+
+@list.command(name="job-progress")
+@click.option("--job-id", required=True, type=int, help="Job ID to pull progress for.")
+def list_job_progress(job_id):
+    """Command to get updates on a job's progress."""
+    try:
+        client = QuotientClient()
+        monitor_job_progress(client, job_id)
+
     except QuotientAIException as e:
         click.echo(str(e))
 

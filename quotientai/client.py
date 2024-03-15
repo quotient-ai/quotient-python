@@ -8,14 +8,14 @@ from datetime import datetime
 logging.basicConfig(level=logging.WARNING)
 
 import requests
+from requests.exceptions import ConnectionError, HTTPError, RequestException, Timeout
+from supabase import PostgrestAPIError, PostgrestAPIResponse, create_client
+
 from quotientai.exceptions import (
     QuotientAIAuthException,
     QuotientAIException,
     QuotientAIInvalidInputException,
 )
-from requests.exceptions import ConnectionError, HTTPError, RequestException, Timeout
-
-from supabase import PostgrestAPIError, PostgrestAPIResponse, create_client
 
 
 class FastAPIError(Exception):
@@ -644,3 +644,26 @@ class QuotientClient:
             ) from http_err
         except ValueError as ve:
             raise QuotientAIException(str(ve)) from ve
+
+    ###########################
+    #          Progress       #
+    ###########################
+
+    @require_api_key
+    def list_job_progress(self, job_id):
+        try:
+            data = (
+                self.supaclient.table("job_progress")
+                .select("*")
+                .eq("job_id", job_id)
+                .execute()
+            )
+            return data.data
+        except PostgrestAPIError as api_err:
+            raise QuotientAIException(
+                f"Failed to retrieve job progress: {api_err.message} ({api_err.code})"
+            ) from api_err
+        except Exception as e:
+            raise QuotientAIException(
+                f"Failed to retrieve job progress: {str(e)}"
+            ) from e

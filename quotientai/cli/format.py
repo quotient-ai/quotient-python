@@ -1,9 +1,12 @@
-import textwrap
-
-from prettytable import PrettyTable
-import pandas as pd
 import json
 import os
+import textwrap
+import time
+
+import pandas as pd
+from prettytable import PrettyTable
+from rich.console import Console
+from rich.progress import BarColumn, Progress, TextColumn
 
 
 def format_api_keys_table(data):
@@ -334,3 +337,107 @@ def save_eval_metadata_to_file(data):
         json.dump(selected_info, json_file, indent=4)
     full_path = os.path.abspath(file_name)
     print(f"Evaluation metadata saved to {full_path}")
+
+
+def monitor_job_progress(client, job_id):
+    console = Console()
+    job_progress_data = client.list_job_progress(job_id)
+    job_data = client.list_jobs({"id": job_id})
+    job_status = job_data[0]["status"]
+
+    if not job_data:
+        print("Job not found.")
+        return
+
+    if job_status == "Scheduled":
+        with console.status("Waiting for Job to start...", spinner="dots", speed=1):
+            while job_status == "Scheduled":
+                job_data = client.list_jobs({"id": job_id})
+                job_status = job_data[0]["status"]
+                time.sleep(2)
+
+    if job_status == "Failed":
+        print("Job failed. No progress to report.")
+        return
+    if job_status == "Completed":
+        print("Job completed!")
+        return
+
+    with Progress(
+        "[progress.description]{task.description}",
+        BarColumn(),
+        "[progress.percentage]{task.percentage:>3.0f}%",
+        TextColumn("{task.fields[parallel]}"),
+        console=console,
+    ) as progress:
+        inference_task = progress.add_task(
+            "[cyan]Inference Progress",
+            total=get_total_chunks(job_progress_data, "Inference"),
+            parallel="Parallelization: 0",
+        )
+        metrics_task = progress.add_task(
+            "[green]Metrics Progress",
+            total=get_total_chunks(job_progress_data, "Metrics"),
+            parallel="Parallelization: 0",
+        )
+        job_complete = False
+
+        while not job_complete:
+            job_progress_data = client.list_job_progress(job_id)
+            job_complete = update_progress(
+                progress, job_progress_data, inference_task, metrics_task
+            )
+            time.sleep(2)
+        print("Job completed!")
+
+
+def update_progress(progress, data, inference_task, metrics_task):
+    """Updates the progress bars and parallelization text."""
+    (
+        completed_inference,
+        total_inference,
+        parallelization_inference,
+    ) = get_progress_and_parallelization(data, "Inference")
+    (
+        completed_metrics,
+        total_metrics,
+        parallelization_metrics,
+    ) = get_progress_and_parallelization(data, "Metrics")
+
+    progress.update(
+        inference_task,
+        completed=completed_inference,
+        total=total_inference,
+        parallel=f"Parallelization: {parallelization_inference}",
+    )
+    progress.update(
+        metrics_task,
+        completed=completed_metrics,
+        total=total_metrics,
+        parallel=f"Parallelization: {parallelization_metrics}",
+    )
+
+    return (
+        completed_inference == total_inference
+        and completed_metrics == total_metrics
+        and completed_inference > 0
+        and completed_metrics > 0
+    )
+
+
+def get_progress_and_parallelization(data, job_step):
+    """Calculates and returns the number of completed chunks, total chunks, and current parallelization for a given job step."""
+    progress_trackers = [x for x in data if x["job_step"] == job_step]
+    current_parallelization = [x for x in progress_trackers if x["finished_at"] is None]
+
+    completed = len(progress_trackers) - len(current_parallelization)
+    total_chunks = get_total_chunks(data, job_step)
+    return completed, total_chunks, len(current_parallelization)
+
+
+def get_total_chunks(data, job_step):
+    """Returns the total chunks for a given job step."""
+    trackers = [x for x in data if x["job_step"] == job_step]
+    if trackers:
+        return trackers[0]["total_chunks"]
+    return 0

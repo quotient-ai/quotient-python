@@ -15,11 +15,11 @@ repos:
     hooks:
       # Run the formatter.
       - id: ruff-format
-        files: src/
+        files: \.py$
   - repo: https://github.com/pycqa/isort
     rev: 5.12.0
     hooks:
       - id: isort
         name: isort (python)
         args: ["--profile", "black", "--trailing-comma"]
-        files: src/
+        files: \.py$
