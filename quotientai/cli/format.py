@@ -339,7 +339,7 @@ def save_eval_metadata_to_file(data):
     print(f"Evaluation metadata saved to {full_path}")
 
 
-def monitor_job_progress(client, job_id):
+def show_job_progress(client, job_id):
     console = Console()
     job_progress_data = client.list_job_progress(job_id)
     job_data = client.list_jobs({"id": job_id})
@@ -367,18 +367,15 @@ def monitor_job_progress(client, job_id):
         "[progress.description]{task.description}",
         BarColumn(),
         "[progress.percentage]{task.percentage:>3.0f}%",
-        TextColumn("{task.fields[parallel]}"),
         console=console,
     ) as progress:
         inference_task = progress.add_task(
-            "[cyan]Inference Progress",
+            "[cyan]Getting Completions...",
             total=get_total_chunks(job_progress_data, "Inference"),
-            parallel="Parallelization: 0",
         )
         metrics_task = progress.add_task(
-            "[green]Metrics Progress",
+            "[green]Computing Metrics...",
             total=get_total_chunks(job_progress_data, "Metrics"),
-            parallel="Parallelization: 0",
         )
         job_complete = False
 
@@ -405,16 +402,12 @@ def update_progress(progress, data, inference_task, metrics_task):
     ) = get_progress_and_parallelization(data, "Metrics")
 
     progress.update(
-        inference_task,
-        completed=completed_inference,
-        total=total_inference,
-        parallel=f"Parallelization: {parallelization_inference}",
+        inference_task, completed=completed_inference, total=total_inference
     )
     progress.update(
         metrics_task,
         completed=completed_metrics,
         total=total_metrics,
-        parallel=f"Parallelization: {parallelization_metrics}",
     )
 
     return (
