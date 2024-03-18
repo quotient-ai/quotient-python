@@ -733,7 +733,21 @@ class QuotientClient:
     ###########################
 
     @require_api_key
-    def list_jobs(self, filters=None):
+    def list_jobs(self, filters=None) -> list:
+        """
+        List jobs with optional filters. If no filters are provided, all jobs are returned.
+
+        Parameters:
+        -----------
+        filters : dict, optional
+            A dictionary of equality filters to apply to the job list. Default is None.
+            Options are "id", "task_id", "recipe_id", "status", "created_at".
+
+        Returns:
+        --------
+        list
+            A list of job records from the API.
+        """
         try:
             query = self.supaclient.table("job").select("*,task(*),recipe(*)")
             if filters:
