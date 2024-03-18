@@ -682,7 +682,29 @@ class QuotientClient:
             raise QuotientAIException(f"Failed to list tasks: {str(e)}") from e
 
     @require_api_key
-    def create_task(self, dataset_id, name, task_type):
+    def create_task(self, dataset_id, name, task_type) -> dict:
+        """
+        Create a new task with a given dataset, name, and task type.
+
+        Parameters:
+        -----------
+        dataset_id : int
+            The ID of the dataset to use for the task
+        name : str
+            The name of the task
+        task_type : str
+            The type of task to create. Must be one of "question_answering" or "summarization"
+
+        Returns:
+        --------
+        dict
+            The task record from the API.
+        """
+        if task_type not in ["question_answering", "summarization"]:
+            raise QuotientAIInvalidInputException(
+                "Task type must be one of 'question_answering' or 'summarization'"
+            )
+
         try:
             task_data = {
                 "dataset_id": dataset_id,
