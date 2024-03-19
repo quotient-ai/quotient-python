@@ -235,7 +235,9 @@ def test_create_task_invalid_task_type():
             task_type="invalid_type",
             dataset_id=1,
         )
-    assert "Invalid task type" in str(exc_info.value), "Expected task creation to fail"
+    assert "Task type must be one of" in str(
+        exc_info.value
+    ), "Expected task creation to fail"
 
 
 def test_list_recipes():
