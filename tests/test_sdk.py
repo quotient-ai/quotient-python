@@ -31,6 +31,8 @@ def test_ids():
     keys = {
         "test_template_id": None,
         "test_prompt_id": None,
+        "test_dataset_id": None,
+        "test_task_id": None,
         "test_recipe_id": None,
         "test_job_id": None,
     }
@@ -218,6 +220,16 @@ def test_create_prompt_template(test_ids):
 def test_delete_prompt_template(test_ids):
     response = client.delete_prompt_template(test_ids["test_template_id"])
     assert response is None, "Expected prompt template to be deleted"
+
+
+def test_list_datasets():
+    datasets = client.list_datasets()
+    assert datasets is not None, "Expected datasets to be returned"
+    assert isinstance(datasets, list), "Expected datasets to be a list"
+    assert len(datasets) > 0, "Expected at least one dataset to be returned"
+    for dataset in datasets:
+        assert isinstance(dataset, dict), "Expected each dataset to be an object"
+        assert "id" in dataset, "Expected each dataset to have an 'id' field"
 
 
 def test_list_tasks():
