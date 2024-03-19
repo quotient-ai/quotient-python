@@ -222,6 +222,17 @@ def test_delete_prompt_template(test_ids):
     assert response is None, "Expected prompt template to be deleted"
 
 
+# def test_create_dataset():
+#     dataset = client.create_dataset(
+#         name="Test dataset",
+#         file_path="./tests/resources/WhiteHouse_statements_summarizations.csv"
+#     )
+#     assert dataset is not None, "Dataset was not created"
+#     assert isinstance(dataset, dict), "Expected dataset to be an object"
+#     assert "id" in dataset, "Expected dataset to have an 'id' field"
+#     assert dataset["name"] == "Test dataset", "Expected dataset name to match"
+
+
 def test_list_datasets():
     datasets = client.list_datasets()
     assert datasets is not None, "Expected datasets to be returned"
