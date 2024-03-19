@@ -1,9 +1,9 @@
-import textwrap
-
-from prettytable import PrettyTable
-import pandas as pd
 import json
 import os
+import textwrap
+
+import pandas as pd
+from prettytable import PrettyTable
 
 
 def format_api_keys_table(data):
