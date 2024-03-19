@@ -26,6 +26,14 @@ class FastAPIError(Exception):
 
 
 class QuotientClient:
+    """
+    A client that provides access to the QuotientAI API.
+
+    The QuotientClient class provides methods to interact with the QuotientAI API, including
+    logging in, creating and managing API keys, and creating and managing models, system prompts,
+    prompt templates, recipes, datasets, and tasks.
+    """
+
     def __init__(self):
         # Public API key for the QuotientAI Supabase project
         self.public_api_key = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhocXBwY3FsdGtsemZwZ2dkb2NiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MDEzNTU4MzgsImV4cCI6MjAxNjkzMTgzOH0.bpOtVl7co6B4wXQqt6Ec-WCz9FuO7tpVYbTa6PLoheI"
@@ -149,6 +157,21 @@ class QuotientClient:
     ###########################
 
     def create_api_key(self, key_name: str, key_lifetime: int = 30) -> str:
+        """
+        Create a new API key with a given name and lifetime.
+
+        Parameters:
+        -----------
+        key_name : str
+            The name of the API key
+        key_lifetime : int, optional
+            The lifetime of the API key in days. Default is 30 days.
+
+        Returns:
+        --------
+        str
+            The name of the API key
+        """
         try:
             if not self.token:
                 raise ValueError("Not logged in. Please log in first.")
@@ -275,7 +298,22 @@ class QuotientClient:
             raise QuotientAIException(f"Failed to list system prompts: {str(e)}") from e
 
     @require_api_key
-    def create_system_prompt(self, message_string: str, name: str):
+    def create_system_prompt(self, message_string: str, name: str) -> dict:
+        """
+        Create a new system prompt with a given message string and name.
+
+        Parameters:
+        -----------
+        message_string : str
+            The message string to use for the system prompt
+        name : str
+            The name of the system prompt
+
+        Returns:
+        --------
+        dict
+            The system prompt record from the API.
+        """
         try:
             params = {
                 "name": name,
@@ -323,7 +361,20 @@ class QuotientClient:
     ###########################
 
     @require_api_key
-    def list_prompt_templates(self, filters=None):
+    def list_prompt_templates(self, filters=None) -> list:
+        """
+        List prompt templates with optional filters. If no filters are provided, all prompt templates are returned.
+
+        Parameters:
+        -----------
+        filters : dict, optional
+            A dictionary of equality filters to apply to the prompt template list. Default is None.
+            Options are "id", "name", "created_at".
+
+        Returns:
+        --------
+        list : A list of prompt template records from the API.
+        """
         try:
             query = self.supaclient.table("prompt_template").select("*")
             if filters:
@@ -341,7 +392,22 @@ class QuotientClient:
             ) from e
 
     @require_api_key
-    def create_prompt_template(self, template, name):
+    def create_prompt_template(self, template, name) -> dict:
+        """
+        Create a new prompt template with a given template and name.
+
+        Parameters:
+        -----------
+        template : str
+            The template string to use for the prompt template
+        name : str
+            The name of the prompt template
+
+        Returns:
+        --------
+        dict
+            The prompt template record from the API.
+        """
         try:
             url = f"{self.eval_scheduler_url}/create-prompt-template"
             headers = {
@@ -398,7 +464,21 @@ class QuotientClient:
     ###########################
 
     @require_api_key
-    def list_recipes(self, filters=None):
+    def list_recipes(self, filters=None) -> list:
+        """
+        List recipes with optional filters. If no filters are provided, all recipes are returned.
+
+        Parameters:
+        -----------
+        filters : dict, optional
+            A dictionary of equality filters to apply to the recipe list. Default is None.
+            Options are "id", "name", "model_id", "prompt_template_id", "created_at".
+
+        Returns:
+        --------
+        list
+            A list of recipe records from the API.
+        """
         try:
             query = self.supaclient.table("recipe").select(
                 "*,prompt_template(*),model(*)"
@@ -423,7 +503,28 @@ class QuotientClient:
         system_prompt_id: int | None = None,
         name: str = None,
         description: str = None,
-    ):
+    ) -> dict:
+        """
+        Create a new recipe with a given model, prompt template, and optional system prompt.
+
+        Parameters:
+        -----------
+        model_id : int
+            The ID of the model to use for the recipe
+        prompt_template_id : int
+            The ID of the prompt template to use for the recipe
+        system_prompt_id : int, optional
+            The ID of the system prompt to use for the recipe. Default is None.
+        name : str, optional
+            The name of the recipe. Default is None.
+        description : str, optional
+            The description of the recipe. Default is None.
+
+        Returns:
+        --------
+        dict
+            The recipe record from the API.
+        """
         recipe = {"model_id": model_id, "prompt_template_id": prompt_template_id}
         recipe.update({"created_at": datetime.utcnow().isoformat()})
         if name:
@@ -468,6 +569,20 @@ class QuotientClient:
 
     @require_api_key
     def list_datasets(self, filters=None):
+        """
+        List datasets with optional filters. If no filters are provided, all datasets are returned.
+
+        Parameters:
+        -----------
+        filters : dict, optional
+            A dictionary of equality filters to apply to the dataset list. Default is None.
+            Options are "id", "name", "created_at".
+
+        Returns:
+        --------
+        list
+            A list of dataset records from the API.
+        """
         try:
             query = self.supaclient.table("dataset").select("*")
             if filters:
@@ -483,7 +598,22 @@ class QuotientClient:
             raise QuotientAIException(f"Failed to list datasets: {str(e)}") from e
 
     @require_api_key
-    def create_dataset(self, file_path: str, name: str):
+    def create_dataset(self, file_path: str, name: str) -> dict:
+        """
+        Create a new dataset with a given file and name.
+
+        Parameters:
+        -----------
+        file_path : str
+            The path to the file to upload.
+        name : str
+            The name of the dataset once uploaded to Quotient.
+
+        Returns:
+        --------
+        dict
+            The dataset record from the API.
+        """
         try:
             url = f"{self.eval_scheduler_url}/upload-dataset"
             headers = {
@@ -527,7 +657,16 @@ class QuotientClient:
     ###########################
 
     @require_api_key
-    def list_tasks(self, filters=None):
+    def list_tasks(self, filters=None) -> list:
+        """
+        List tasks with optional filters. If no filters are provided, all tasks are returned.
+
+        Parameters:
+        -----------
+        filters : dict, optional
+            A dictionary of equality filters to apply to the task list. Default is None.
+            Options are "id", "name", "task_type", "dataset_id", "created_at".
+        """
         try:
             query = self.supaclient.table("task").select("*,dataset(*)")
             if filters:
@@ -543,7 +682,29 @@ class QuotientClient:
             raise QuotientAIException(f"Failed to list tasks: {str(e)}") from e
 
     @require_api_key
-    def create_task(self, dataset_id, name, task_type):
+    def create_task(self, dataset_id, name, task_type) -> dict:
+        """
+        Create a new task with a given dataset, name, and task type.
+
+        Parameters:
+        -----------
+        dataset_id : int
+            The ID of the dataset to use for the task
+        name : str
+            The name of the task
+        task_type : str
+            The type of task to create. Must be one of "question_answering" or "summarization"
+
+        Returns:
+        --------
+        dict
+            The task record from the API.
+        """
+        if task_type not in ["question_answering", "summarization"]:
+            raise QuotientAIInvalidInputException(
+                "Task type must be one of 'question_answering' or 'summarization'"
+            )
+
         try:
             task_data = {
                 "dataset_id": dataset_id,
@@ -572,7 +733,21 @@ class QuotientClient:
     ###########################
 
     @require_api_key
-    def list_jobs(self, filters=None):
+    def list_jobs(self, filters=None) -> list:
+        """
+        List jobs with optional filters. If no filters are provided, all jobs are returned.
+
+        Parameters:
+        -----------
+        filters : dict, optional
+            A dictionary of equality filters to apply to the job list. Default is None.
+            Options are "id", "task_id", "recipe_id", "status", "created_at".
+
+        Returns:
+        --------
+        list
+            A list of job records from the API.
+        """
         try:
             query = self.supaclient.table("job").select("*,task(*),recipe(*)")
             if filters:
@@ -591,6 +766,27 @@ class QuotientClient:
     def create_job(
         self, task_id, recipe_id, num_fewshot_examples=0, limit=100, seed=42
     ):
+        """
+        Create a new job with a given task, recipe, and optional parameters.
+
+        Parameters:
+        ----------
+        task_id : int
+            The ID of the task to evaluate
+        recipe_id : int
+            The ID of the recipe to use for evaluation
+        num_fewshot_examples : int, optional
+            The number of few-shot examples to use for evaluation. Default is 0.
+        limit : int, optional
+            The number of examples to evaluate. Default is 100.
+        seed : int, optional
+            The random seed to use for evaluation. Default is 42.
+
+        Returns:
+        --------
+        dict
+            The job record from the API.
+        """
         job_data = {
             "task_id": task_id,
             "recipe_id": recipe_id,
@@ -623,7 +819,19 @@ class QuotientClient:
             raise QuotientAIException(f"Failed to create job: {str(e)}") from e
 
     @require_api_key
-    def get_eval_results(self, job_id):
+    def get_eval_results(self, job_id: int) -> dict:
+        """
+        Get the results of an evaluation job.
+
+        Parameters:
+        -----------
+        job_id : int
+            The ID of the job to get results for.
+
+        Returns:
+        --------
+        dict : The results of the evaluation job.
+        """
         try:
             url = f"{self.eval_scheduler_url}/get-eval-results"
             headers = {

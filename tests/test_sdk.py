@@ -6,7 +6,8 @@ from dotenv import load_dotenv
 from supabase import create_client
 
 from quotientai import QuotientClient
-from quotientai.exceptions import QuotientAIException
+from quotientai.exceptions import QuotientAIException, QuotientAIInvalidInputException
+
 
 if "QUOTIENT_API_KEY" in os.environ:
     del os.environ["QUOTIENT_API_KEY"]
@@ -226,6 +227,18 @@ def test_list_tasks():
     for task in tasks:
         assert isinstance(task, dict), "Expected each task to be an object"
         assert "id" in task, "Expected each task to have an 'id' field"
+
+
+def test_create_task_invalid_task_type():
+    with pytest.raises(QuotientAIInvalidInputException) as exc_info:
+        client.create_task(
+            name="Test task",
+            task_type="invalid_type",
+            dataset_id=1,
+        )
+    assert "Task type must be one of" in str(
+        exc_info.value
+    ), "Expected task creation to fail"
 
 
 def test_list_recipes():
