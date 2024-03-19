@@ -264,6 +264,28 @@ def test_create_task_invalid_task_type():
     ), "Expected task creation to fail"
 
 
+def test_create_task_invalid_dataset():
+    with pytest.raises(QuotientAIException) as exc_info:
+        client.create_task(dataset_id=3, name="test-task", task_type="testing")
+    assert "Failed to create task" in str(
+        exc_info.value
+    ), "Expected invalid dataset ID to raise an exception"
+
+
+def test_create_task_success(test_ids):
+    created_task = client.create_task(dataset_id=2, name="test-task", task_type="testing")
+    assert created_task is not None, "Expected task to be created"
+    assert created_task['name'] == "test-task", "Expected task name to match"
+    assert created_task['task_type'] == "testing", "Expected task type to match"
+    assert 'id' in created_task, "Expected created task to have an 'id' field"
+    test_ids["test_task_id"] = created_task["id"]
+
+
+def test_delete_task(test_ids):
+    response = client.delete_task(test_ids["test_task_id"])
+    assert response is None, "Expected task to be deleted"
+
+
 def test_list_recipes():
     recipes = client.list_recipes()
     assert recipes is not None, "Expected recipes to be returned"
