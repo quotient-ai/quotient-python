@@ -14,10 +14,10 @@ from quotientai.cli.format import (
     save_eval_metadata_to_file,
     save_metrics_to_file,
     save_results_to_file,
-    show_job_progress,
 )
 from quotientai.client import QuotientClient
 from quotientai.exceptions import QuotientAIException
+from quotientai.utils import show_job_progress
 
 
 @click.group()
