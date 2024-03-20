@@ -31,6 +31,8 @@ def test_ids():
     keys = {
         "test_template_id": None,
         "test_prompt_id": None,
+        "test_dataset_id": None,
+        "test_task_id": None,
         "test_recipe_id": None,
         "test_job_id": None,
     }
@@ -220,6 +222,27 @@ def test_delete_prompt_template(test_ids):
     assert response is None, "Expected prompt template to be deleted"
 
 
+# def test_create_dataset():
+#     dataset = client.create_dataset(
+#         name="Test dataset",
+#         file_path="./tests/resources/WhiteHouse_statements_summarizations.csv"
+#     )
+#     assert dataset is not None, "Dataset was not created"
+#     assert isinstance(dataset, dict), "Expected dataset to be an object"
+#     assert "id" in dataset, "Expected dataset to have an 'id' field"
+#     assert dataset["name"] == "Test dataset", "Expected dataset name to match"
+
+
+def test_list_datasets():
+    datasets = client.list_datasets()
+    assert datasets is not None, "Expected datasets to be returned"
+    assert isinstance(datasets, list), "Expected datasets to be a list"
+    assert len(datasets) > 0, "Expected at least one dataset to be returned"
+    for dataset in datasets:
+        assert isinstance(dataset, dict), "Expected each dataset to be an object"
+        assert "id" in dataset, "Expected each dataset to have an 'id' field"
+
+
 def test_list_tasks():
     tasks = client.list_tasks()
     assert tasks is not None, "Expected tasks to be returned"
@@ -239,6 +262,28 @@ def test_create_task_invalid_task_type():
     assert "Task type must be one of" in str(
         exc_info.value
     ), "Expected task creation to fail"
+
+
+def test_create_task_invalid_dataset():
+    with pytest.raises(QuotientAIException) as exc_info:
+        client.create_task(dataset_id=3, name="test-task", task_type="summarization")
+    assert "Failed to create task" in str(
+        exc_info.value
+    ), "Expected invalid dataset ID to raise an exception"
+
+
+def test_create_task_success(test_ids):
+    created_task = client.create_task(dataset_id=2, name="test-task", task_type="summarization")
+    assert created_task is not None, "Expected task to be created"
+    assert created_task['name'] == "test-task", "Expected task name to match"
+    assert created_task['task_type'] == "summarization", "Expected task type to match"
+    assert 'id' in created_task, "Expected created task to have an 'id' field"
+    test_ids["test_task_id"] = created_task["id"]
+
+
+def test_delete_task(test_ids):
+    response = client.delete_task(test_ids["test_task_id"])
+    assert response is None, "Expected task to be deleted"
 
 
 def test_list_recipes():
