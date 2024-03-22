@@ -36,15 +36,17 @@ class QuotientClient:
 
     def __init__(self):
         # Public API key for the QuotientAI Supabase project
-        self.public_api_key = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhocXBwY3FsdGtsemZwZ2dkb2NiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MDEzNTU4MzgsImV4cCI6MjAxNjkzMTgzOH0.bpOtVl7co6B4wXQqt6Ec-WCz9FuO7tpVYbTa6PLoheI"
+        self.public_api_key = os.getenv("SUPABASE_PUBLIC_KEY")
 
         # Base URL for the Supabase project
-        self.supabase_url = "https://hhqppcqltklzfpggdocb.supabase.co"
- 
+        self.supabase_url = os.getenv("SUPABASE_URL")
+
         # Eval Scheduler config
-        self.eval_scheduler_url = (
-            "http://eval-scheduler-alb-887401167.us-east-2.elb.amazonaws.com"
-        )
+        self.eval_scheduler_url = os.getenv("EVAL_SCHEDULER_URL")
+
+        # self.public_api_key = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0"
+        # self.supabase_url = "http://127.0.0.1:54321"
+        # self.eval_scheduler_url = "http://127.0.0.1:8000"
         self.supaclient = create_client(self.supabase_url, self.public_api_key)
 
         # Client Auth Token
@@ -60,11 +62,14 @@ class QuotientClient:
         """Decorator to ensure an API key is present before calling the function."""
 
         def wrapper(self, *args, **kwargs):
-            if not self.supaclient._auth_token.get("Authorization"):
+            auth_token = self.supaclient._auth_token.get("Authorization") if self.supaclient._auth_token else None
+            print('found auth token: ', auth_token)
+            if not auth_token or auth_token.split(" ")[-1] == os.getenv("SUPABASE_PUBLIC_KEY"):
                 raise QuotientAIException("Invalid request: Missing API key")
             return func(self, *args, **kwargs)
 
         return wrapper
+
 
     def status(self):
         current_time = time.time()
@@ -75,6 +80,7 @@ class QuotientClient:
             "active_login": self.token is not None,
             "api_key": self.api_key is not None,
         }
+
 
     def login(self, email: str, password: str) -> str:
         login_data = {"email": email, "password": password}
@@ -134,10 +140,11 @@ class QuotientClient:
             # Clear the token and expiry
             self.token = None
             self.token_expiry = 0
-            self.supaclient._auth_token = None
+            self.supaclient._auth_token = {"Authorization": f"Bearer {os.getenv('SUPABASE_PUBLIC_KEY')}"}
 
             # Return a message based on whether an API key is still in place
             if self.api_key:
+                self.supaclient._auth_token = {"Authorization": f"Bearer {self.api_key}"}
                 return "Sign out successful. API key still in place."
             return "Sign out successful."
 
@@ -152,6 +159,7 @@ class QuotientClient:
         except Exception as e:
             raise QuotientAIException(f"Sign out failed: {str(e)}") from e
 
+ 
     ###########################
     #         API Keys        #
     ###########################
@@ -187,7 +195,7 @@ class QuotientClient:
                 raise ValueError("API key not returned. Unknown error.")
 
             self.api_key = response.data
-            self.supaclient._auth_token = {"Authorization": f"Bearer {self.api_key}"}
+            self.supaclient._auth_token = {"Authorization": f"Bearer {response.data}"}
 
             print(
                 f"API keys are only returned once. Please store this key and its name in a secure location, and add it to your environment variables."
@@ -200,10 +208,12 @@ class QuotientClient:
         except Exception as e:
             raise QuotientAIException(f"Failed to create API key: {str(e)}") from e
 
+
     def set_api_key(self, api_key: str):
         # TODO: Check if key is valid
         self.api_key = api_key
         return f"Workspace set with API key."
+
 
     def get_api_key(self):
         if not self.api_key:
@@ -222,20 +232,28 @@ class QuotientClient:
                 f"Failed to get API key information: {str(e)}"
             ) from e
 
+
     def remove_api_key(self):
         self.api_key = None
         if self.token and self.token_expiry > time.time():
+            self.supaclient._auth_token = {"Authorization": f"Bearer {self.token}"}
             print("API key removed. You are still logged in.")
         else:
+            self.supaclient._auth_token = {"Authorization": f"Bearer {os.getenv('SUPABASE_PUBLIC_KEY')}"}
             print("API key removed")
 
+
     @require_api_key
-    def list_api_keys(self):
+    def list_api_keys(self, filters=None):
         try:
-            response = self.supaclient.table("api_keys").select("*").execute()
-            if not response.data:
-                raise ValueError("API keys not returned")
-            return response.data
+            query = self.supaclient.table("api_keys").select("*")
+            if filters:
+                for key, value in filters.items():
+                    query = query.eq(key, value)
+            data = query.execute()
+            if data.data is None:
+                raise ValueError("Data not returned")
+            return data.data
         except PostgrestAPIError as api_err:
             raise QuotientAIException(
                 f"Failed to list API keys: {api_err.message} ({api_err.code})"
@@ -246,9 +264,11 @@ class QuotientClient:
     @require_api_key
     def revoke_api_key(self, key_name: str):
         try:
-            self.supaclient.table("api_keys").update({"revoked": True}).eq(
+            query = self.supaclient.table("api_keys").update({"revoked": True}).eq(
                 "key_name", key_name
             ).execute()
+            if not query.data:
+                raise ValueError("API key not found?")
             return f"API key {key_name} revoked successfully"
         except PostgrestAPIError as api_err:
             raise QuotientAIException(

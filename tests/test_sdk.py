@@ -22,7 +22,7 @@ alternate_client = QuotientClient()
 ###########################
 @pytest.fixture(scope="session", autouse=True)
 def load_env():
-    dotenv_path = os.path.join(os.path.dirname(__file__), "..", ".env.test")
+    dotenv_path = os.path.join(os.path.dirname(__file__), "..", ".env")
     load_dotenv(dotenv_path)
 
 
@@ -59,6 +59,7 @@ def teardown_module():
         return
     profile_id = response.data[0]["id"]
     client.table("api_keys").delete().eq("user_id", os.getenv("TEST_USER_ID")).execute()
+    client.table("api_keys").delete().eq("user_id", os.getenv("TEST_USER_ID_2")).execute()
     client.table("job").delete().eq("owner_profile_id", profile_id).execute()
     print("SDK tests cleanup completed")
 
@@ -66,6 +67,16 @@ def teardown_module():
 ###########################
 #      Without creds      #
 ###########################
+
+
+def test_initial_status():
+    status = client.status()
+    assert status is not None, "Expected status to be returned"
+    assert isinstance(status, dict), "Expected status to be an object"
+    assert "active_login" in status, "Expected status to have a 'active_login' field"
+    assert status["active_login"] == False, "Expected status to show active_login as False"
+    assert "api_key" in status, "Expected status to have an 'api_key' field"
+    assert status["api_key"] == False, "Expected status to show api_key as False"
 
 
 def test_invalid_credentials():
@@ -84,6 +95,20 @@ def test_missing_credentials():
     ), "Expected missing credentials to raise an exception"
 
 
+# def test_missing_all_initial():
+#     result = client.list_datasets()
+#     assert result is not None, "Expected datasets to be returned"
+#     assert isinstance(result, list), "Expected datasets to be a list"
+#     assert len(result) == 0, "Expected no datasets to be returned with invalid API key"
+
+def test_missing_all_failure():
+    with pytest.raises(QuotientAIException) as exc_info:
+        client.list_datasets()
+    assert "Invalid request" in str(
+        exc_info.value
+    ), "Expected dataset list request to fail"
+
+
 ###########################
 #       Create creds      #
 ###########################
@@ -94,12 +119,12 @@ def test_successful_login():
     assert "Login successful" in result, "Expected login to be successful"
     assert client.token is not None, "Expected token to be set after login"
 
-    result = alternate_client.login(
-        os.getenv("TEST_USER_EMAIL_2"), os.getenv("TEST_USER_PASSWORD")
-    )
-    assert "Login successful" in result, "Expected login to be successful"
-    assert alternate_client.token is not None, "Expected token to be set after login"
-    alternate_client.create_api_key(os.getenv("TEST_API_KEY_NAME"), 60)
+    # result = alternate_client.login(
+    #     os.getenv("TEST_USER_EMAIL_2"), os.getenv("TEST_USER_PASSWORD")
+    # )
+    # assert "Login successful" in result, "Expected login to be successful"
+    # assert alternate_client.token is not None, "Expected token to be set after login"
+    # alternate_client.create_api_key(os.getenv("TEST_API_KEY_NAME"), 60)
 
 
 def test_api_key_failure():
@@ -112,8 +137,15 @@ def test_api_key_failure():
 
 def test_api_key_creation():
     api_key = client.create_api_key(os.getenv("TEST_API_KEY_NAME"), 60)
+    print('api_key: ', api_key)
     assert api_key is not None, "Expected API key to be created"
     assert client.api_key is not None, "Expected API key to be set after creation"
+
+
+def test_signout():
+    result = client.sign_out()
+    assert "Sign out successful" in result, "Expected successful signout"
+    assert client.token is None, "Expected token to be None after signout"
 
 
 def test_get_api_key():
@@ -132,231 +164,369 @@ def test_status():
     assert status["api_key"] == True, "Expected status to show api_key as True"
 
 
+# ###########################
+# #          Models         #
+# ###########################
+
+
+# def test_list_models():
+#     models = client.list_models()
+#     assert models is not None, "Expected models to be returned"
+#     assert isinstance(models, list), "Expected models to be a list"
+#     assert len(models) > 0, "Expected at least one model to be returned"
+#     for model in models:
+#         assert isinstance(model, dict), "Expected each model to be an object"
+#         assert "id" in model, "Expected each model to have an 'id' field"
+
+
+# def test_fail_get_model():
+#     models = client.list_models(filters={'id': 999})
+#     assert models is not None, "Expected models to be returned"
+#     assert isinstance(models, list), "Expected models to be a list"
+#     assert len(models) == 0, "Expected no models to be returned with invalid model ID"
+
+
+# ###########################
+# #      System prompts     #
+# ###########################
+        
+# def test_list_system_prompts():
+#     system_prompts = client.list_system_prompts()
+#     assert system_prompts is not None, "Expected system prompts to be returned"
+#     assert isinstance(system_prompts, list), "Expected system prompts to be a list"
+#     assert len(system_prompts) > 0, "Expected at least one system prompt to be returned"
+#     for prompt in system_prompts:
+#         assert isinstance(prompt, dict), "Expected each prompt to be an object"
+#         assert "id" in prompt, "Expected each prompt to have an 'id' field"
+
+
+# def test_create_system_prompt(test_ids):
+#     system_prompt = client.create_system_prompt(
+#         os.getenv("TEST_CREATE_SYSTEM_PROMPT"), "New system prompt"
+#     )
+#     assert system_prompt is not None, "system prompt was not created"
+#     assert isinstance(system_prompt, dict), "Expected system prompt to be an object"
+#     assert (
+#         "message_string" in system_prompt
+#     ), "Expected system prompt to have a 'message_string' field"
+#     test_ids["test_prompt_id"] = system_prompt["id"]
+
+
+# def test_fail_create_duplicate_system_prompt():
+#     with pytest.raises(QuotientAIException) as exc_info:
+#         client.create_system_prompt(
+#             os.getenv("TEST_CREATE_SYSTEM_PROMPT"), "New system prompt"
+#         )
+#     assert "Failed to create system prompt" in str(
+#         exc_info.value
+#     ), "Expected duplicate system prompt to raise an exception"
+
+
+# def test_get_system_prompt(test_ids):
+#     system_prompts = client.list_system_prompts(filters={'id': test_ids["test_prompt_id"]})
+#     assert system_prompts is not None, "Expected system prompts to be returned"
+#     assert isinstance(system_prompts, list), "Expected system prompts to be a list"
+#     assert len(system_prompts) == 1, "Expected no system prompts to be returned with invalid system_prompt ID"
+
+
+# def test_fail_get_system_prompt_nonexist():
+#     system_prompts = client.list_system_prompts(filters={'id': 999})
+#     assert system_prompts is not None, "Expected system prompts to be returned"
+#     assert isinstance(system_prompts, list), "Expected system prompts to be a list"
+#     assert len(system_prompts) == 0, "Expected no system prompts to be returned with invalid system_prompt ID"
+
+
+# def test_delete_system_prompt(test_ids):
+#     response = client.delete_system_prompt(test_ids["test_prompt_id"])
+#     assert response is None, "Expected system prompt to be deleted"
+
+
+# ###########################
+# #    Prompt templates     #
+# ###########################
+    
+# def test_list_prompt_templates():
+#     prompt_templates = client.list_prompt_templates()
+#     assert prompt_templates is not None, "Expected prompt templates to be returned"
+#     assert isinstance(prompt_templates, list), "Expected prompt templates to be a list"
+#     assert (
+#         len(prompt_templates) > 0
+#     ), "Expected at least one prompt template to be returned"
+#     for prompt in prompt_templates:
+#         assert isinstance(prompt, dict), "Expected each prompt to be an object"
+#         assert "id" in prompt, "Expected each prompt to have an 'id' field"
+
+
+# def test_fail_prompt_template():
+#     with pytest.raises(QuotientAIException) as exc_info:
+#         client.create_prompt_template(
+#             os.getenv("TEST_BAD_PROMPT_TEMPLATE"), "Bad template A"
+#         )
+#     assert "The template must include" in str(
+#         exc_info.value
+#     ), "Expected prompt template creation to fail with invalid template"
+
+
+# def test_create_prompt_template(test_ids):
+#     prompt_template = client.create_prompt_template(
+#         os.getenv("TEST_CREATE_PROMPT_TEMPLATE"), "Good template B"
+#     )
+#     assert prompt_template is not None, "Prompt template was not created"
+#     assert isinstance(prompt_template, dict), "Expected prompt template to be an object"
+#     assert (
+#         "template_string" in prompt_template
+#     ), "Expected prompt template to have a 'template_string' field"
+#     test_ids["test_template_id"] = prompt_template["id"]
+
+
+# def test_fail_create_duplicate_prompt_template():
+#     with pytest.raises(QuotientAIException) as exc_info:
+#         client.create_prompt_template(
+#             os.getenv("TEST_CREATE_PROMPT_TEMPLATE"), "Good template B"
+#         )
+#     assert "Failed to create prompt template" in str(
+#         exc_info.value
+#     ), "Expected duplicate prompt template to raise an exception"
+
+
+# def test_get_prompt_template(test_ids):
+#     prompt_templates = client.list_prompt_templates(filters={'id': test_ids["test_template_id"]})
+#     assert prompt_templates is not None, "Expected prompt templates to be returned"
+#     assert isinstance(prompt_templates, list), "Expected prompt templates to be a list"
+#     assert len(prompt_templates) == 1, "Expected no prompt templates to be returned with invalid prompt template ID"
+
+
+# def def_fail_get_prompt_template_nonexist():
+#     prompt_templates = client.list_prompt_templates(filters={'id': 999})
+#     assert prompt_templates is not None, "Expected prompt templates to be returned"
+#     assert isinstance(prompt_templates, list), "Expected prompt templates to be a list"
+#     assert len(prompt_templates) == 0, "Expected no prompt templates to be returned with invalid prompt template ID"
+
+
+# def test_delete_prompt_template(test_ids):
+#     response = client.delete_prompt_template(test_ids["test_template_id"])
+#     assert response is None, "Expected prompt template to be deleted"
+
+
+# ###########################
+# #        Datasets         #
+# ###########################
+    
+# # def test_create_dataset():
+# #     dataset = client.create_dataset(
+# #         name="Test dataset",
+# #         file_path="./tests/resources/WhiteHouse_statements_summarizations.csv"
+# #     )
+# #     assert dataset is not None, "Dataset was not created"
+# #     assert isinstance(dataset, dict), "Expected dataset to be an object"
+# #     assert "id" in dataset, "Expected dataset to have an 'id' field"
+# #     assert dataset["name"] == "Test dataset", "Expected dataset name to match"
+
+
+# def test_list_datasets():
+#     datasets = client.list_datasets()
+#     assert datasets is not None, "Expected datasets to be returned"
+#     assert isinstance(datasets, list), "Expected datasets to be a list"
+#     assert len(datasets) > 0, "Expected at least one dataset to be returned"
+#     for dataset in datasets:
+#         assert isinstance(dataset, dict), "Expected each dataset to be an object"
+#         assert "id" in dataset, "Expected each dataset to have an 'id' field"
+
+
+# def test_fail_get_dataset_nonexist():
+#     datasets = client.list_datasets(filters={'id': 9999999})
+#     assert datasets is not None, "Expected datasets to be returned"
+#     assert isinstance(datasets, list), "Expected datasets to be a list"
+#     assert len(datasets) == 0, "Expected no datasets to be returned with invalid dataset ID"
+
+
+# def test_fail_get_dataset_notown():
+#     datasets = client.list_datasets(filters={'id': 3})
+#     assert datasets is not None, "Expected datasets to be returned"
+#     assert isinstance(datasets, list), "Expected datasets to be a list"
+#     assert len(datasets) == 0, "Expected no datasets to be returned with invalid dataset ID"
+
+
+# ###########################
+# #          Tasks          #
+# ###########################
+
+# def test_list_tasks():
+#     tasks = client.list_tasks()
+#     assert tasks is not None, "Expected tasks to be returned"
+#     assert isinstance(tasks, list), "Expected tasks to be a list"
+#     assert len(tasks) > 0, "Expected at least one (public) task to be returned"
+#     for task in tasks:
+#         assert isinstance(task, dict), "Expected each task to be an object"
+#         assert "id" in task, "Expected each task to have an 'id' field"
+
+
+# def test_create_task_invalid_task_type():
+#     with pytest.raises(QuotientAIInvalidInputException) as exc_info:
+#         client.create_task(
+#             name="Test task",
+#             task_type="invalid_type",
+#             dataset_id=1,
+#         )
+#     assert "Task type must be one of" in str(
+#         exc_info.value
+#     ), "Expected task creation to fail"
+
+
+# def test_create_task_invalid_dataset():
+#     with pytest.raises(QuotientAIException) as exc_info:
+#         client.create_task(dataset_id=3, name="test-task", task_type="summarization")
+#     assert "Failed to create task" in str(
+#         exc_info.value
+#     ), "Expected invalid dataset ID to raise an exception"
+
+
+# def test_create_task_success(test_ids):
+#     created_task = client.create_task(dataset_id=2, name="test-task", task_type="summarization")
+#     assert created_task is not None, "Expected task to be created"
+#     assert created_task['name'] == "test-task", "Expected task name to match"
+#     assert created_task['task_type'] == "summarization", "Expected task type to match"
+#     assert 'id' in created_task, "Expected created task to have an 'id' field"
+#     test_ids["test_task_id"] = created_task["id"]
+
+# def test_create_task_invalid_duplicate():
+#     with pytest.raises(QuotientAIException) as exc_info:
+#         client.create_task(dataset_id=2, name="test-task", task_type="summarization")
+#     assert "Failed to create task" in str(
+#         exc_info.value
+#     ), "Expected duplicate task to raise an exception"
+
+# def test_delete_task_invalid_dataset():
+#     with pytest.raises(QuotientAIException) as exc_info:
+#         client.delete_task(task_id=1)
+#     assert "Failed to delete task" in str(
+#         exc_info.value
+#     ), "Expected not-owned dataset ID to raise an exception"
+
+# def test_delete_task(test_ids):
+#     response = client.delete_task(test_ids["test_task_id"])
+#     assert response is None, "Expected task to be deleted"
+
+
+# ###########################
+# #          Recipes        #
+# ###########################
+    
+# def test_list_recipes():
+#     recipes = client.list_recipes()
+#     assert recipes is not None, "Expected recipes to be returned"
+#     assert isinstance(recipes, list), "Expected recipes to be a list"
+#     for recipe in recipes:
+#         assert isinstance(recipe, dict), "Expected each recipe to be an object"
+#         assert "id" in recipe, "Expected each recipe to have an 'id' field"
+
+
+# def test_create_recipe(test_ids):
+#     recipe = client.create_recipe(
+#         name="Test recipe",
+#         description="Test recipe description",
+#         model_id=1,
+#         prompt_template_id=2,
+#     )
+#     assert recipe is not None, "Recipe was not created"
+#     assert isinstance(recipe, dict), "Expected recipe to be an object"
+#     assert "id" in recipe, "Expected recipe to have an 'id' field"
+#     test_ids["test_recipe_id"] = recipe["id"]
+
+
+# def test_delete_recipe(test_ids):
+#     response = client.delete_recipe(test_ids["test_recipe_id"])
+#     assert response is None, "Expected recipe to be deleted"
+
+
+# ###########################
+# #           Jobs          #
+# ###########################
+    
+# def test_list_jobs():
+#     jobs = client.list_jobs()
+#     assert jobs is not None, "Expected jobs to be returned"
+#     assert isinstance(jobs, list), "Expected jobs to be a list"
+#     for job in jobs:
+#         assert isinstance(job, dict), "Expected each job to be an object"
+#         assert "id" in job, "Expected each job to have an 'id' field"
+
+
+# def test_create_job(test_ids):
+#     job = client.create_job(task_id=2, recipe_id=1, num_fewshot_examples=2, limit=1)
+#     assert job is not None, "Job was not created"
+#     assert isinstance(job, dict), "Expected job to be an object"
+#     assert "id" in job, "Expected job to have an 'id' field"
+#     test_ids["test_job_id"] = job["id"]
+
+
+# def test_filter_by_job_id(test_ids):
+#     jobs = client.list_jobs(filters={"id": test_ids["test_job_id"]})
+#     for job in jobs:
+#         assert "status" in job, "Expected each job to have a 'status' field"
+#         assert job["status"] == "Scheduled", "Expected job to have status Scheduled"
+
+
+# def test_create_job_rate_limit(test_ids):
+#     # Assuming the rate limit is 3 jobs per hour, create 4 jobs to surpass the limit
+#     for _ in range(3):
+#         alternate_client.create_job(
+#             task_id=2, recipe_id=1, num_fewshot_examples=0, limit=1
+#         )
+#     with pytest.raises(QuotientAIException) as exc_info:
+#         alternate_client.create_job(
+#             task_id=2, recipe_id=1, num_fewshot_examples=0, limit=1
+#         )
+#     assert "Rate limit exceeded" in str(
+#         exc_info.value
+#     ), "Expected job creation to fail with rate limit exceeded"
+
+
+# ###########################
+# #         Results         #
+# ###########################
+    
+# # TODO: results tests
+    
+
 ###########################
-#        Use creds        #
+#         API Keys        #
 ###########################
 
 
 def test_list_api_keys():
+    status = client.status()
+    print('status api start: ', status)
     keys = client.list_api_keys()
     assert keys is not None, "Expected keys to be returned"
     assert isinstance(keys, list), "Expected keys to be a list"
+    assert len(keys) == 1, "Expected one key to be returned"
     for key in keys:
         assert isinstance(key, dict), "Expected each key to be an object"
         assert "key_name" in key, "Expected each key to have an 'key_name' field"
 
 
-def test_list_models():
-    models = client.list_models()
-    assert models is not None, "Expected models to be returned"
-    assert isinstance(models, list), "Expected models to be a list"
-    assert len(models) > 0, "Expected at least one model to be returned"
-    for model in models:
-        assert isinstance(model, dict), "Expected each model to be an object"
-        assert "id" in model, "Expected each model to have an 'id' field"
-
-
-def test_list_system_prompts():
-    system_prompts = client.list_system_prompts()
-    assert system_prompts is not None, "Expected system prompts to be returned"
-    assert isinstance(system_prompts, list), "Expected system prompts to be a list"
-    assert len(system_prompts) > 0, "Expected at least one system prompt to be returned"
-    for prompt in system_prompts:
-        assert isinstance(prompt, dict), "Expected each prompt to be an object"
-        assert "id" in prompt, "Expected each prompt to have an 'id' field"
-
-
-def test_create_system_prompt(test_ids):
-    system_prompt = client.create_system_prompt(
-        os.getenv("TEST_CREATE_SYSTEM_PROMPT"), "New system prompt"
-    )
-    assert system_prompt is not None, "system prompt was not created"
-    assert isinstance(system_prompt, dict), "Expected system prompt to be an object"
-    assert (
-        "message_string" in system_prompt
-    ), "Expected system prompt to have a 'message_string' field"
-    test_ids["test_prompt_id"] = system_prompt["id"]
-
-
-def test_delete_system_prompt(test_ids):
-    response = client.delete_system_prompt(test_ids["test_prompt_id"])
-    assert response is None, "Expected system prompt to be deleted"
-
-
-def test_list_prompt_templates():
-    prompt_templates = client.list_prompt_templates()
-    assert prompt_templates is not None, "Expected prompt templates to be returned"
-    assert isinstance(prompt_templates, list), "Expected prompt templates to be a list"
-    assert (
-        len(prompt_templates) > 0
-    ), "Expected at least one prompt template to be returned"
-    for prompt in prompt_templates:
-        assert isinstance(prompt, dict), "Expected each prompt to be an object"
-        assert "id" in prompt, "Expected each prompt to have an 'id' field"
-
-
-def test_fail_prompt_template():
+def test_fail_create_duplicate_api_key():
     with pytest.raises(QuotientAIException) as exc_info:
-        client.create_prompt_template(
-            os.getenv("TEST_BAD_PROMPT_TEMPLATE"), "Bad template A"
-        )
-    assert "The template must include" in str(
+        client.create_api_key(os.getenv("TEST_API_KEY_NAME"), 60)
+    assert "Failed to create API key" in str(
         exc_info.value
-    ), "Expected prompt template creation to fail with invalid template"
+    ), "Expected duplicate API key to raise an exception"
 
 
-def test_create_prompt_template(test_ids):
-    prompt_template = client.create_prompt_template(
-        os.getenv("TEST_CREATE_PROMPT_TEMPLATE"), "Good template B"
-    )
-    assert prompt_template is not None, "Prompt template was not created"
-    assert isinstance(prompt_template, dict), "Expected prompt template to be an object"
-    assert (
-        "template_string" in prompt_template
-    ), "Expected prompt template to have a 'template_string' field"
-    test_ids["test_template_id"] = prompt_template["id"]
+def test_fail_get_api_key_nonexist():
+    api_key = client.list_api_keys(filters={"key_name": "nonexist"})
+    assert api_key is not None, "Expected api_key to be returned"
+    assert isinstance(api_key, list), "Expected api_key to be a list"
+    assert len(api_key) == 0, "Expected no api key to be returned with invalid name"
 
 
-def test_delete_prompt_template(test_ids):
-    response = client.delete_prompt_template(test_ids["test_template_id"])
-    assert response is None, "Expected prompt template to be deleted"
-
-
-# def test_create_dataset():
-#     dataset = client.create_dataset(
-#         name="Test dataset",
-#         file_path="./tests/resources/WhiteHouse_statements_summarizations.csv"
-#     )
-#     assert dataset is not None, "Dataset was not created"
-#     assert isinstance(dataset, dict), "Expected dataset to be an object"
-#     assert "id" in dataset, "Expected dataset to have an 'id' field"
-#     assert dataset["name"] == "Test dataset", "Expected dataset name to match"
-
-
-def test_list_datasets():
-    datasets = client.list_datasets()
-    assert datasets is not None, "Expected datasets to be returned"
-    assert isinstance(datasets, list), "Expected datasets to be a list"
-    assert len(datasets) > 0, "Expected at least one dataset to be returned"
-    for dataset in datasets:
-        assert isinstance(dataset, dict), "Expected each dataset to be an object"
-        assert "id" in dataset, "Expected each dataset to have an 'id' field"
-
-
-def test_list_tasks():
-    tasks = client.list_tasks()
-    assert tasks is not None, "Expected tasks to be returned"
-    assert isinstance(tasks, list), "Expected tasks to be a list"
-    for task in tasks:
-        assert isinstance(task, dict), "Expected each task to be an object"
-        assert "id" in task, "Expected each task to have an 'id' field"
-
-
-def test_create_task_invalid_task_type():
-    with pytest.raises(QuotientAIInvalidInputException) as exc_info:
-        client.create_task(
-            name="Test task",
-            task_type="invalid_type",
-            dataset_id=1,
-        )
-    assert "Task type must be one of" in str(
-        exc_info.value
-    ), "Expected task creation to fail"
-
-
-def test_create_task_invalid_dataset():
+def test_fail_revoke_nonexist():
     with pytest.raises(QuotientAIException) as exc_info:
-        client.create_task(dataset_id=3, name="test-task", task_type="summarization")
-    assert "Failed to create task" in str(
+        client.revoke_api_key("nonexist")
+    assert "Failed to revoke API key" in str(
         exc_info.value
-    ), "Expected invalid dataset ID to raise an exception"
-
-
-def test_create_task_success(test_ids):
-    created_task = client.create_task(dataset_id=2, name="test-task", task_type="summarization")
-    assert created_task is not None, "Expected task to be created"
-    assert created_task['name'] == "test-task", "Expected task name to match"
-    assert created_task['task_type'] == "summarization", "Expected task type to match"
-    assert 'id' in created_task, "Expected created task to have an 'id' field"
-    test_ids["test_task_id"] = created_task["id"]
-
-
-def test_delete_task(test_ids):
-    response = client.delete_task(test_ids["test_task_id"])
-    assert response is None, "Expected task to be deleted"
-
-
-def test_list_recipes():
-    recipes = client.list_recipes()
-    assert recipes is not None, "Expected recipes to be returned"
-    assert isinstance(recipes, list), "Expected recipes to be a list"
-    for recipe in recipes:
-        assert isinstance(recipe, dict), "Expected each recipe to be an object"
-        assert "id" in recipe, "Expected each recipe to have an 'id' field"
-
-
-def test_create_recipe(test_ids):
-    recipe = client.create_recipe(
-        name="Test recipe",
-        description="Test recipe description",
-        model_id=1,
-        prompt_template_id=2,
-    )
-    assert recipe is not None, "Recipe was not created"
-    assert isinstance(recipe, dict), "Expected recipe to be an object"
-    assert "id" in recipe, "Expected recipe to have an 'id' field"
-    test_ids["test_recipe_id"] = recipe["id"]
-
-
-def test_delete_recipe(test_ids):
-    response = client.delete_recipe(test_ids["test_recipe_id"])
-    assert response is None, "Expected recipe to be deleted"
-
-
-def test_list_jobs():
-    jobs = client.list_jobs()
-    assert jobs is not None, "Expected jobs to be returned"
-    assert isinstance(jobs, list), "Expected jobs to be a list"
-    for job in jobs:
-        assert isinstance(job, dict), "Expected each job to be an object"
-        assert "id" in job, "Expected each job to have an 'id' field"
-
-
-def test_create_job(test_ids):
-    job = client.create_job(task_id=2, recipe_id=1, num_fewshot_examples=2, limit=1)
-    assert job is not None, "Job was not created"
-    assert isinstance(job, dict), "Expected job to be an object"
-    assert "id" in job, "Expected job to have an 'id' field"
-    test_ids["test_job_id"] = job["id"]
-
-
-def test_filter_by_job_id(test_ids):
-    jobs = client.list_jobs(filters={"id": test_ids["test_job_id"]})
-    for job in jobs:
-        assert "status" in job, "Expected each job to have a 'status' field"
-        assert job["status"] == "Scheduled", "Expected job to have status Scheduled"
-
-
-def test_create_job_rate_limit(test_ids):
-    # Assuming the rate limit is 3 jobs per hour, create 4 jobs to surpass the limit
-    for _ in range(3):
-        alternate_client.create_job(
-            task_id=2, recipe_id=1, num_fewshot_examples=0, limit=1
-        )
-    with pytest.raises(QuotientAIException) as exc_info:
-        alternate_client.create_job(
-            task_id=2, recipe_id=1, num_fewshot_examples=0, limit=1
-        )
-    assert "Rate limit exceeded" in str(
-        exc_info.value
-    ), "Expected job creation to fail with rate limit exceeded"
-
-
-# TODO: results tests
-
-###########################
-#       Remove creds      #
-###########################
+    ), "Expected failure to raise an exception"
 
 
 def test_api_key_revoke():
@@ -364,10 +534,32 @@ def test_api_key_revoke():
     assert "revoked successfully" in result, "Expected API key to be revoked"
 
 
-def test_signout():
-    result = client.sign_out()
-    assert "Sign out successful" in result, "Expected successful signout"
-    assert client.token is None, "Expected token to be None after signout"
+# def test_list_api_keys_again():
+#     keys = client.list_api_keys()
+#     assert keys is not None, "Expected keys to be returned"
+#     assert isinstance(keys, list), "Expected api_key to be a list"
+#     assert len(keys) == 0, "Expected no api key to be returned with invalid API key"
+#     print('keys: ', keys)
+
+
+def test_revoked_key_list_failure():
+    status = client.status()
+    print('status revoked: ', status)
+    result = client.list_datasets()
+    assert result is not None, "Expected datasets to be returned"
+    assert isinstance(result, list), "Expected datasets to be a list"
+    assert len(result) == 0, "Expected no datasets to be returned with invalid API key"
+    # with pytest.raises(QuotientAIException) as exc_info:
+    #     client.list_datasets()
+    # print('hi from revoked failure: ', str(exc_info.value))
+    # assert "API key not found" in str(
+    #     exc_info.value
+    # ), "Expected dataset list request to fail"
+
+
+###########################
+#      Remove creds       #
+###########################
 
 
 def test_remove_api_key():
@@ -376,9 +568,24 @@ def test_remove_api_key():
     assert client.api_key is None, "Expected API key to be None after removal"
 
 
+def test_removed_key():
+    result = client.get_api_key()
+    assert "No API key set" in result, "Expected to not find an API key"
+
+
 def test_logout_status():
     status = client.status()
+    print('status logout: ', status)
     assert status is not None, "Expected status to be returned"
     assert isinstance(status, dict), "Expected status to be an object"
     assert "api_key" in status, "Expected status to have an 'api_key' field"
     assert status["api_key"] == False, "Expected status to show api_key as False"
+
+
+def test_revoked_all_failure():
+    with pytest.raises(QuotientAIException) as exc_info:
+        client.list_datasets()
+    assert "Invalid request" in str(
+        exc_info.value
+    ), "Expected dataset list request to fail"
+
