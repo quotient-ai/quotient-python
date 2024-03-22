@@ -40,7 +40,7 @@ class QuotientClient:
 
         # Base URL for the Supabase project
         self.supabase_url = "https://hhqppcqltklzfpggdocb.supabase.co"
- 
+
         # Eval Scheduler config
         self.eval_scheduler_url = (
             "http://eval-scheduler-alb-887401167.us-east-2.elb.amazonaws.com"
@@ -651,7 +651,7 @@ class QuotientClient:
             ) from e
         except Exception as e:
             raise QuotientAIException(f"Failed to create dataset: {str(e)}") from e
-        
+
     ###########################
     #          Tasks          #
     ###########################
@@ -719,10 +719,7 @@ class QuotientClient:
             # Supabase does not support returning nested objects, so we need to
             # manually fetch the dataset after create
             return self.list_tasks({"id": task_id})[0]
-        except PostgrestAPIError as api_err:
-            raise QuotientAIException(
-                f"Failed to create task: {api_err.message} ({api_err.code})"
-            ) from api_err
+
         except ValueError as e:
             raise QuotientAIException(f"Failed to create task: {e}") from e
         except Exception as e:
@@ -730,22 +727,6 @@ class QuotientClient:
             raise QuotientAIException(
                 f"An unexpected error occurred during task creation: {str(e)}"
             ) from e
-    
-    @require_api_key
-    def delete_task(self, task_id):
-        try:
-            response = (
-                self.supaclient.table("task").delete().eq("id", task_id).execute()
-            )
-            if not response.data:
-                raise ValueError("task not deleted (unknown error)")
-            print(f"task {response.data[0]['name']} deleted")
-        except PostgrestAPIError as api_err:
-            raise QuotientAIException(
-                f"Failed to delete task: {api_err.message} ({api_err.code})"
-            ) from api_err
-        except Exception as e:
-            raise QuotientAIException(f"Failed to delete task: {str(e)}") from e
 
     ###########################
     #          Jobs           #
