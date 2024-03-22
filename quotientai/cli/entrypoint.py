@@ -1,7 +1,6 @@
 import textwrap
 import time
 
-from datetime import datetime
 
 import click
 
@@ -9,12 +8,7 @@ from rich import print
 from rich.prompt import IntPrompt, Prompt, Confirm
 from rich.table import Table
 from rich.console import Console
-from rich.panel import Panel
 from rich.text import Text
-from rich.progress import BarColumn, Progress, SpinnerColumn, TextColumn
-from rich.layout import Layout
-from rich.console import Group
-from rich.align import Align
 from rich.syntax import Syntax
 
 

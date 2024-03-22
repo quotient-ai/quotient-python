@@ -49,6 +49,7 @@ def show_job_progress(client, job_id):
                 progress, job_progress_data, inference_task, metrics_task
             )
             time.sleep(2)
+
     print("Job completed!")
 
 
