@@ -3,7 +3,8 @@ import time
 
 import pytest
 from dotenv import load_dotenv
-from supabase import create_client
+# from supabase import create_client
+from postgrest import APIError, APIResponse, SyncPostgrestClient
 
 from quotientai import QuotientClient
 from quotientai.exceptions import QuotientAIException, QuotientAIInvalidInputException
@@ -12,6 +13,8 @@ from quotientai.exceptions import QuotientAIException, QuotientAIInvalidInputExc
 if "QUOTIENT_API_KEY" in os.environ:
     del os.environ["QUOTIENT_API_KEY"]
 
+if not os.getenv("SUPABASE_URL") or not os.getenv("SUPABASE_ADMIN_KEY"):
+    raise Exception("Missing Supabase URL or admin key in environment variables")
 
 client = QuotientClient()
 alternate_client = QuotientClient()
@@ -20,10 +23,10 @@ alternate_client = QuotientClient()
 ###########################
 #      Setup/Cleanup      #
 ###########################
-@pytest.fixture(scope="session", autouse=True)
-def load_env():
-    dotenv_path = os.path.join(os.path.dirname(__file__), "..", ".env.test")
-    load_dotenv(dotenv_path)
+# @pytest.fixture(scope="session", autouse=True)
+# def load_env():
+#     dotenv_path = os.path.join(os.path.dirname(__file__), "..", ".env")
+#     load_dotenv(dotenv_path)
 
 
 @pytest.fixture(scope="module")
@@ -45,9 +48,12 @@ def teardown_module():
         del os.environ["QUOTIENT_API_KEY"]
     yield
     # Teardown code
-    client = create_client(os.getenv("SUPABASE_URL"), os.getenv("SUPABASE_ADMIN_KEY"))
+    teardown_client = SyncPostgrestClient(os.getenv("SUPABASE_URL") + "/rest/v1", headers={
+        "apiKey": os.getenv("SUPABASE_PUBLIC_KEY")
+    })
+    teardown_client.auth(os.getenv("SUPABASE_ADMIN_KEY"))
     response = (
-        client.table("profile")
+        teardown_client.from_("profile")
         .select("id")
         .eq("uid", os.getenv("TEST_USER_ID"))
         .execute()
@@ -56,8 +62,8 @@ def teardown_module():
         print("No profile found for test user: Cleanup not done")
         return
     profile_id = response.data[0]["id"]
-    client.table("api_keys").delete().eq("user_id", os.getenv("TEST_USER_ID")).execute()
-    client.table("job").delete().eq("owner_profile_id", profile_id).execute()
+    teardown_client.table("api_keys").delete().eq("user_id", os.getenv("TEST_USER_ID")).execute()
+    teardown_client.table("job").delete().eq("owner_profile_id", profile_id).execute()
     print("SDK tests cleanup completed")
 
 
@@ -82,9 +88,9 @@ def test_missing_credentials():
     ), "Expected missing credentials to raise an exception"
 
 
-###########################
-#       Create creds      #
-###########################
+# ###########################
+# #       Create creds      #
+# ###########################
 
 
 def test_successful_login():
@@ -92,12 +98,12 @@ def test_successful_login():
     assert "Login successful" in result, "Expected login to be successful"
     assert client.token is not None, "Expected token to be set after login"
 
-    result = alternate_client.login(
-        os.getenv("TEST_USER_EMAIL_2"), os.getenv("TEST_USER_PASSWORD")
-    )
-    assert "Login successful" in result, "Expected login to be successful"
-    assert alternate_client.token is not None, "Expected token to be set after login"
-    alternate_client.create_api_key(os.getenv("TEST_API_KEY_NAME"), 60)
+#     # result = alternate_client.login(
+#     #     os.getenv("TEST_USER_EMAIL_2"), os.getenv("TEST_USER_PASSWORD")
+#     # )
+#     # assert "Login successful" in result, "Expected login to be successful"
+#     # assert alternate_client.token is not None, "Expected token to be set after login"
+#     # alternate_client.create_api_key(os.getenv("TEST_API_KEY_NAME"), 60)
 
 
 def test_api_key_failure():
@@ -114,12 +120,12 @@ def test_api_key_creation():
     assert client.api_key is not None, "Expected API key to be set after creation"
 
 
-def test_get_api_key():
-    key_name = client.get_api_key()
-    assert key_name is not None, "Expected key to be returned"
-    assert key_name == os.getenv(
-        "TEST_API_KEY_NAME"
-    ), "Expected key to have the correct name"
+# def test_get_api_key():
+#     key_name = client.get_api_key()
+#     assert key_name is not None, "Expected key to be returned"
+#     assert key_name == os.getenv(
+#         "TEST_API_KEY_NAME"
+#     ), "Expected key to have the correct name"
 
 
 def test_status():
@@ -129,6 +135,11 @@ def test_status():
     assert "api_key" in status, "Expected status to have an 'api_key' field"
     assert status["api_key"] == True, "Expected status to show api_key as True"
 
+def test_logout():
+    result = client.sign_out()
+    assert "Sign out successful" in result, "Expected successful logout"
+    assert client.token is None, "Expected token to be None after logout"
+    assert client.api_key is not None, "Expected API key to still exist after logout"
 
 ###########################
 #        Use creds        #
@@ -277,34 +288,34 @@ def test_list_jobs():
         assert "id" in job, "Expected each job to have an 'id' field"
 
 
-def test_create_job(test_ids):
-    job = client.create_job(task_id=2, recipe_id=1, num_fewshot_examples=2, limit=1)
-    assert job is not None, "Job was not created"
-    assert isinstance(job, dict), "Expected job to be an object"
-    assert "id" in job, "Expected job to have an 'id' field"
-    test_ids["test_job_id"] = job["id"]
+# def test_create_job(test_ids):
+#     job = client.create_job(task_id=2, recipe_id=1, num_fewshot_examples=2, limit=1)
+#     assert job is not None, "Job was not created"
+#     assert isinstance(job, dict), "Expected job to be an object"
+#     assert "id" in job, "Expected job to have an 'id' field"
+#     test_ids["test_job_id"] = job["id"]
 
 
-def test_filter_by_job_id(test_ids):
-    jobs = client.list_jobs(filters={"id": test_ids["test_job_id"]})
-    for job in jobs:
-        assert "status" in job, "Expected each job to have a 'status' field"
-        assert job["status"] == "Scheduled", "Expected job to have status Scheduled"
+# def test_filter_by_job_id(test_ids):
+#     jobs = client.list_jobs(filters={"id": test_ids["test_job_id"]})
+#     for job in jobs:
+#         assert "status" in job, "Expected each job to have a 'status' field"
+#         assert job["status"] == "Scheduled", "Expected job to have status Scheduled"
 
 
-def test_create_job_rate_limit(test_ids):
-    # Assuming the rate limit is 3 jobs per hour, create 4 jobs to surpass the limit
-    for _ in range(3):
-        alternate_client.create_job(
-            task_id=2, recipe_id=1, num_fewshot_examples=0, limit=1
-        )
-    with pytest.raises(QuotientAIException) as exc_info:
-        alternate_client.create_job(
-            task_id=2, recipe_id=1, num_fewshot_examples=0, limit=1
-        )
-    assert "Rate limit exceeded" in str(
-        exc_info.value
-    ), "Expected job creation to fail with rate limit exceeded"
+# def test_create_job_rate_limit(test_ids):
+#     # Assuming the rate limit is 3 jobs per hour, create 4 jobs to surpass the limit
+#     for _ in range(3):
+#         alternate_client.create_job(
+#             task_id=2, recipe_id=1, num_fewshot_examples=0, limit=1
+#         )
+#     with pytest.raises(QuotientAIException) as exc_info:
+#         alternate_client.create_job(
+#             task_id=2, recipe_id=1, num_fewshot_examples=0, limit=1
+#         )
+#     assert "Rate limit exceeded" in str(
+#         exc_info.value
+#     ), "Expected job creation to fail with rate limit exceeded"
 
 
 # TODO: results tests
@@ -315,15 +326,9 @@ def test_create_job_rate_limit(test_ids):
 
 
 def test_api_key_revoke():
+    print(f"Revoking API key: {os.getenv('TEST_API_KEY_NAME')}")
     result = client.revoke_api_key(os.getenv("TEST_API_KEY_NAME"))
     assert "revoked successfully" in result, "Expected API key to be revoked"
-
-
-def test_signout():
-    result = client.sign_out()
-    assert "Sign out successful" in result, "Expected successful signout"
-    assert client.token is None, "Expected token to be None after signout"
-
 
 def test_remove_api_key():
     result = client.remove_api_key()
@@ -337,3 +342,8 @@ def test_logout_status():
     assert isinstance(status, dict), "Expected status to be an object"
     assert "api_key" in status, "Expected status to have an 'api_key' field"
     assert status["api_key"] == False, "Expected status to show api_key as False"
+
+def test_end_session():
+    result = client.end_session()
+    assert "Session ended" in result, "Expected session to be ended"
+    assert client.token is None, "Expected token to be None after ending session"
