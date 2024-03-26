@@ -2,7 +2,6 @@ import os
 import time
 
 import pytest
-from dotenv import load_dotenv
 from postgrest import APIError, SyncPostgrestClient
 
 from quotientai import QuotientClient
@@ -359,3 +358,4 @@ def test_create_job_rate_limit(test_ids):
     assert "Rate limit exceeded" in str(
         exc_info.value
     ), "Expected job creation to fail with rate limit exceeded"
+    time.sleep(10)
