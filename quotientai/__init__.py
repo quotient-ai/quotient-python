@@ -1,2 +1,4 @@
-from .cli.entrypoint import cli
-from .client import QuotientClient
+from quotientai.cli.entrypoint import cli
+from quotientai.client import QuotientClient
+
+__all__ = ["cli", "QuotientClient"]

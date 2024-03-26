@@ -89,7 +89,7 @@ def authenticate():
         if "Failed" in api_key_result:
             click.echo(api_key_result)
             return
-        click.echo(f"Add to your shell: `export QUOTIENT_API_KEY=<api_key>`")
+        click.echo("Add to your shell: `export QUOTIENT_API_KEY=<api_key>`")
         click.echo(api_key_result)
     except QuotientAIException as e:
         click.echo(str(e))

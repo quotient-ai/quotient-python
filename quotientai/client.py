@@ -1,21 +1,19 @@
-import ast
 import logging
 import mimetypes
 import os
 import time
 from datetime import datetime
 
-logging.basicConfig(level=logging.WARNING)
-
 import requests
 from postgrest import APIError, SyncPostgrestClient
 from requests.exceptions import ConnectionError, HTTPError, RequestException, Timeout
 
 from quotientai.exceptions import (
-    QuotientAIAuthException,
     QuotientAIException,
     QuotientAIInvalidInputException,
 )
+
+logging.basicConfig(level=logging.WARNING)
 
 
 class FastAPIError(Exception):
@@ -216,7 +214,7 @@ class QuotientClient:
             self.supaclient.auth(result)
 
             print(
-                f"API keys are only returned once. Please store this key and its name in a secure location, and add it to your environment variables."
+                "API keys are only returned once. Please store this key and its name in a secure location, and add it to your environment variables."
             )
             return result
         except APIError as api_err:
@@ -233,7 +231,7 @@ class QuotientClient:
     def set_api_key(self, api_key: str):
         # TODO: Check if key is valid
         self.api_key = api_key
-        return f"Workspace set with API key."
+        return "Workspace set with API key."
 
     def get_api_key(self):
         if not self.api_key:
