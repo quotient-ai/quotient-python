@@ -20,10 +20,6 @@ alternate_client = QuotientClient()
 ###########################
 #      Setup/Cleanup      #
 ###########################
-@pytest.fixture(scope="session", autouse=True)
-def load_env():
-    dotenv_path = os.path.join(os.path.dirname(__file__), "..", ".env.test")
-    load_dotenv(dotenv_path)
 
 
 @pytest.fixture(scope="module")

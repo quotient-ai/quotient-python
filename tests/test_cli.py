@@ -14,12 +14,6 @@ runner = CliRunner()
 ###########################
 
 
-@pytest.fixture(scope="session", autouse=True)
-def check_env():
-    x = os.getenv("SUPABASE_URL")
-    assert x is not None
-
-
 @pytest.fixture(scope="module", autouse=True)
 def cleanup():
     # Setup code
