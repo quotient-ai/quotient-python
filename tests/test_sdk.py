@@ -40,35 +40,16 @@ def teardown_module():
         del os.environ["QUOTIENT_API_KEY"]
     yield
     # Teardown code
-    teardown_client = SyncPostgrestClient(os.getenv("SUPABASE_URL") + "/rest/v1", headers={
-        "apiKey": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhocXBwY3FsdGtsemZwZ2dkb2NiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MDEzNTU4MzgsImV4cCI6MjAxNjkzMTgzOH0.bpOtVl7co6B4wXQqt6Ec-WCz9FuO7tpVYbTa6PLoheI"
-    })
-    teardown_client.auth(os.getenv("SUPABASE_ADMIN_KEY"))
-    response = (
-        teardown_client.from_("profile")
-        .select("id")
-        .eq("uid", os.getenv("TEST_USER_ID"))
-        .execute()
-    )
-    if not response.data:
-        print("No profile found for test user: Cleanup not done")
-        return
-    profile_id = response.data[0]["id"]
-    teardown_client.from_("api_keys").delete().eq("user_id", os.getenv("TEST_USER_ID")).execute()
-    teardown_client.from_("job").delete().eq("owner_profile_id", profile_id).execute()
-    response2 = (
-        teardown_client.from_("profile")
-        .select("id")
-        .eq("uid", os.getenv("TEST_USER_ID_2"))
-        .execute()
-    )
-    if not response2.data:
-        print("No profile found for test user 2: Cleanup not done")
-        return
-    profile_id2 = response2.data[0]["id"]
-    teardown_client.from_("api_keys").delete().eq("user_id", os.getenv("TEST_USER_ID_2")).execute()
-    teardown_client.from_("job").delete().eq("owner_profile_id", profile_id2).execute()
-    print("SDK tests cleanup completed")
+    try:
+        teardown_client = SyncPostgrestClient(os.getenv("SUPABASE_URL") + "/rest/v1", headers={
+            "apiKey": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhocXBwY3FsdGtsemZwZ2dkb2NiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MDEzNTU4MzgsImV4cCI6MjAxNjkzMTgzOH0.bpOtVl7co6B4wXQqt6Ec-WCz9FuO7tpVYbTa6PLoheI"
+        })
+        teardown_client.auth(os.getenv("SUPABASE_ADMIN_KEY"))
+        # Clear the API keys
+        teardown_client.from_("api_keys").delete().eq("user_id", os.getenv("TEST_USER_ID")).execute()
+        teardown_client.from_("api_keys").delete().eq("user_id", os.getenv("TEST_USER_ID_2")).execute()
+    except Exception as e:
+        print("Error in cleanup: ", e)
 
 
 ###########################
@@ -295,6 +276,12 @@ def test_filter_by_job_id(test_ids):
         assert job["status"] == "Scheduled", "Expected job to have status Scheduled"
 
 
+def test_delete_job(test_ids):
+    time.sleep(2)
+    response = client.delete_job(test_ids["test_job_id"])
+    assert str(test_ids["test_job_id"]) in response, "Expected job to be deleted"
+
+
 # # TODO: results tests
 
 
@@ -358,4 +345,12 @@ def test_create_job_rate_limit(test_ids):
     assert "Rate limit exceeded" in str(
         exc_info.value
     ), "Expected job creation to fail with rate limit exceeded"
+
+
+def test_delete_jobs_nonprivileged():
     time.sleep(10)
+    jobs = client.list_jobs()
+    for job in jobs:
+        response = client.delete_job(job["id"])
+        assert str(job["id"]) in response, "Expected job to be deleted"
+    assert len(client.list_jobs()) == 0, "Expected all jobs to be deleted"

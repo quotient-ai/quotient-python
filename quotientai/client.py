@@ -45,7 +45,7 @@ class QuotientClient:
         self.eval_scheduler_url = (
             "http://eval-scheduler-alb-887401167.us-east-2.elb.amazonaws.com"
         )
-      
+        
         self.supaclient = SyncPostgrestClient(self.supabase_url + '/rest/v1', headers={
             "apiKey": self.public_api_key
         })
@@ -886,6 +886,28 @@ class QuotientClient:
             ) from http_err
         except ValueError as ve:
             raise QuotientAIException(str(ve)) from ve
+        
+    @require_api_key
+    def delete_job(self, job_id):
+        try:
+            # Before we can delete a job, we also need to find all the progress records associated with the job and delete them.
+            progress_records = self.supaclient.from_("job_progress").select("id").eq("job_id", job_id).execute()
+            if progress_records.data:
+                for progress_record in progress_records.data:
+                    self.supaclient.from_("job_progress").delete().eq("id", progress_record["id"]).execute()
+            
+            response = (
+                self.supaclient.from_("job").delete().eq("id", job_id).execute()
+            )
+            if not response.data:
+                raise ValueError("Job not deleted (unknown error)")
+            return f"Job {response.data[0]['id']} deleted"
+        except APIError as api_err:
+            raise QuotientAIException(
+                f"Failed to delete job: {api_err.message} ({api_err.code})"
+            ) from api_err
+        except Exception as e:
+            raise QuotientAIException(f"Failed to delete job: {str(e)}") from e
 
     ###########################
     #          Progress       #
