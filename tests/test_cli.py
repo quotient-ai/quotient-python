@@ -2,9 +2,9 @@ import os
 
 import pytest
 from click.testing import CliRunner
-from quotientai import cli
-
 from postgrest import APIError, APIResponse, SyncPostgrestClient
+
+from quotientai import cli
 
 runner = CliRunner()
 
@@ -23,9 +23,10 @@ def cleanup():
     # Teardown code
     if "QUOTIENT_API_KEY" in os.environ:
         del os.environ["QUOTIENT_API_KEY"]
-    teardown_client = SyncPostgrestClient(os.getenv("SUPABASE_URL") + "/rest/v1", headers={
-        "apiKey": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhocXBwY3FsdGtsemZwZ2dkb2NiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MDEzNTU4MzgsImV4cCI6MjAxNjkzMTgzOH0.bpOtVl7co6B4wXQqt6Ec-WCz9FuO7tpVYbTa6PLoheI"
-    })
+    teardown_client = SyncPostgrestClient(
+        os.getenv("SUPABASE_URL") + "/rest/v1",
+        headers={"apiKey": os.getenv("SUPABASE_ANON_KEY")},
+    )
     teardown_client.auth(os.getenv("SUPABASE_ADMIN_KEY"))
     response = (
         teardown_client.from_("profile")
@@ -37,11 +38,15 @@ def cleanup():
         print("No profile found for test user: Cleanup not done")
         return
     profile_id = response.data[0]["id"]
-    teardown_client.from_("api_keys").delete().eq("user_id", os.getenv("TEST_USER_ID")).execute()
+    teardown_client.from_("api_keys").delete().eq(
+        "user_id", os.getenv("TEST_USER_ID")
+    ).execute()
     teardown_client.from_("prompt_template").delete().eq(
         "owner_profile_id", profile_id
     ).execute()
-    teardown_client.from_("system_prompt").delete().eq("owner_profile_id", profile_id).execute()
+    teardown_client.from_("system_prompt").delete().eq(
+        "owner_profile_id", profile_id
+    ).execute()
     print("CLI tests cleanup completed")
 
 

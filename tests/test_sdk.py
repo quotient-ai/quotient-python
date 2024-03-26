@@ -7,7 +7,6 @@ from postgrest import APIError, SyncPostgrestClient
 from quotientai import QuotientClient
 from quotientai.exceptions import QuotientAIException, QuotientAIInvalidInputException
 
-
 if "QUOTIENT_API_KEY" in os.environ:
     del os.environ["QUOTIENT_API_KEY"]
 
@@ -41,13 +40,18 @@ def teardown_module():
     yield
     # Teardown code
     try:
-        teardown_client = SyncPostgrestClient(os.getenv("SUPABASE_URL") + "/rest/v1", headers={
-            "apiKey": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhocXBwY3FsdGtsemZwZ2dkb2NiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MDEzNTU4MzgsImV4cCI6MjAxNjkzMTgzOH0.bpOtVl7co6B4wXQqt6Ec-WCz9FuO7tpVYbTa6PLoheI"
-        })
+        teardown_client = SyncPostgrestClient(
+            os.getenv("SUPABASE_URL") + "/rest/v1",
+            headers={"apiKey": os.getenv("SUPABASE_ANON_KEY")},
+        )
         teardown_client.auth(os.getenv("SUPABASE_ADMIN_KEY"))
         # Clear the API keys
-        teardown_client.from_("api_keys").delete().eq("user_id", os.getenv("TEST_USER_ID")).execute()
-        teardown_client.from_("api_keys").delete().eq("user_id", os.getenv("TEST_USER_ID_2")).execute()
+        teardown_client.from_("api_keys").delete().eq(
+            "user_id", os.getenv("TEST_USER_ID")
+        ).execute()
+        teardown_client.from_("api_keys").delete().eq(
+            "user_id", os.getenv("TEST_USER_ID_2")
+        ).execute()
     except Exception as e:
         print("Error in cleanup: ", e)
 
@@ -279,7 +283,7 @@ def test_filter_by_job_id(test_ids):
 def test_delete_job(test_ids):
     time.sleep(2)
     response = client.delete_job(test_ids["test_job_id"])
-    assert str(test_ids["test_job_id"]) in response, "Expected job to be deleted"
+    assert response is None, "Expected job to be deleted"
 
 
 # # TODO: results tests
@@ -318,10 +322,12 @@ def test_logout_status():
 ###########################
 #   Nonprivileged creds   #
 ###########################
-    
+
 
 def test_successful_login_nonprivileged():
-    result = client.login(os.getenv("TEST_USER_EMAIL_2"), os.getenv("TEST_USER_PASSWORD"))
+    result = client.login(
+        os.getenv("TEST_USER_EMAIL_2"), os.getenv("TEST_USER_PASSWORD")
+    )
     assert "Login successful" in result, "Expected login to be successful"
     assert client.token is not None, "Expected token to be set after login"
 
@@ -335,13 +341,9 @@ def test_api_key_creation_nonprivileged():
 def test_create_job_rate_limit(test_ids):
     # Assuming the rate limit is 3 jobs per hour, create 4 jobs to surpass the limit
     for _ in range(3):
-        client.create_job(
-            task_id=2, recipe_id=1, num_fewshot_examples=0, limit=1
-        )
+        client.create_job(task_id=2, recipe_id=1, num_fewshot_examples=0, limit=1)
     with pytest.raises(QuotientAIException) as exc_info:
-        client.create_job(
-            task_id=2, recipe_id=1, num_fewshot_examples=0, limit=1
-        )
+        client.create_job(task_id=2, recipe_id=1, num_fewshot_examples=0, limit=1)
     assert "Rate limit exceeded" in str(
         exc_info.value
     ), "Expected job creation to fail with rate limit exceeded"
@@ -352,5 +354,5 @@ def test_delete_jobs_nonprivileged():
     jobs = client.list_jobs()
     for job in jobs:
         response = client.delete_job(job["id"])
-        assert str(job["id"]) in response, "Expected job to be deleted"
+        assert response is None, "Expected job to be deleted"
     assert len(client.list_jobs()) == 0, "Expected all jobs to be deleted"

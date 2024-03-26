@@ -8,8 +8,8 @@ from datetime import datetime
 logging.basicConfig(level=logging.WARNING)
 
 import requests
-from requests.exceptions import ConnectionError, HTTPError, RequestException, Timeout
 from postgrest import APIError, SyncPostgrestClient
+from requests.exceptions import ConnectionError, HTTPError, RequestException, Timeout
 
 from quotientai.exceptions import (
     QuotientAIAuthException,
@@ -41,14 +41,14 @@ class QuotientClient:
         # Base URL for the Supabase project
         self.supabase_url = "https://hhqppcqltklzfpggdocb.supabase.co"
 
-        # # Eval Scheduler config
+        # Eval Scheduler config
         self.eval_scheduler_url = (
             "http://eval-scheduler-alb-887401167.us-east-2.elb.amazonaws.com"
         )
-        
-        self.supaclient = SyncPostgrestClient(self.supabase_url + '/rest/v1', headers={
-            "apiKey": self.public_api_key
-        })
+
+        self.supaclient = SyncPostgrestClient(
+            self.supabase_url + "/rest/v1", headers={"apiKey": self.public_api_key}
+        )
 
         # Client Auth Token
         self.token = None
@@ -156,14 +156,12 @@ class QuotientClient:
             ) from http_err
         except Exception as e:
             raise QuotientAIException(f"Sign out failed: {str(e)}") from e
-        
 
     def end_session(self) -> str:
         self.token = None
         self.token_expiry = 0
         self.supaclient.aclose()
         return "Session ended"
-
 
     ###########################
     #         API Keys        #
@@ -886,22 +884,27 @@ class QuotientClient:
             ) from http_err
         except ValueError as ve:
             raise QuotientAIException(str(ve)) from ve
-        
+
     @require_api_key
     def delete_job(self, job_id):
         try:
             # Before we can delete a job, we also need to find all the progress records associated with the job and delete them.
-            progress_records = self.supaclient.from_("job_progress").select("id").eq("job_id", job_id).execute()
+            progress_records = (
+                self.supaclient.from_("job_progress")
+                .select("id")
+                .eq("job_id", job_id)
+                .execute()
+            )
             if progress_records.data:
                 for progress_record in progress_records.data:
-                    self.supaclient.from_("job_progress").delete().eq("id", progress_record["id"]).execute()
-            
-            response = (
-                self.supaclient.from_("job").delete().eq("id", job_id).execute()
-            )
+                    self.supaclient.from_("job_progress").delete().eq(
+                        "id", progress_record["id"]
+                    ).execute()
+
+            response = self.supaclient.from_("job").delete().eq("id", job_id).execute()
             if not response.data:
                 raise ValueError("Job not deleted (unknown error)")
-            return f"Job {response.data[0]['id']} deleted"
+            print(f"Job {response.data[0]['id']} deleted")
         except APIError as api_err:
             raise QuotientAIException(
                 f"Failed to delete job: {api_err.message} ({api_err.code})"
