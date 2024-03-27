@@ -2,12 +2,18 @@ import os
 
 import pytest
 from click.testing import CliRunner
-from dotenv import load_dotenv
+from postgrest import SyncPostgrestClient
+
 from quotientai import cli
 
-from supabase import create_client
-
 runner = CliRunner()
+
+
+admin_client = SyncPostgrestClient(
+    os.getenv("SUPABASE_URL") + "/rest/v1",
+    headers={"apiKey": os.getenv("SUPABASE_ANON_KEY")},
+)
+admin_client.auth(os.getenv("SUPABASE_ADMIN_KEY"))
 
 
 ###########################
@@ -15,12 +21,45 @@ runner = CliRunner()
 ###########################
 
 
-@pytest.fixture(scope="session", autouse=True)
-def load_env():
-    dotenv_path = os.path.join(os.path.dirname(__file__), "..", ".env.test")
-    load_dotenv(dotenv_path)
-    x = os.getenv("SUPABASE_URL")
-    assert x is not None
+def get_profile_id():
+    try:
+        response = (
+            admin_client.from_("profile")
+            .select("id")
+            .eq("uid", os.getenv("TEST_USER_ID"))
+            .execute()
+        )
+        if not response.data:
+            raise ValueError("No profile found for test user")
+        return response.data[0]["id"]
+    except Exception as e:
+        print("Error getting profile ID: ", e)
+
+
+def get_items_by_profile_id(table, profile_id):
+    try:
+        response = (
+            admin_client.from_(table)
+            .select("*")
+            .eq("owner_profile_id", profile_id)
+            .execute()
+        )
+        if not response.data:
+            raise ValueError("No item found for profile id")
+        return response.data
+    except Exception as e:
+        print(f"Error getting {table} by profile ID ({profile_id}): ", e)
+
+
+@pytest.fixture(scope="module")
+def test_ids():
+    keys = {
+        "test_profile_id": None,
+        "test_api_key_id": None,
+        "test_prompt_template_id": None,
+        "test_system_prompt_id": None,
+    }
+    yield keys
 
 
 @pytest.fixture(scope="module", autouse=True)
@@ -30,25 +69,15 @@ def cleanup():
         del os.environ["QUOTIENT_API_KEY"]
     yield
     # Teardown code
-    if "QUOTIENT_API_KEY" in os.environ:
-        del os.environ["QUOTIENT_API_KEY"]
-    client = create_client(os.getenv("SUPABASE_URL"), os.getenv("SUPABASE_ADMIN_KEY"))
-    response = (
-        client.table("profile")
-        .select("id")
-        .eq("uid", os.getenv("TEST_USER_ID"))
-        .execute()
-    )
-    if not response.data:
-        print("No profile found for test user: Cleanup not done")
-        return
-    profile_id = response.data[0]["id"]
-    client.table("api_keys").delete().eq("user_id", os.getenv("TEST_USER_ID")).execute()
-    client.table("prompt_template").delete().eq(
-        "owner_profile_id", profile_id
-    ).execute()
-    client.table("system_prompt").delete().eq("owner_profile_id", profile_id).execute()
-    print("CLI tests cleanup completed")
+    try:
+        if "QUOTIENT_API_KEY" in os.environ:
+            del os.environ["QUOTIENT_API_KEY"]
+        admin_client.from_("api_keys").delete().eq(
+            "user_id", os.getenv("TEST_USER_ID")
+        ).execute()
+        print("CLI tests cleanup completed")
+    except Exception as e:
+        print("CLI tests cleanup failed: ", e)
 
 
 ###########################
@@ -57,7 +86,6 @@ def cleanup():
 
 
 def test_authentication_api_key_exists():
-    # inputs = f"{TEST_USER_EMAIL}\nbadpassword\n{TEST_API_KEY_NAME}\n30\n"
     os.environ["QUOTIENT_API_KEY"] = "mock_key"
     result = runner.invoke(cli, ["authenticate"])
     assert result.exit_code == 0
@@ -77,7 +105,7 @@ def test_authentication_fail():
 ###########################
 
 
-def test_authentication_flow():
+def test_authentication_flow(test_ids):
     inputs = f"{os.getenv('TEST_USER_EMAIL')}\n{os.getenv('TEST_USER_PASSWORD')}\n{os.getenv('TEST_API_KEY_NAME')}\n30\n"
     result = runner.invoke(cli, ["authenticate"], input=inputs)
     test_api_key = result.output.split("\n")[-2].strip()
@@ -91,6 +119,9 @@ def test_authentication_flow():
     ), "Expected API key warning"
     assert "Add to your shell" in result.output, "Expected API key instructions"
     assert "ey" in result.output, "Expected API key to be returned"
+    # Get user information for the rest of the tests
+    profile_id = get_profile_id()
+    test_ids["test_profile_id"] = profile_id
 
 
 def test_get_api_key():
@@ -135,7 +166,7 @@ def test_list_prompts():
     assert "Default System Prompt" in result.output
 
 
-def create_system_prompt():
+def test_create_system_prompt(test_ids):
     result = runner.invoke(
         cli,
         [
@@ -143,12 +174,15 @@ def create_system_prompt():
             "system-prompt",
             "--name",
             "Good system prompt",
-            "--message_string",
+            "--message-string",
             os.getenv("TEST_CREATE_SYSTEM_PROMPT"),
         ],
     )
     assert result.exit_code == 0
     assert "Good system prompt" in result.output
+    # Get the system prompt ID for cleanup
+    sp_id = get_items_by_profile_id("system_prompt", test_ids["test_profile_id"])
+    test_ids["test_system_prompt_id"] = sp_id[0]["id"]
 
 
 def test_list_templates():
@@ -158,7 +192,7 @@ def test_list_templates():
     assert "Question Answering" in result.output
 
 
-def create_prompt_template():
+def test_create_prompt_template(test_ids):
     result = runner.invoke(
         cli,
         [
@@ -172,6 +206,9 @@ def create_prompt_template():
     )
     assert result.exit_code == 0
     assert "Good template B" in result.output
+    # Get the prompt template ID for cleanup
+    pt_id = get_items_by_profile_id("prompt_template", test_ids["test_profile_id"])
+    test_ids["test_prompt_template_id"] = pt_id[0]["id"]
 
 
 def test_list_tasks():
@@ -186,6 +223,29 @@ def test_list_recipes():
     result = runner.invoke(cli, ["list", "recipes"])
     assert result.exit_code == 0
     assert "llama-question" in result.output
+
+
+def test_delete_system_prompt(test_ids):
+    sp_id = test_ids["test_system_prompt_id"]
+    result = runner.invoke(
+        cli, ["delete", "system-prompt", "--system-prompt-id", sp_id]
+    )
+    assert result.exit_code == 0
+    assert "Removed system prompt" in result.output
+
+
+def test_delete_prompt_template(test_ids):
+    result = runner.invoke(
+        cli,
+        [
+            "delete",
+            "prompt-template",
+            "--prompt-template-id",
+            test_ids["test_prompt_template_id"],
+        ],
+    )
+    assert result.exit_code == 0
+    assert "Removed prompt template" in result.output
 
 
 ###########################

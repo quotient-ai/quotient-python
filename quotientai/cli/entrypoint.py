@@ -86,9 +86,9 @@ def authenticate():
             default=30,
         )
         api_key_result = client.create_api_key(key_name, key_lifetime)
-        # if "Failed" in api_key_result:
-        #     click.echo(api_key_result)
-        #     return
+        if "Failed" in api_key_result:
+            click.echo(api_key_result)
+            return
         click.echo(f"Add to your shell: `export QUOTIENT_API_KEY=<api_key>`")
         click.echo(api_key_result)
     except QuotientAIException as e:
@@ -201,16 +201,16 @@ def list_system_prompts(filter):
 
 @create.command(name="system-prompt")
 @click.option(
-    "--system-prompt",
+    "--message-string",
     type=str,
     help="Message string to use when sending samples to the model",
 )
 @click.option("--name", type=str, help="A descriptive name for the system prompt.")
-def create_system_prompt(system_prompt, name):
+def create_system_prompt(message_string, name):
     """Command to create a new system prompt."""
     try:
         client = QuotientClient()
-        system_prompt = client.create_system_prompt(system_prompt, name)
+        system_prompt = client.create_system_prompt(message_string, name)
         print("Created system prompt with the following details:")
         print(format_system_prompt_table([system_prompt]))
     except QuotientAIException as e:
@@ -228,9 +228,8 @@ def delete_system_prompt(system_prompt_id):
     """Command to delete a system prompt."""
     try:
         client = QuotientClient()
-        deleted_system_prompt = client.delete_system_prompt(system_prompt_id)
-        print("Removed system prompt with the following details:")
-        print(format_system_prompt_table(deleted_system_prompt))
+        client.delete_system_prompt(system_prompt_id)
+        print("Removed system prompt.")
     except QuotientAIException as e:
         click.echo(str(e))
 
@@ -262,16 +261,16 @@ def list_prompt_templates(filter):
 
 @create.command(name="prompt-template")
 @click.option(
-    "--prompt-template",
+    "--template",
     type=str,
     help="Prompt template to use when sending samples to the model",
 )
 @click.option("--name", type=str, help="A descriptive name for the prompt template.")
-def create_prompt_template(prompt_template, name):
+def create_prompt_template(template, name):
     """Command to create a new prompt template."""
     try:
         client = QuotientClient()
-        prompt_template = client.create_prompt_template(prompt_template, name)
+        prompt_template = client.create_prompt_template(template, name)
         print("Created prompt template with the following details:")
         print(format_prompt_template_table([prompt_template]))
     except QuotientAIException as e:
@@ -289,9 +288,8 @@ def delete_prompt_template(prompt_template_id):
     """Command to delete a prompt template."""
     try:
         client = QuotientClient()
-        deleted_prompt_template = client.delete_prompt_template(prompt_template_id)
-        print("Removed prompt template with the following details:")
-        print(format_prompt_template_table(deleted_prompt_template))
+        client.delete_prompt_template(prompt_template_id)
+        print("Removed prompt template.")
     except QuotientAIException as e:
         click.echo(str(e))
 

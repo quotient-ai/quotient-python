@@ -8,8 +8,8 @@ from datetime import datetime
 logging.basicConfig(level=logging.WARNING)
 
 import requests
+from postgrest import APIError, SyncPostgrestClient
 from requests.exceptions import ConnectionError, HTTPError, RequestException, Timeout
-from supabase import PostgrestAPIError, PostgrestAPIResponse, create_client
 
 from quotientai.exceptions import (
     QuotientAIAuthException,
@@ -45,7 +45,10 @@ class QuotientClient:
         self.eval_scheduler_url = (
             "http://eval-scheduler-alb-887401167.us-east-2.elb.amazonaws.com"
         )
-        self.supaclient = create_client(self.supabase_url, self.public_api_key)
+
+        self.supaclient = SyncPostgrestClient(
+            self.supabase_url + "/rest/v1", headers={"apiKey": self.public_api_key}
+        )
 
         # Client Auth Token
         self.token = None
@@ -54,13 +57,13 @@ class QuotientClient:
 
         # Use API key if provided
         if self.api_key:
-            self.supaclient._auth_token = {"Authorization": f"Bearer {self.api_key}"}
+            self.supaclient.auth(self.api_key)
 
     def require_api_key(func):
         """Decorator to ensure an API key is present before calling the function."""
 
         def wrapper(self, *args, **kwargs):
-            if not self.supaclient._auth_token.get("Authorization"):
+            if not self.api_key:
                 raise QuotientAIException("Invalid request: Missing API key")
             return func(self, *args, **kwargs)
 
@@ -78,7 +81,7 @@ class QuotientClient:
 
     def login(self, email: str, password: str) -> str:
         login_data = {"email": email, "password": password}
-        login_headers = {"apikey": self.public_api_key}
+        login_headers = {"apiKey": self.public_api_key}
         try:
             response = requests.post(
                 self.supabase_url + "/auth/v1/token?grant_type=password",
@@ -99,6 +102,7 @@ class QuotientClient:
             self.token_expiry = (
                 time.time() + session["expires_in"] - 60
             )  # Extra 60 seconds for buffer
+            self.supaclient.auth(self.token)
             return "Login successful"
 
         except (ConnectionError, Timeout) as exc:
@@ -114,7 +118,7 @@ class QuotientClient:
 
     def sign_out(self) -> str:
         logout_headers = {
-            "apikey": self.public_api_key,
+            "apiKey": self.public_api_key,
             "Authorization": f"Bearer {self.token}",
         }
         try:
@@ -134,11 +138,12 @@ class QuotientClient:
             # Clear the token and expiry
             self.token = None
             self.token_expiry = 0
-            self.supaclient._auth_token = None
 
             # Return a message based on whether an API key is still in place
             if self.api_key:
+                self.supaclient.auth(self.api_key)
                 return "Sign out successful. API key still in place."
+            self.supaclient.auth(self.public_api_key)
             return "Sign out successful."
 
         except (ConnectionError, Timeout) as exc:
@@ -151,6 +156,12 @@ class QuotientClient:
             ) from http_err
         except Exception as e:
             raise QuotientAIException(f"Sign out failed: {str(e)}") from e
+
+    def end_session(self) -> str:
+        self.token = None
+        self.token_expiry = 0
+        self.supaclient.aclose()
+        return "Session ended"
 
     ###########################
     #         API Keys        #
@@ -170,7 +181,7 @@ class QuotientClient:
         Returns:
         --------
         str
-            The name of the API key
+            The value of the API key
         """
         try:
             if not self.token:
@@ -179,24 +190,43 @@ class QuotientClient:
             if self.api_key:
                 raise ValueError("API key already exists. Please remove it first.")
 
-            self.supaclient._auth_token = {"Authorization": f"Bearer {self.token}"}
             params = {"key_name": key_name, "key_lifetime": key_lifetime}
-            response = self.supaclient.rpc("create_api_key", params=params).execute()
+            rpc_headers = {
+                "Content-Type": "application/json",
+                "Accept": "application/json",
+                "apiKey": self.public_api_key,
+                "Authorization": f"Bearer {self.token}",
+            }
 
-            if not response.data:
+            response = requests.post(
+                self.supabase_url + "/rest/v1/rpc/create_api_key",
+                json=params,
+                headers=rpc_headers,
+            )
+            if response.status_code == 400:
+                raise ValueError(
+                    f"Code {response.status_code}: {response.json()['message']}"
+                )
+            response.raise_for_status()
+            result = response.json()
+            if not result:
                 raise ValueError("API key not returned. Unknown error.")
 
-            self.api_key = response.data
-            self.supaclient._auth_token = {"Authorization": f"Bearer {self.api_key}"}
+            self.api_key = result
+            self.supaclient.auth(result)
 
             print(
                 f"API keys are only returned once. Please store this key and its name in a secure location, and add it to your environment variables."
             )
-            return response.data
-        except PostgrestAPIError as api_err:
+            return result
+        except APIError as api_err:
             raise QuotientAIException(
                 f"Failed to create API key: {api_err.message} ({api_err.code})"
             ) from api_err
+        except HTTPError as http_err:
+            raise QuotientAIException(
+                f"Failed to create API key: ({http_err.response.status_code}) - {http_err.response.text}"
+            ) from http_err
         except Exception as e:
             raise QuotientAIException(f"Failed to create API key: {str(e)}") from e
 
@@ -210,10 +240,10 @@ class QuotientClient:
             self.api_key = None
             return "No API key set"
         try:
-            response = self.supaclient.table("api_keys").select("*").execute()
+            response = self.supaclient.from_("api_keys").select("*").execute()
             # TODO: JWT tid filter
             return response.data[0]["key_name"]
-        except PostgrestAPIError as api_err:
+        except APIError as api_err:
             raise QuotientAIException(
                 f"Failed to get API key information: {api_err.message} ({api_err.code})"
             ) from api_err
@@ -225,18 +255,20 @@ class QuotientClient:
     def remove_api_key(self):
         self.api_key = None
         if self.token and self.token_expiry > time.time():
+            self.supaclient.auth(self.token)
             print("API key removed. You are still logged in.")
         else:
-            print("API key removed")
+            self.supaclient.auth(self.public_api_key)
+            print("API key removed.")
 
     @require_api_key
     def list_api_keys(self):
         try:
-            response = self.supaclient.table("api_keys").select("*").execute()
+            response = self.supaclient.from_("api_keys").select("*").execute()
             if not response.data:
                 raise ValueError("API keys not returned")
             return response.data
-        except PostgrestAPIError as api_err:
+        except APIError as api_err:
             raise QuotientAIException(
                 f"Failed to list API keys: {api_err.message} ({api_err.code})"
             ) from api_err
@@ -246,11 +278,11 @@ class QuotientClient:
     @require_api_key
     def revoke_api_key(self, key_name: str):
         try:
-            self.supaclient.table("api_keys").update({"revoked": True}).eq(
+            self.supaclient.from_("api_keys").update({"revoked": True}).eq(
                 "key_name", key_name
             ).execute()
             return f"API key {key_name} revoked successfully"
-        except PostgrestAPIError as api_err:
+        except APIError as api_err:
             raise QuotientAIException(
                 f"Failed to revoke API key: {api_err.message} ({api_err.code})"
             ) from api_err
@@ -264,13 +296,13 @@ class QuotientClient:
     @require_api_key
     def list_models(self, filters=None):
         try:
-            query = self.supaclient.table("model").select("*")
+            query = self.supaclient.from_("model").select("*")
             if filters:
                 for key, value in filters.items():
                     query = query.eq(key, value)
             data = query.execute()
             return data.data
-        except PostgrestAPIError as api_err:
+        except APIError as api_err:
             raise QuotientAIException(
                 f"Failed to list models: {api_err.message} ({api_err.code})"
             ) from api_err
@@ -284,13 +316,13 @@ class QuotientClient:
     @require_api_key
     def list_system_prompts(self, filters=None):
         try:
-            query = self.supaclient.table("system_prompt").select("*")
+            query = self.supaclient.from_("system_prompt").select("*")
             if filters:
                 for key, value in filters.items():
                     query = query.eq(key, value)
             data = query.execute()
             return data.data
-        except PostgrestAPIError as api_err:
+        except APIError as api_err:
             raise QuotientAIException(
                 f"Failed to list system prompts: {api_err.message} ({api_err.code})"
             ) from api_err
@@ -320,13 +352,13 @@ class QuotientClient:
                 "message_string": message_string,
                 "created_at": datetime.utcnow().isoformat(),
             }
-            response = self.supaclient.table("system_prompt").insert(params).execute()
+            response = self.supaclient.from_("system_prompt").insert(params).execute()
 
             if not response.data:
                 raise ValueError("System prompt record not returned. Unknown error.")
 
             return response.data[0]
-        except PostgrestAPIError as api_err:
+        except APIError as api_err:
             raise QuotientAIException(
                 f"Failed to create system prompt: {api_err.message} ({api_err.code})"
             ) from api_err
@@ -338,16 +370,16 @@ class QuotientClient:
     @require_api_key
     def delete_system_prompt(self, system_prompt_id: int):
         try:
+            print(f"Deleting system prompt {system_prompt_id}")
             response = (
-                self.supaclient.table("system_prompt")
+                self.supaclient.from_("system_prompt")
                 .delete()
                 .eq("id", system_prompt_id)
                 .execute()
             )
             if not response.data:
                 raise ValueError("system prompt not deleted (unknown error)")
-            print(f"system prompt {response.data[0]['name']} deleted")
-        except PostgrestAPIError as api_err:
+        except APIError as api_err:
             raise QuotientAIException(
                 f"Failed to delete system prompt: {api_err.message} ({api_err.code})"
             ) from api_err
@@ -376,13 +408,13 @@ class QuotientClient:
         list : A list of prompt template records from the API.
         """
         try:
-            query = self.supaclient.table("prompt_template").select("*")
+            query = self.supaclient.from_("prompt_template").select("*")
             if filters:
                 for key, value in filters.items():
                     query = query.eq(key, value)
             data = query.execute()
             return data.data
-        except PostgrestAPIError as api_err:
+        except APIError as api_err:
             raise QuotientAIException(
                 f"Failed to list prompt templates: {api_err.message} ({api_err.code})"
             ) from api_err
@@ -442,15 +474,14 @@ class QuotientClient:
     def delete_prompt_template(self, template_id):
         try:
             response = (
-                self.supaclient.table("prompt_template")
+                self.supaclient.from_("prompt_template")
                 .delete()
                 .eq("id", template_id)
                 .execute()
             )
             if not response.data:
                 raise ValueError("Prompt template not deleted (unknown error)")
-            print(f"Prompt template {response.data[0]['name']} deleted")
-        except PostgrestAPIError as api_err:
+        except APIError as api_err:
             raise QuotientAIException(
                 f"Failed to delete prompt template: {api_err.message} ({api_err.code})"
             ) from api_err
@@ -480,7 +511,7 @@ class QuotientClient:
             A list of recipe records from the API.
         """
         try:
-            query = self.supaclient.table("recipe").select(
+            query = self.supaclient.from_("recipe").select(
                 "*,prompt_template(*),model(*)"
             )
             if filters:
@@ -488,7 +519,7 @@ class QuotientClient:
                     query = query.eq(key, value)
             data = query.execute()
             return data.data
-        except PostgrestAPIError as api_err:
+        except APIError as api_err:
             raise QuotientAIException(
                 f"Failed to list recipes: {api_err.message} ({api_err.code})"
             ) from api_err
@@ -534,13 +565,13 @@ class QuotientClient:
         if system_prompt_id:
             recipe.update({"system_prompt_id": system_prompt_id})
         try:
-            response = self.supaclient.table("recipe").insert(recipe).execute()
+            response = self.supaclient.from_("recipe").insert(recipe).execute()
             recipe_response = response.data[0]
             recipe_id = recipe_response["id"]
             # Supabase does not support returning nested objects, so we need to
             # manually fetch the prompt template and model after create
             return self.list_recipes({"id": recipe_id})[0]
-        except PostgrestAPIError as api_err:
+        except APIError as api_err:
             raise QuotientAIException(
                 f"Failed to create recipe: {api_err.message} ({api_err.code})"
             ) from api_err
@@ -551,12 +582,12 @@ class QuotientClient:
     def delete_recipe(self, recipe_id):
         try:
             response = (
-                self.supaclient.table("recipe").delete().eq("id", recipe_id).execute()
+                self.supaclient.from_("recipe").delete().eq("id", recipe_id).execute()
             )
             if not response.data:
                 raise ValueError("Recipe not deleted (unknown error)")
             print(f"Recipe {response.data[0]['name']} deleted")
-        except PostgrestAPIError as api_err:
+        except APIError as api_err:
             raise QuotientAIException(
                 f"Failed to delete recipe: {api_err.message} ({api_err.code})"
             ) from api_err
@@ -584,13 +615,13 @@ class QuotientClient:
             A list of dataset records from the API.
         """
         try:
-            query = self.supaclient.table("dataset").select("*")
+            query = self.supaclient.from_("dataset").select("*")
             if filters:
                 for key, value in filters.items():
                     query = query.eq(key, value)
             data = query.execute()
             return data.data
-        except PostgrestAPIError as api_err:
+        except APIError as api_err:
             raise QuotientAIException(
                 f"Failed to list datasets: {api_err.message} ({api_err.code})"
             ) from api_err
@@ -668,13 +699,13 @@ class QuotientClient:
             Options are "id", "name", "task_type", "dataset_id", "created_at".
         """
         try:
-            query = self.supaclient.table("task").select("*,dataset(*)")
+            query = self.supaclient.from_("task").select("*,dataset(*)")
             if filters:
                 for key, value in filters.items():
                     query = query.eq(key, value)
             data = query.execute()
             return data.data
-        except PostgrestAPIError as api_err:
+        except APIError as api_err:
             raise QuotientAIException(
                 f"Failed to list tasks: {api_err.message} ({api_err.code})"
             ) from api_err
@@ -712,7 +743,7 @@ class QuotientClient:
                 "task_type": task_type,
                 "created_at": datetime.utcnow().isoformat(),
             }
-            response = self.supaclient.table("task").insert(task_data).execute()
+            response = self.supaclient.from_("task").insert(task_data).execute()
             if not response.data:
                 raise ValueError("Task creation failed, no data returned.")
             task_id = response.data[0]["id"]
@@ -749,13 +780,13 @@ class QuotientClient:
             A list of job records from the API.
         """
         try:
-            query = self.supaclient.table("job").select("*,task(*),recipe(*)")
+            query = self.supaclient.from_("job").select("*,task(*),recipe(*)")
             if filters:
                 for key, value in filters.items():
                     query = query.eq(key, value)
             data = query.execute()
             return data.data
-        except PostgrestAPIError as api_err:
+        except APIError as api_err:
             raise QuotientAIException(
                 f"Failed to list jobs: {api_err.message} ({api_err.code})"
             ) from api_err
@@ -853,6 +884,33 @@ class QuotientClient:
         except ValueError as ve:
             raise QuotientAIException(str(ve)) from ve
 
+    @require_api_key
+    def delete_job(self, job_id):
+        try:
+            # Before we can delete a job, we also need to find all the progress records associated with the job and delete them.
+            progress_records = (
+                self.supaclient.from_("job_progress")
+                .select("id")
+                .eq("job_id", job_id)
+                .execute()
+            )
+            if progress_records.data:
+                for progress_record in progress_records.data:
+                    self.supaclient.from_("job_progress").delete().eq(
+                        "id", progress_record["id"]
+                    ).execute()
+
+            response = self.supaclient.from_("job").delete().eq("id", job_id).execute()
+            if not response.data:
+                raise ValueError("Job not deleted (unknown error)")
+            print(f"Job {response.data[0]['id']} deleted")
+        except APIError as api_err:
+            raise QuotientAIException(
+                f"Failed to delete job: {api_err.message} ({api_err.code})"
+            ) from api_err
+        except Exception as e:
+            raise QuotientAIException(f"Failed to delete job: {str(e)}") from e
+
     ###########################
     #          Progress       #
     ###########################
@@ -861,13 +919,13 @@ class QuotientClient:
     def list_job_progress(self, job_id):
         try:
             data = (
-                self.supaclient.table("job_progress")
+                self.supaclient.from_("job_progress")
                 .select("*")
                 .eq("job_id", job_id)
                 .execute()
             )
             return data.data
-        except PostgrestAPIError as api_err:
+        except APIError as api_err:
             raise QuotientAIException(
                 f"Failed to retrieve job progress: {api_err.message} ({api_err.code})"
             ) from api_err

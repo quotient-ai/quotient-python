@@ -2,28 +2,16 @@ import os
 import time
 
 import pytest
-from dotenv import load_dotenv
-from supabase import create_client
+from postgrest import SyncPostgrestClient
 
 from quotientai import QuotientClient
 from quotientai.exceptions import QuotientAIException, QuotientAIInvalidInputException
 
-
-if "QUOTIENT_API_KEY" in os.environ:
-    del os.environ["QUOTIENT_API_KEY"]
-
-
 client = QuotientClient()
-alternate_client = QuotientClient()
-
 
 ###########################
 #      Setup/Cleanup      #
 ###########################
-@pytest.fixture(scope="session", autouse=True)
-def load_env():
-    dotenv_path = os.path.join(os.path.dirname(__file__), "..", ".env.test")
-    load_dotenv(dotenv_path)
 
 
 @pytest.fixture(scope="module")
@@ -45,20 +33,29 @@ def teardown_module():
         del os.environ["QUOTIENT_API_KEY"]
     yield
     # Teardown code
-    client = create_client(os.getenv("SUPABASE_URL"), os.getenv("SUPABASE_ADMIN_KEY"))
-    response = (
-        client.table("profile")
-        .select("id")
-        .eq("uid", os.getenv("TEST_USER_ID"))
-        .execute()
-    )
-    if not response.data:
-        print("No profile found for test user: Cleanup not done")
-        return
-    profile_id = response.data[0]["id"]
-    client.table("api_keys").delete().eq("user_id", os.getenv("TEST_USER_ID")).execute()
-    client.table("job").delete().eq("owner_profile_id", profile_id).execute()
-    print("SDK tests cleanup completed")
+    try:
+        teardown_client = SyncPostgrestClient(
+            os.getenv("SUPABASE_URL") + "/rest/v1",
+            headers={"apiKey": os.getenv("SUPABASE_ANON_KEY")},
+        )
+        teardown_client.auth(os.getenv("SUPABASE_ADMIN_KEY"))
+        # TODO: Clear the API keys once DELETE policy is implemented
+        # teardown_client.from_("api_keys").delete().eq(
+        #     "user_id", os.getenv("TEST_USER_ID")
+        # ).execute()
+        # teardown_client.from_("api_keys").delete().eq(
+        #     "user_id", os.getenv("TEST_USER_ID_2")
+        # ).execute()
+        # For now: revoke keys to unblock test suite
+        teardown_client.from_("api_keys").update({"revoked": True}).eq(
+            "user_id", os.getenv("TEST_USER_ID")
+        ).execute()
+        teardown_client.from_("api_keys").update({"revoked": True}).eq(
+            "user_id", os.getenv("TEST_USER_ID_2")
+        ).execute()
+        print("SDK tests cleanup completed")
+    except Exception as e:
+        print("Error in cleanup: ", e)
 
 
 ###########################
@@ -92,13 +89,6 @@ def test_successful_login():
     assert "Login successful" in result, "Expected login to be successful"
     assert client.token is not None, "Expected token to be set after login"
 
-    result = alternate_client.login(
-        os.getenv("TEST_USER_EMAIL_2"), os.getenv("TEST_USER_PASSWORD")
-    )
-    assert "Login successful" in result, "Expected login to be successful"
-    assert alternate_client.token is not None, "Expected token to be set after login"
-    alternate_client.create_api_key(os.getenv("TEST_API_KEY_NAME"), 60)
-
 
 def test_api_key_failure():
     with pytest.raises(QuotientAIException) as exc_info:
@@ -127,7 +117,7 @@ def test_status():
     assert status is not None, "Expected status to be returned"
     assert isinstance(status, dict), "Expected status to be an object"
     assert "api_key" in status, "Expected status to have an 'api_key' field"
-    assert status["api_key"] == True, "Expected status to show api_key as True"
+    assert status["api_key"] is True, "Expected status to show api_key as True"
 
 
 ###########################
@@ -292,22 +282,14 @@ def test_filter_by_job_id(test_ids):
         assert job["status"] == "Scheduled", "Expected job to have status Scheduled"
 
 
-def test_create_job_rate_limit(test_ids):
-    # Assuming the rate limit is 3 jobs per hour, create 4 jobs to surpass the limit
-    for _ in range(3):
-        alternate_client.create_job(
-            task_id=2, recipe_id=1, num_fewshot_examples=0, limit=1
-        )
-    with pytest.raises(QuotientAIException) as exc_info:
-        alternate_client.create_job(
-            task_id=2, recipe_id=1, num_fewshot_examples=0, limit=1
-        )
-    assert "Rate limit exceeded" in str(
-        exc_info.value
-    ), "Expected job creation to fail with rate limit exceeded"
+def test_delete_job(test_ids):
+    time.sleep(2)
+    response = client.delete_job(test_ids["test_job_id"])
+    assert response is None, "Expected job to be deleted"
 
 
-# TODO: results tests
+# # TODO: results tests
+
 
 ###########################
 #       Remove creds      #
@@ -336,4 +318,48 @@ def test_logout_status():
     assert status is not None, "Expected status to be returned"
     assert isinstance(status, dict), "Expected status to be an object"
     assert "api_key" in status, "Expected status to have an 'api_key' field"
-    assert status["api_key"] == False, "Expected status to show api_key as False"
+    assert status["api_key"] is False, "Expected status to show api_key as False"
+
+
+###########################
+#   Nonprivileged creds   #
+###########################
+
+
+def test_successful_login_nonprivileged():
+    result = client.login(
+        os.getenv("TEST_USER_EMAIL_2"), os.getenv("TEST_USER_PASSWORD")
+    )
+    assert "Login successful" in result, "Expected login to be successful"
+    assert client.token is not None, "Expected token to be set after login"
+
+
+def test_api_key_creation_nonprivileged():
+    api_key = client.create_api_key(os.getenv("TEST_API_KEY_NAME"), 60)
+    assert api_key is not None, "Expected API key to be created"
+    assert client.api_key is not None, "Expected API key to be set after creation"
+
+
+def test_create_job_rate_limit(test_ids):
+    # Assuming the rate limit is 3 jobs per hour, create 4 jobs to surpass the limit
+    for _ in range(3):
+        client.create_job(task_id=2, recipe_id=1, num_fewshot_examples=0, limit=1)
+    with pytest.raises(QuotientAIException) as exc_info:
+        client.create_job(task_id=2, recipe_id=1, num_fewshot_examples=0, limit=1)
+    assert "Rate limit exceeded" in str(
+        exc_info.value
+    ), "Expected job creation to fail with rate limit exceeded"
+
+
+def test_delete_jobs_nonprivileged():
+    time.sleep(10)
+    jobs = client.list_jobs()
+    for job in jobs:
+        response = client.delete_job(job["id"])
+        assert response is None, "Expected job to be deleted"
+    assert len(client.list_jobs()) == 0, "Expected all jobs to be deleted"
+
+
+def test_api_key_revoke_nonprivileged():
+    result = client.revoke_api_key(os.getenv("TEST_API_KEY_NAME"))
+    assert "revoked successfully" in result, "Expected API key to be revoked"

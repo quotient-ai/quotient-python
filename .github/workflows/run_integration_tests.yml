@@ -31,6 +31,7 @@ jobs:
       run: |
         echo "SUPABASE_URL=https://hhqppcqltklzfpggdocb.supabase.co" > .env.test
         echo "SUPABASE_ADMIN_KEY=${{ secrets.SUPABASE_ADMIN_KEY }}" >> .env.test
+        echo "SUPABASE_ANON_KEY=${{ secrets.SUPABASE_ANON_KEY }}" >> .env.test
         echo "TEST_USER_EMAIL=demo@example.com" >> .env.test
         echo "TEST_USER_PASSWORD=${{ secrets.TEST_USER_PASSWORD }}" >> .env.test
         echo "TEST_USER_ID=d20cd6b4-2e67-43b9-b3b9-db5848a80546" >> .env.test
@@ -40,8 +41,8 @@ jobs:
         echo "TEST_BAD_PROMPT_TEMPLATE=badprompttemplate" >> .env.test
         echo "TEST_CREATE_PROMPT_TEMPLATE=\"Customer question: {input_text}\n\nShakespearean styles: {context}\n\nAnswer as King Lear:\"" >> .env.test
         echo "TEST_USER_EMAIL_2=demo2@example.com"  >> .env.test
-        echo "TEST_USER_ID=c29aa9a9-db8a-425f-b994-b9fdb8498853"  >> .env.test
+        echo "TEST_USER_ID_2=c29aa9a9-db8a-425f-b994-b9fdb8498853"  >> .env.test
 
     - name: Run pytest integration tests
       run: |
-        pytest --cov=quotientai tests/  
+        pytest --cov=quotientai tests/
