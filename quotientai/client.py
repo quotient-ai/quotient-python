@@ -203,7 +203,6 @@ class QuotientClient:
             result = response.json()
             if not result:
                 raise ValueError("API key not returned. Unknown error.")
-
             self.api_key = result
             self.supaclient.auth(result)
 
