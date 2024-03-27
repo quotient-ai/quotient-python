@@ -31,6 +31,7 @@ jobs:
       run: |
         echo "SUPABASE_URL=https://hhqppcqltklzfpggdocb.supabase.co" > .env.test
         echo "SUPABASE_ADMIN_KEY=${{ secrets.SUPABASE_ADMIN_KEY }}" >> .env.test
+        echo "SUPABASE_ANON_KEY=${{ secrets.SUPABASE_ANON_KEY }}" >> .env.test
         echo "TEST_USER_EMAIL=demo@example.com" >> .env.test
         echo "TEST_USER_PASSWORD=${{ secrets.TEST_USER_PASSWORD }}" >> .env.test
         echo "TEST_USER_ID=d20cd6b4-2e67-43b9-b3b9-db5848a80546" >> .env.test
@@ -44,4 +45,4 @@ jobs:
 
     - name: Run pytest integration tests
       run: |
-        pytest --cov=quotientai tests/  
+        pytest --cov=quotientai tests/
