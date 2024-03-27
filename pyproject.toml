@@ -30,6 +30,7 @@ postgrest = "^0.16.2"
 [tool.poetry.group.dev.dependencies]
 pytest = "^8.0.0"
 pytest-cov = "^5.0.0"
+pre-commit = "^3.7.0"
 
 [build-system]
 requires = ["poetry-core"]

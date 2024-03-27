@@ -4,7 +4,7 @@ import pytest
 from click.testing import CliRunner
 from postgrest import SyncPostgrestClient
 
-from quotientai import cli
+from quotientai.cli import cli
 
 runner = CliRunner()
 
@@ -72,6 +72,7 @@ def cleanup():
     try:
         if "QUOTIENT_API_KEY" in os.environ:
             del os.environ["QUOTIENT_API_KEY"]
+        # TODO: delete once there is a DELETE
         admin_client.from_("api_keys").delete().eq(
             "user_id", os.getenv("TEST_USER_ID")
         ).execute()
@@ -108,7 +109,7 @@ def test_authentication_fail():
 def test_authentication_flow(test_ids):
     inputs = f"{os.getenv('TEST_USER_EMAIL')}\n{os.getenv('TEST_USER_PASSWORD')}\n{os.getenv('TEST_API_KEY_NAME')}\n30\n"
     result = runner.invoke(cli, ["authenticate"], input=inputs)
-    test_api_key = result.output.split("\n")[-2].strip()
+    test_api_key = result.output.split("`")[-2].split("QUOTIENT_API_KEY=")[-1].strip()
     os.environ["QUOTIENT_API_KEY"] = test_api_key
     assert result.exit_code == 0
     assert (

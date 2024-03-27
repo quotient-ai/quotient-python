@@ -4,8 +4,11 @@ import time
 import pytest
 from postgrest import SyncPostgrestClient
 
-from quotientai import QuotientClient
-from quotientai.exceptions import QuotientAIException, QuotientAIInvalidInputException
+from quotientai import (
+    QuotientAIException,
+    QuotientAIInvalidInputException,
+    QuotientClient,
+)
 
 client = QuotientClient()
 
@@ -288,7 +291,7 @@ def test_delete_job(test_ids):
     assert response is None, "Expected job to be deleted"
 
 
-# # TODO: results tests
+# TODO: results tests
 
 
 ###########################
