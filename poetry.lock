@@ -291,21 +291,6 @@ testing = ["covdefaults (>=2.3)", "coverage (>=7.3.2)", "diff-cover (>=8.0.1)", 
 typing = ["typing-extensions (>=4.8)"]
 
 [[package]]
-name = "gotrue"
-version = "2.4.2"
-description = "Python Client Library for Supabase Auth"
-optional = false
-python-versions = "<4.0,>=3.8"
-files = [
-    {file = "gotrue-2.4.2-py3-none-any.whl", hash = "sha256:64cd40933d1f0a5d5cc4f4bd93bc51d730b94812447b6600f774790a4901e455"},
-    {file = "gotrue-2.4.2.tar.gz", hash = "sha256:e100745161f1c58dd05b9c1ef8bcd4cd78cdfb38d8d2c253ade63143a3dc6aeb"},
-]
-
-[package.dependencies]
-httpx = ">=0.23,<0.28"
-pydantic = ">=1.10,<3"
-
-[[package]]
 name = "h11"
 version = "0.14.0"
 description = "A pure-Python, bring-your-own-I/O implementation of HTTP/1.1"
@@ -839,22 +824,6 @@ files = [
 ]
 
 [[package]]
-name = "realtime"
-version = "1.0.2"
-description = ""
-optional = false
-python-versions = ">=3.8,<4.0"
-files = [
-    {file = "realtime-1.0.2-py3-none-any.whl", hash = "sha256:8f8375199fd917cd0ded818702321f91b208ab72794ade0a33cee9d55ae30f11"},
-    {file = "realtime-1.0.2.tar.gz", hash = "sha256:776170a4329edc869b91e104c554cda02c8bf8e052cbb93c377e22482870959c"},
-]
-
-[package.dependencies]
-python-dateutil = ">=2.8.1,<3.0.0"
-typing-extensions = ">=4.2.0,<5.0.0"
-websockets = ">=11.0,<12.0"
-
-[[package]]
 name = "requests"
 version = "2.31.0"
 description = "Python HTTP for Humans."
@@ -930,22 +899,6 @@ files = [
     {file = "sniffio-1.3.1-py3-none-any.whl", hash = "sha256:2f6da418d1f1e0fddd844478f41680e794e6051915791a034ff65e5f100525a2"},
     {file = "sniffio-1.3.1.tar.gz", hash = "sha256:f4324edc670a0f49750a81b895f35c3adb843cca46f0530f79fc1babb23789dc"},
 ]
-
-[[package]]
-name = "storage3"
-version = "0.7.4"
-description = "Supabase Storage client for Python."
-optional = false
-python-versions = "<4.0,>=3.8"
-files = [
-    {file = "storage3-0.7.4-py3-none-any.whl", hash = "sha256:0b8e8839b10a64063796ce55a41462c7ffd6842e0ada74f25f5dcf37e1d1bade"},
-    {file = "storage3-0.7.4.tar.gz", hash = "sha256:61fcbf836f566405981722abb7d56caa57025b261e7a316e73316701abf0c040"},
-]
-
-[package.dependencies]
-httpx = ">=0.24,<0.28"
-python-dateutil = ">=2.8.2,<3.0.0"
-typing-extensions = ">=4.2.0,<5.0.0"
 
 [[package]]
 name = "strenum"
@@ -1057,4 +1010,4 @@ files = [
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.9"
-content-hash = "f9d8f39b6663f598eaf229e9a78e2d94b677329f09507c4fb987e3dd0d46592c"
+content-hash = "e91ad30ddb09547634660be1077ccd76860f4cafe85e8d85f30bac44acfdd0bc"

@@ -72,6 +72,7 @@ def cleanup():
     try:
         if "QUOTIENT_API_KEY" in os.environ:
             del os.environ["QUOTIENT_API_KEY"]
+        # TODO: delete once there is a DELETE
         admin_client.from_("api_keys").delete().eq(
             "user_id", os.getenv("TEST_USER_ID")
         ).execute()

@@ -1,4 +1,3 @@
-import logging
 import mimetypes
 import os
 import time
@@ -8,12 +7,7 @@ import requests
 from postgrest import APIError, SyncPostgrestClient
 from requests.exceptions import ConnectionError, HTTPError, RequestException, Timeout
 
-from quotientai.exceptions import (
-    QuotientAIException,
-    QuotientAIInvalidInputException,
-)
-
-logging.basicConfig(level=logging.WARNING)
+from quotientai.exceptions import QuotientAIException, QuotientAIInvalidInputException
 
 
 class FastAPIError(Exception):
