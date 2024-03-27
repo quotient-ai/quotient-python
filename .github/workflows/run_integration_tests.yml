@@ -41,7 +41,7 @@ jobs:
         echo "TEST_BAD_PROMPT_TEMPLATE=badprompttemplate" >> .env.test
         echo "TEST_CREATE_PROMPT_TEMPLATE=\"Customer question: {input_text}\n\nShakespearean styles: {context}\n\nAnswer as King Lear:\"" >> .env.test
         echo "TEST_USER_EMAIL_2=demo2@example.com"  >> .env.test
-        echo "TEST_USER_ID=c29aa9a9-db8a-425f-b994-b9fdb8498853"  >> .env.test
+        echo "TEST_USER_ID_2=c29aa9a9-db8a-425f-b994-b9fdb8498853"  >> .env.test
 
     - name: Run pytest integration tests
       run: |
