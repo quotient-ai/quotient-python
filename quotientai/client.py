@@ -370,6 +370,7 @@ class QuotientClient:
     @require_api_key
     def delete_system_prompt(self, system_prompt_id: int):
         try:
+            print(f"Deleting system prompt {system_prompt_id}")
             response = (
                 self.supaclient.from_("system_prompt")
                 .delete()
@@ -378,7 +379,6 @@ class QuotientClient:
             )
             if not response.data:
                 raise ValueError("system prompt not deleted (unknown error)")
-            print(f"system prompt {response.data[0]['name']} deleted")
         except APIError as api_err:
             raise QuotientAIException(
                 f"Failed to delete system prompt: {api_err.message} ({api_err.code})"
@@ -481,7 +481,6 @@ class QuotientClient:
             )
             if not response.data:
                 raise ValueError("Prompt template not deleted (unknown error)")
-            print(f"Prompt template {response.data[0]['name']} deleted")
         except APIError as api_err:
             raise QuotientAIException(
                 f"Failed to delete prompt template: {api_err.message} ({api_err.code})"

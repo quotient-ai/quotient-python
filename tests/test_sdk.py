@@ -2,7 +2,7 @@ import os
 import time
 
 import pytest
-from postgrest import APIError, SyncPostgrestClient
+from postgrest import SyncPostgrestClient
 
 from quotientai import QuotientClient
 from quotientai.exceptions import QuotientAIException, QuotientAIInvalidInputException
@@ -10,10 +10,7 @@ from quotientai.exceptions import QuotientAIException, QuotientAIInvalidInputExc
 if "QUOTIENT_API_KEY" in os.environ:
     del os.environ["QUOTIENT_API_KEY"]
 
-
 client = QuotientClient()
-alternate_client = QuotientClient()
-
 
 ###########################
 #      Setup/Cleanup      #
@@ -45,13 +42,21 @@ def teardown_module():
             headers={"apiKey": os.getenv("SUPABASE_ANON_KEY")},
         )
         teardown_client.auth(os.getenv("SUPABASE_ADMIN_KEY"))
-        # Clear the API keys
-        teardown_client.from_("api_keys").delete().eq(
+        # TODO: Clear the API keys once DELETE policy is implemented
+        # teardown_client.from_("api_keys").delete().eq(
+        #     "user_id", os.getenv("TEST_USER_ID")
+        # ).execute()
+        # teardown_client.from_("api_keys").delete().eq(
+        #     "user_id", os.getenv("TEST_USER_ID_2")
+        # ).execute()
+        # For now: revoke keys to unblock test suite
+        teardown_client.from_("api_keys").update({"revoked": True}).eq(
             "user_id", os.getenv("TEST_USER_ID")
         ).execute()
-        teardown_client.from_("api_keys").delete().eq(
+        teardown_client.from_("api_keys").update({"revoked": True}).eq(
             "user_id", os.getenv("TEST_USER_ID_2")
         ).execute()
+        print("SDK tests cleanup completed")
     except Exception as e:
         print("Error in cleanup: ", e)
 
@@ -115,7 +120,7 @@ def test_status():
     assert status is not None, "Expected status to be returned"
     assert isinstance(status, dict), "Expected status to be an object"
     assert "api_key" in status, "Expected status to have an 'api_key' field"
-    assert status["api_key"] == True, "Expected status to show api_key as True"
+    assert status["api_key"] is True, "Expected status to show api_key as True"
 
 
 ###########################
@@ -316,7 +321,7 @@ def test_logout_status():
     assert status is not None, "Expected status to be returned"
     assert isinstance(status, dict), "Expected status to be an object"
     assert "api_key" in status, "Expected status to have an 'api_key' field"
-    assert status["api_key"] == False, "Expected status to show api_key as False"
+    assert status["api_key"] is False, "Expected status to show api_key as False"
 
 
 ###########################
@@ -356,3 +361,8 @@ def test_delete_jobs_nonprivileged():
         response = client.delete_job(job["id"])
         assert response is None, "Expected job to be deleted"
     assert len(client.list_jobs()) == 0, "Expected all jobs to be deleted"
+
+
+def test_api_key_revoke_nonprivileged():
+    result = client.revoke_api_key(os.getenv("TEST_API_KEY_NAME"))
+    assert "revoked successfully" in result, "Expected API key to be revoked"
