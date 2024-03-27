@@ -8,13 +8,6 @@ from quotientai import cli
 
 runner = CliRunner()
 
-if "QUOTIENT_API_KEY" in os.environ:
-    del os.environ["QUOTIENT_API_KEY"]
-
-if not os.getenv("SUPABASE_URL"):
-    raise ValueError("SUPABASE_URL not found in .env.test")
-else:
-    print("SUPABASE_URL found: ", os.getenv("SUPABASE_URL"))
 
 admin_client = SyncPostgrestClient(
     os.getenv("SUPABASE_URL") + "/rest/v1",

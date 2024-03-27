@@ -7,9 +7,6 @@ from postgrest import SyncPostgrestClient
 from quotientai import QuotientClient
 from quotientai.exceptions import QuotientAIException, QuotientAIInvalidInputException
 
-if "QUOTIENT_API_KEY" in os.environ:
-    del os.environ["QUOTIENT_API_KEY"]
-
 client = QuotientClient()
 
 ###########################
