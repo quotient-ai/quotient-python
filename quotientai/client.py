@@ -333,18 +333,15 @@ class QuotientClient:
         }
 
         try:
-            print("external_model_config", external_model_config)
             response = (
                 self.supaclient.table("external_model_config")
                 .insert(external_model_config)
                 .execute()
             )
-            print("response", response)
             model_config_response = response.data[0]
             model_config_id = model_config_response["id"]
 
             model.update({"external_model_config_id": model_config_id})
-            print("model", model)
             response = self.supaclient.table("model").insert(model).execute()
             model_response = response.data[0]
             return model_response
