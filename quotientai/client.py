@@ -366,15 +366,17 @@ class QuotientClient:
 
             model_data = model.data[0]
             external_model_config_id = model_data.get("external_model_config_id")
+
+            response = (
+                self.supaclient.from_("model").delete().eq("id", model_id).execute()
+            )
+
             if external_model_config_id:
                 # delete the external model config
                 self.supaclient.from_("external_model_config").delete().eq(
                     "id", external_model_config_id
                 ).execute()
 
-            response = (
-                self.supaclient.from_("model").delete().eq("id", model_id).execute()
-            )
             if not response.data:
                 raise ValueError("Model not deleted (unknown error)")
             print(f"Model {response.data[0]['name']} deleted")
