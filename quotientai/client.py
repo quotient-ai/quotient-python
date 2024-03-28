@@ -300,6 +300,93 @@ class QuotientClient:
         except Exception as e:
             raise QuotientAIException(f"Failed to list models: {str(e)}") from e
 
+    @require_api_key
+    def create_model(
+        self,
+        name: str,
+        endpoint: str,
+        description: str,
+        method: str,
+        headers: str,
+        payload_template: str,
+        path_to_data: str,
+        path_to_context: str,
+        model_type: str = "UserHostedModel",
+    ) -> dict:
+        external_model_config = {
+            "method": method,
+            "headers": headers,
+            "payload_template": payload_template,
+            "path_to_data": path_to_data,
+            "path_to_context": path_to_context,
+            "created_at": datetime.utcnow().isoformat(),
+        }
+
+        model = {
+            "name": name,
+            "endpoint": endpoint,
+            "revision": "placeholder",
+            "model_type": model_type,
+            "description": description,
+            "created_at": datetime.utcnow().isoformat(),
+            "instruction_template_cls": "NoneType",
+        }
+
+        try:
+            response = (
+                self.supaclient.table("external_model_config")
+                .insert(external_model_config)
+                .execute()
+            )
+            model_config_response = response.data[0]
+            model_config_id = model_config_response["id"]
+
+            model.update({"external_model_config_id": model_config_id})
+            response = self.supaclient.table("model").insert(model).execute()
+            model_response = response.data[0]
+            return model_response
+
+        except APIError as api_err:
+            print("exception", api_err)
+            raise QuotientAIException(
+                f"Failed to create model: {api_err.message} ({api_err.code})"
+            ) from api_err
+        except Exception as e:
+            raise QuotientAIException(f"Failed to create model: {str(e)}") from e
+
+    @require_api_key
+    def delete_model(self, model_id: int):
+        try:
+            # pull the model and see if the model as any external model config
+            model = (
+                self.supaclient.from_("model").select("*").eq("id", model_id).execute()
+            )
+            if not model.data:
+                raise ValueError("Model not found")
+
+            model_data = model.data[0]
+            external_model_config_id = model_data.get("external_model_config_id")
+
+            response = (
+                self.supaclient.from_("model").delete().eq("id", model_id).execute()
+            )
+
+            if external_model_config_id:
+                # delete the external model config
+                self.supaclient.from_("external_model_config").delete().eq(
+                    "id", external_model_config_id
+                ).execute()
+
+            if not response.data:
+                raise ValueError("Model not deleted (unknown error)")
+            print(f"Model {response.data[0]['name']} deleted")
+        except APIError as api_err:
+            raise QuotientAIException(
+                f"Failed to delete model: {api_err.message} ({api_err.code})"
+            ) from api_err
+        except Exception as e:
+            raise QuotientAIException(f"Failed to delete model: {str(e)}") from e
+
     ###########################
     #     System Prompts     #
     ###########################

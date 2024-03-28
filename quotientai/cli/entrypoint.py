@@ -1,3 +1,5 @@
+import json
+
 import click
 
 from quotientai.cli.format import (
@@ -171,6 +173,50 @@ def list_models(filter):
         print(format_models_table(models))
     except QuotientAIException as e:
         click.echo(str(e))
+
+
+@create.command(name="model")
+@click.option("--config-path", type=str, help="Path to the JSON configuration file.")
+def create_model_from_config(config_path):
+    """Command to add a new model from a JSON configuration file."""
+    try:
+        # Load and parse the JSON configuration file
+        with open(config_path, "r") as file:
+            config = json.load(file)
+
+        # Extract the necessary fields from the JSON configuration
+        name = config["name"]
+        endpoint = config["request"]["url"]
+        description = config["description"]
+        method = config["request"]["method"]
+        headers = json.dumps(config["request"]["headers"])
+        payload_template = json.dumps(config["request"]["payloadTemplate"])
+        path_to_data = config["responseParsing"]["pathToData"]
+        path_to_context = config["responseParsing"].get("pathToContext", None)
+
+        # Instantiate your client and call create_model with the extracted fields
+        client = QuotientClient()
+        client.create_model(
+            name=name,
+            endpoint=endpoint,
+            description=description,
+            method=method,
+            headers=headers,
+            payload_template=payload_template,
+            path_to_data=path_to_data,
+            path_to_context=path_to_context,
+        )
+
+    except QuotientAIException as e:
+        click.echo(str(e))
+    except FileNotFoundError:
+        click.echo("The specified configuration file could not be found.")
+    except json.JSONDecodeError:
+        click.echo("The configuration file is not a valid JSON file.")
+    except KeyError as e:
+        click.echo(f"An expected field was missing from your JSON file: {str(e)}")
+    except Exception as e:
+        click.echo(f"An unexpected error occurred: {str(e)}")
 
 
 ###########################
