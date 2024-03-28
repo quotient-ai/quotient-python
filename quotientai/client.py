@@ -32,6 +32,7 @@ class QuotientClient:
 
         # Base URL for the Supabase project
         self.supabase_url = "https://hhqppcqltklzfpggdocb.supabase.co"
+        # self.supabase_url = "http://127.0.0.1:54321" # Local Supabase
 
         # Eval Scheduler config
         self.eval_scheduler_url = (
@@ -299,6 +300,63 @@ class QuotientClient:
             ) from api_err
         except Exception as e:
             raise QuotientAIException(f"Failed to list models: {str(e)}") from e
+
+    @require_api_key
+    def create_model(
+        self,
+        name: str,
+        endpoint: str,
+        description: str,
+        method: str,
+        headers: str,
+        payload_template: str,
+        path_to_data: str,
+        path_to_context: str,
+        model_type: str = "UserHostedModel",
+    ) -> dict:
+        external_model_config = {
+            "method": method,
+            "headers": headers,
+            "payload_template": payload_template,
+            "path_to_data": path_to_data,
+            "path_to_context": path_to_context,
+            "created_at": datetime.utcnow().isoformat(),
+        }
+
+        model = {
+            "name": name,
+            "endpoint": endpoint,
+            "revision": "placeholder",
+            "model_type": model_type,
+            "description": description,
+            "created_at": datetime.utcnow().isoformat(),
+            "instruction_template_cls": "NoneType",
+        }
+
+        try:
+            print("external_model_config", external_model_config)
+            response = (
+                self.supaclient.table("external_model_config")
+                .insert(external_model_config)
+                .execute()
+            )
+            print("response", response)
+            model_config_response = response.data[0]
+            model_config_id = model_config_response["id"]
+
+            model.update({"external_model_config_id": model_config_id})
+            print("model", model)
+            response = self.supaclient.table("model").insert(model).execute()
+            model_response = response.data[0]
+            return model_response
+
+        except PostgrestAPIError as api_err:
+            print("exception", api_err)
+            raise QuotientAIException(
+                f"Failed to create model: {api_err.message} ({api_err.code})"
+            ) from api_err
+        except Exception as e:
+            raise QuotientAIException(f"Failed to create model: {str(e)}") from e
 
     ###########################
     #     System Prompts     #
