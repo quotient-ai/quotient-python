@@ -213,6 +213,8 @@ def create_model_from_config(config_path):
         click.echo("The specified configuration file could not be found.")
     except json.JSONDecodeError:
         click.echo("The configuration file is not a valid JSON file.")
+    except KeyError as e:
+        click.echo(f"An expected field was missing from your JSON file: {str(e)}")
     except Exception as e:
         click.echo(f"An unexpected error occurred: {str(e)}")
 

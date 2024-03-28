@@ -291,6 +291,33 @@ def test_delete_job(test_ids):
     assert response is None, "Expected job to be deleted"
 
 
+def test_create_model():
+    model = client.create_model(
+        name="bedrock-test",
+        endpoint="amazon.titan-text-lite-v1",
+        description="A description for the model.",
+        method="AWS",
+        headers={
+            "aws_access_key": "some_key",
+            "aws_secret_access_key": "some_secret_key",
+        },
+        payload_template='{"inputText": "{input_text}", "textGenerationConfig": {"maxTokenCount": 4096, "stopSequences": [], "temperature": 0, "topP": 1}}',
+        path_to_data="$.results[0].outputText",
+        path_to_context=None,
+    )
+    assert model is not None, "Model was not created"
+    assert isinstance(model, dict), "Expected model to be an object"
+    assert "id" in model, "Expected model to have an 'id' field"
+
+
+def test_delete_model():
+    models = client.list_models()
+    for model in models:
+        if model["name"] == "bedrock-test":
+            response = client.delete_model(model["id"])
+            assert response is None, "Expected model to be deleted"
+
+
 # TODO: results tests
 
 

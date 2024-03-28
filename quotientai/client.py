@@ -32,7 +32,6 @@ class QuotientClient:
 
         # Base URL for the Supabase project
         self.supabase_url = "https://hhqppcqltklzfpggdocb.supabase.co"
-        # self.supabase_url = "http://127.0.0.1:54321" # Local Supabase
 
         # Eval Scheduler config
         self.eval_scheduler_url = (
@@ -350,13 +349,44 @@ class QuotientClient:
             model_response = response.data[0]
             return model_response
 
-        except PostgrestAPIError as api_err:
+        except APIError as api_err:
             print("exception", api_err)
             raise QuotientAIException(
                 f"Failed to create model: {api_err.message} ({api_err.code})"
             ) from api_err
         except Exception as e:
             raise QuotientAIException(f"Failed to create model: {str(e)}") from e
+
+    @require_api_key
+    def delete_model(self, model_id: int):
+        try:
+            # pull the model and see if the model as any external model config
+            model = (
+                self.supaclient.from_("model").select("*").eq("id", model_id).execute()
+            )
+            if not model.data:
+                raise ValueError("Model not found")
+
+            model_data = model.data[0]
+            external_model_config_id = model_data.get("external_model_config_id")
+            if external_model_config_id:
+                # delete the external model config
+                self.supaclient.from_("external_model_config").delete().eq(
+                    "id", external_model_config_id
+                ).execute()
+
+            response = (
+                self.supaclient.from_("model").delete().eq("id", model_id).execute()
+            )
+            if not response.data:
+                raise ValueError("Model not deleted (unknown error)")
+            print(f"Model {response.data[0]['name']} deleted")
+        except APIError as api_err:
+            raise QuotientAIException(
+                f"Failed to delete model: {api_err.message} ({api_err.code})"
+            ) from api_err
+        except Exception as e:
+            raise QuotientAIException(f"Failed to delete model: {str(e)}") from e
 
     ###########################
     #     System Prompts     #
