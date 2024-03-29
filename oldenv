@@ -1,0 +1,29 @@
+; SUPABASE_URL = "https://hhqppcqltklzfpggdocb.supabase.co"
+; SUPABASE_ADMIN_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhocXBwY3FsdGtsemZwZ2dkb2NiIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTcwMTM1NTgzOCwiZXhwIjoyMDE2OTMxODM4fQ.nwMZQwEGST0fNVATc6PAm_TaQwc95YcM2W1BLVj-9rU"
+; SUPABASE_PUBLIC_KEY =
+; EVAL_SCHEDULER_URL =
+; TEST_USER_EMAIL = "demo@example.com"
+; TEST_USER_PASSWORD = "testuser"
+; TEST_USER_ID = "d20cd6b4-2e67-43b9-b3b9-db5848a80546"
+; TEST_PROFILE_ID = 43
+
+; TEST_USER_EMAIL_2="demo2@example.com"
+; TEST_USER_ID="c29aa9a9-db8a-425f-b994-b9fdb8498853"
+
+SUPABASE_URL = "http://127.0.0.1:54321"
+SUPABASE_ADMIN_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImV4cCI6MTk4MzgxMjk5Nn0.EGIM96RAZx35lJzdJsyH-qQwv8Hdp7fsn3W0YpN81IU"
+SUPABASE_PUBLIC_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0"
+EVAL_SCHEDULER_URL = "http://127.0.0.1:8000"
+TEST_USER_EMAIL = "demo@example.com"
+TEST_USER_PASSWORD = "testuser"
+TEST_USER_ID = "75672178-19c8-420c-840b-13d03af1a056"
+TEST_PROFILE_ID = 1
+
+TEST_USER_EMAIL_2="demo2@example.com"
+TEST_USER_ID_2="9e42b78e-05ae-4b45-9ff3-adcbc859eb2a"
+
+TEST_INVALID_PASSWORD="wrongpassword"
+TEST_API_KEY_NAME="testkeynamehere"
+TEST_CREATE_SYSTEM_PROMPT="You are a Shakespearean chatbot responding to queries as King Lear."
+TEST_BAD_PROMPT_TEMPLATE="badprompttemplate"
+TEST_CREATE_PROMPT_TEMPLATE="Customer question: {input_text}\n\nShakespearean styles: {context}\n\nAnswer as King Lear:"

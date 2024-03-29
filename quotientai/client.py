@@ -27,16 +27,19 @@ class QuotientClient:
     """
 
     def __init__(self):
-        # Public API key for the QuotientAI Supabase project
-        self.public_api_key = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhocXBwY3FsdGtsemZwZ2dkb2NiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MDEzNTU4MzgsImV4cCI6MjAxNjkzMTgzOH0.bpOtVl7co6B4wXQqt6Ec-WCz9FuO7tpVYbTa6PLoheI"
+        # # Public API key for the QuotientAI Supabase project
+        # self.public_api_key = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhocXBwY3FsdGtsemZwZ2dkb2NiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MDEzNTU4MzgsImV4cCI6MjAxNjkzMTgzOH0.bpOtVl7co6B4wXQqt6Ec-WCz9FuO7tpVYbTa6PLoheI"
 
-        # Base URL for the Supabase project
-        self.supabase_url = "https://hhqppcqltklzfpggdocb.supabase.co"
+        # # Base URL for the Supabase project
+        # self.supabase_url = "https://hhqppcqltklzfpggdocb.supabase.co"
 
-        # Eval Scheduler config
-        self.eval_scheduler_url = (
-            "http://eval-scheduler-alb-887401167.us-east-2.elb.amazonaws.com"
-        )
+        # # Eval Scheduler config
+        # self.eval_scheduler_url = (
+        #     "http://eval-scheduler-alb-887401167.us-east-2.elb.amazonaws.com"
+        # )
+        self.public_api_key = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0"
+        self.supabase_url = "http://127.0.0.1:54321"
+        self.eval_scheduler_url = "http://127.0.0.1:8000"
 
         self.supaclient = SyncPostgrestClient(
             self.supabase_url + "/rest/v1", headers={"apiKey": self.public_api_key}
@@ -741,7 +744,10 @@ class QuotientClient:
             # Supabase does not support returning nested objects, so we need to
             # manually fetch the dataset after create
             return self.list_tasks({"id": task_id})[0]
-
+        except APIError as api_err:
+            raise QuotientAIException(
+                f"Failed to create task: {api_err.message} ({api_err.code})"
+            ) from api_err
         except ValueError as e:
             raise QuotientAIException(f"Failed to create task: {e}") from e
         except Exception as e:
@@ -749,6 +755,22 @@ class QuotientClient:
             raise QuotientAIException(
                 f"An unexpected error occurred during task creation: {str(e)}"
             ) from e
+
+    @require_api_key
+    def delete_task(self, task_id):
+        try:
+            response = (
+                self.supaclient.table("task").delete().eq("id", task_id).execute()
+            )
+            if not response.data:
+                raise ValueError("task not deleted (unknown error)")
+            print(f"task {response.data[0]['name']} deleted")
+        except APIError as api_err:
+            raise QuotientAIException(
+                f"Failed to delete task: {api_err.message} ({api_err.code})"
+            ) from api_err
+        except Exception as e:
+            raise QuotientAIException(f"Failed to delete task: {str(e)}") from e
 
     ###########################
     #          Jobs           #
