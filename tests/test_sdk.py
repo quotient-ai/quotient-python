@@ -22,6 +22,7 @@ def test_ids():
     keys = {
         "test_template_id": None,
         "test_prompt_id": None,
+        "test_task_id": None,
         "test_recipe_id": None,
         "test_job_id": None,
     }
@@ -213,15 +214,6 @@ def test_delete_prompt_template(test_ids):
     assert response is None, "Expected prompt template to be deleted"
 
 
-def test_list_tasks():
-    tasks = client.list_tasks()
-    assert tasks is not None, "Expected tasks to be returned"
-    assert isinstance(tasks, list), "Expected tasks to be a list"
-    for task in tasks:
-        assert isinstance(task, dict), "Expected each task to be an object"
-        assert "id" in task, "Expected each task to have an 'id' field"
-
-
 def test_create_task_invalid_task_type():
     with pytest.raises(QuotientAIInvalidInputException) as exc_info:
         client.create_task(
@@ -232,6 +224,44 @@ def test_create_task_invalid_task_type():
     assert "Task type must be one of" in str(
         exc_info.value
     ), "Expected task creation to fail"
+
+
+def test_create_task_success(test_ids):
+    created_task = client.create_task(
+        dataset_id=2, name="test-task", task_type="summarization"
+    )
+    assert created_task is not None, "Expected task to be created"
+    assert created_task["name"] == "test-task", "Expected task name to match"
+    assert created_task["task_type"] == "summarization", "Expected task type to match"
+    assert "id" in created_task, "Expected created task to have an 'id' field"
+    test_ids["test_task_id"] = created_task["id"]
+
+
+def test_list_tasks(test_ids):
+    tasks = client.list_tasks()
+    assert tasks is not None, "Expected tasks to be returned"
+    assert isinstance(tasks, list), "Expected tasks to be a list"
+    assert len(tasks) > 0, "Expected at least one task to be returned"
+    assert test_ids["test_task_id"] in [
+        task["id"] for task in tasks
+    ], "Expected created task to be in the list"
+    for task in tasks:
+        assert isinstance(task, dict), "Expected each task to be an object"
+        assert "id" in task, "Expected each task to have an 'id' field"
+
+
+def test_delete_task(test_ids):
+    response = client.delete_task(test_ids["test_task_id"])
+    assert response is None, "Expected task to be deleted"
+
+
+def test_task_deleted(test_ids):
+    tasks = client.list_tasks(filters={"id": test_ids["test_task_id"]})
+    assert tasks is not None, "Expected tasks to be returned"
+    assert isinstance(tasks, list), "Expected tasks to be a list"
+    assert test_ids["test_task_id"] not in [
+        task["id"] for task in tasks
+    ], "Expected created task to not be in the list"
 
 
 def test_list_recipes():
