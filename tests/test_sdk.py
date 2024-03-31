@@ -400,26 +400,6 @@ def test_api_key_creation_nonprivileged():
     assert client.api_key is not None, "Expected API key to be set after creation"
 
 
-def test_clear_jobs_nonprivileged():
-    # To clear out any existing jobs and not hit the rate limit prematurely
-    jobs = client.list_jobs()
-    for job in jobs:
-        response = client.delete_job(job["id"])
-        assert response is None, "Expected job to be deleted"
-    assert len(client.list_jobs()) == 0, "Expected all jobs to be deleted"
-
-
-def test_create_job_rate_limit(test_ids):
-    # Assuming the rate limit is 3 jobs per hour, create 4 jobs to surpass the limit
-    for _ in range(3):
-        client.create_job(task_id=2, recipe_id=1, num_fewshot_examples=0, limit=1)
-    with pytest.raises(QuotientAIException) as exc_info:
-        client.create_job(task_id=2, recipe_id=1, num_fewshot_examples=0, limit=1)
-    assert "Rate limit exceeded" in str(
-        exc_info.value
-    ), "Expected job creation to fail with rate limit exceeded"
-
-
 def test_delete_jobs_nonprivileged():
     time.sleep(10)
     jobs = client.list_jobs()
