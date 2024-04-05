@@ -280,6 +280,40 @@ class QuotientClient:
         except Exception as e:
             raise QuotientAIException(f"Failed to revoke API key: {str(e)}") from e
 
+    @require_api_key
+    def delete_api_key(self, key_name: str):
+        try:
+            self.supaclient.from_("api_keys").delete().eq(
+                "key_name", key_name
+            ).execute()
+            return f"API key {key_name} deleted successfully"
+        except APIError as api_err:
+            raise QuotientAIException(
+                f"Failed to delete API key: {api_err.message} ({api_err.code})"
+            ) from api_err
+        except Exception as e:
+            raise QuotientAIException(f"Failed to delete API key: {str(e)}") from e
+
+    ###########################
+    #         Metrics         #
+    ###########################
+
+    @require_api_key
+    def list_metrics(self, filters=None):
+        try:
+            query = self.supaclient.from_("metrics").select("*")
+            if filters:
+                for key, value in filters.items():
+                    query = query.eq(key, value)
+            data = query.execute()
+            return data.data
+        except APIError as api_err:
+            raise QuotientAIException(
+                f"Failed to list metrics: {api_err.message} ({api_err.code})"
+            ) from api_err
+        except Exception as e:
+            raise QuotientAIException(f"Failed to list metrics: {str(e)}") from e
+
     ###########################
     #         Models          #
     ###########################
@@ -749,6 +783,7 @@ class QuotientClient:
                 response = requests.post(
                     url, headers=headers, params={"name": name}, files=files
                 )
+                print("Create Datset Response:", response.json())
                 response.raise_for_status()
                 dataset_id = response.json()["id"]
                 return self.list_datasets({"id": dataset_id})[0]
@@ -760,6 +795,25 @@ class QuotientClient:
             ) from e
         except Exception as e:
             raise QuotientAIException(f"Failed to create dataset: {str(e)}") from e
+
+    @require_api_key
+    def delete_dataset(self, dataset_id: str) -> None:
+        """
+        Delete a dataset by ID.
+        """
+        try:
+            response = (
+                self.supaclient.from_("dataset").delete().eq("id", dataset_id).execute()
+            )
+            if not response.data:
+                raise ValueError("Dataset not deleted (unknown error)")
+            print(f"Dataset {response.data[0]['name']} deleted")
+        except APIError as api_err:
+            raise QuotientAIException(
+                f"Failed to delete dataset: {api_err.message} ({api_err.code})"
+            )
+        except Exception as e:
+            raise QuotientAIException(f"Failed to delete dataset: {str(e)}") from e
 
     ###########################
     #          Tasks          #
