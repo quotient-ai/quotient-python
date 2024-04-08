@@ -29,7 +29,7 @@ def test_list_recipes(quotient_client, keyring):
         assert "id" in recipe, "Expected each recipe to have an 'id' field"
 
 
-def test_cannot_create_duplicate_recipe(quotient_client):
+def test_no_duplicate_recipe(quotient_client):
     with pytest.raises(QuotientAIException) as exc_info:
         quotient_client.create_recipe(
             name="Test recipe",

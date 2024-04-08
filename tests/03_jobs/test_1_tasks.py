@@ -26,7 +26,7 @@ def test_create_task_success(quotient_client, keyring):
     keyring["test_task_id"] = created_task["id"]
 
 
-def test_cannot_create_duplicate_task(quotient_client):
+def test_no_duplicate_task(quotient_client):
     with pytest.raises(QuotientAIException) as exc_info:
         quotient_client.create_task(
             dataset_id=2, name="test-task", task_type="summarization"

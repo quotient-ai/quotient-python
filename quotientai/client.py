@@ -783,7 +783,6 @@ class QuotientClient:
                 response = requests.post(
                     url, headers=headers, params={"name": name}, files=files
                 )
-                print("Create Datset Response:", response.json())
                 response.raise_for_status()
                 dataset_id = response.json()["id"]
                 return self.list_datasets({"id": dataset_id})[0]

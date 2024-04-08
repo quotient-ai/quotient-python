@@ -1,3 +1,8 @@
+import pytest
+
+from quotientai import QuotientAIException
+
+
 def test_create_model(quotient_client, keyring):
     model = quotient_client.create_model(
         name="bedrock-test",
@@ -16,6 +21,26 @@ def test_create_model(quotient_client, keyring):
     assert isinstance(model, dict), "Expected model to be an object"
     assert "id" in model, "Expected model to have an 'id' field"
     keyring["test_model_id"] = model["id"]
+
+
+def test_no_duplicate_model(quotient_client):
+    with pytest.raises(QuotientAIException) as exc_info:
+        quotient_client.create_model(
+            name="bedrock-test",
+            endpoint="amazon.titan-text-lite-v1",
+            description="A description for the model.",
+            method="AWS",
+            headers={
+                "aws_access_key": "some_key",
+                "aws_secret_access_key": "some_secret_key",
+            },
+            payload_template='{"inputText": "{input_text}", "textGenerationConfig": {"maxTokenCount": 4096, "stopSequences": [], "temperature": 0, "topP": 1}}',
+            path_to_data="$.results[0].outputText",
+            path_to_context=None,
+        )
+    assert "Model with the same name already exists" in str(
+        exc_info.value
+    ), "Expected model creation to fail with duplicate name"
 
 
 def test_list_models(quotient_client, keyring):
