@@ -34,6 +34,21 @@ def quotient_client(keyring):
 @pytest.fixture(scope="session", autouse=True)
 def teardown_module():
     """Cleanup function to run after all tests in this module."""
+    try:
+        setup_client = SyncPostgrestClient(
+            os.getenv("SUPABASE_URL") + "/rest/v1",
+            headers={"apiKey": os.getenv("SUPABASE_ANON_KEY")},
+        )
+        setup_client.auth(os.getenv("SUPABASE_ADMIN_KEY"))
+        setup_client.from_("api_keys").delete().eq(
+            "uid", os.getenv("TEST_USER_ID")
+        ).execute()
+        setup_client.from_("api_keys").delete().eq(
+            "uid", os.getenv("TEST_USER_ID_2")
+        ).execute()
+        setup_client.aclose()
+    except Exception as e:
+        print("Error in teardown: ", e)
     yield
     # Teardown code
     try:
@@ -48,6 +63,7 @@ def teardown_module():
         teardown_client.from_("api_keys").delete().eq(
             "uid", os.getenv("TEST_USER_ID_2")
         ).execute()
+        teardown_client.aclose()
         print("SDK tests cleanup completed")
     except Exception as e:
         print("Error in cleanup: ", e)
