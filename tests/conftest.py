@@ -42,14 +42,11 @@ def teardown_module():
             headers={"apiKey": os.getenv("SUPABASE_ANON_KEY")},
         )
         teardown_client.auth(os.getenv("SUPABASE_ADMIN_KEY"))
-
-        # TODO: Clear the API keys once DELETE policy is implemented
-        # For now: revoke keys to unblock test suite
-        teardown_client.from_("api_keys").update({"revoked": True}).eq(
-            "user_id", os.getenv("TEST_USER_ID")
+        teardown_client.from_("api_keys").delete().eq(
+            "uid", os.getenv("TEST_USER_ID")
         ).execute()
-        teardown_client.from_("api_keys").update({"revoked": True}).eq(
-            "user_id", os.getenv("TEST_USER_ID_2")
+        teardown_client.from_("api_keys").delete().eq(
+            "uid", os.getenv("TEST_USER_ID_2")
         ).execute()
         print("SDK tests cleanup completed")
     except Exception as e:
