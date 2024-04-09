@@ -893,7 +893,13 @@ class QuotientClient:
 
     @require_api_key
     def create_job(
-        self, task_id, recipe_id, num_fewshot_examples=0, limit=100, seed=42
+        self,
+        task_id,
+        recipe_id,
+        num_fewshot_examples=0,
+        limit=100,
+        seed=42,
+        metrics=None,
     ):
         """
         Create a new job with a given task, recipe, and optional parameters.
@@ -910,6 +916,8 @@ class QuotientClient:
             The number of examples to evaluate. Default is 100.
         seed : int, optional
             The random seed to use for evaluation. Default is 42.
+        metrics : list[str], optional
+            A list of metrics to use for evaluation. Default is None.
 
         Returns:
         --------
@@ -923,6 +931,23 @@ class QuotientClient:
             "limit": limit,
             "seed": seed,
         }
+
+        if metrics is not None:
+            metric_ids = []
+            for metric in metrics:
+                metric_id = (
+                    self.supaclient.from_("metrics")
+                    .select("id")
+                    .eq("name", metric)
+                    .execute()
+                )
+                if metric_id.data:
+                    metric_ids.append(metric_id.data[0]["id"])
+
+            my_string = ",".join(str(number) for number in metric_ids)
+
+            job_data.update({"metric_ids": my_string})
+
         try:
             url = f"{self.eval_scheduler_url}/create-eval-job"
             headers = {
