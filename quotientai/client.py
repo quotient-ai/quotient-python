@@ -899,7 +899,7 @@ class QuotientClient:
         num_fewshot_examples=0,
         limit=100,
         seed=42,
-        metrics=None,
+        metric_ids=None,
     ):
         """
         Create a new job with a given task, recipe, and optional parameters.
@@ -916,7 +916,7 @@ class QuotientClient:
             The number of examples to evaluate. Default is 100.
         seed : int, optional
             The random seed to use for evaluation. Default is 42.
-        metrics : list[str], optional
+        metric_ids : list[int], optional
             A list of metrics to use for evaluation. Default is None.
 
         Returns:
@@ -932,17 +932,7 @@ class QuotientClient:
             "seed": seed,
         }
 
-        if metrics is not None:
-            metric_ids = []
-            for metric in metrics:
-                metric_id = (
-                    self.supaclient.from_("metrics")
-                    .select("id")
-                    .eq("name", metric)
-                    .execute()
-                )
-                if metric_id.data:
-                    metric_ids.append(metric_id.data[0]["id"])
+        if metric_ids is not None:
             job_data.update({"metric_ids": metric_ids})
 
         try:
@@ -1044,6 +1034,76 @@ class QuotientClient:
                 .eq("job_id", job_id)
                 .execute()
             )
+            return data.data
+        except APIError as api_err:
+            raise QuotientAIException(
+                f"Failed to retrieve job progress: {api_err.message} ({api_err.code})"
+            ) from api_err
+        except Exception as e:
+            raise QuotientAIException(
+                f"Failed to retrieve job progress: {str(e)}"
+            ) from e
+
+    ###########################
+    #          Metrics        #
+    ###########################
+
+    @require_api_key
+    def create_byo_rubric_metric(
+        self, name: str, description: str, model_id: int, rubric_template: str
+    ) -> dict:
+        """
+        Create a new metric with a given name and description.
+
+        Parameters:
+        -----------
+        name : str
+            The name of the metric
+        description : str
+            The description of the metric
+        mode
+
+        Returns:
+        --------
+        dict
+            The metric record from the API.
+        """
+        try:
+            byo_metric_data = {
+                "name": name,
+                "rubric_template": rubric_template,
+                "model_id": model_id,
+                "created_at": datetime.utcnow().isoformat(),
+            }
+            response = (
+                self.supaclient.from_("byo_rubric_metric")
+                .insert(byo_metric_data)
+                .execute()
+            )
+            byo_rubric_metric_id = response.data[0]["id"]
+
+            metric_data = {
+                "name": name,
+                "title": name,
+                "description": description,
+                "byo_rubric_metric_id": byo_rubric_metric_id,
+                "created_at": datetime.utcnow().isoformat(),
+            }
+            response = self.supaclient.from_("metrics").insert(metric_data).execute()
+            if not response.data:
+                raise ValueError("Metric creation failed, no data returned.")
+            return response.data[0]
+        except APIError as api_err:
+            raise QuotientAIException(
+                f"Failed to create metric: {api_err.message} ({api_err.code})"
+            ) from api_err
+        except Exception as e:
+            raise QuotientAIException(f"Failed to create metric: {str(e)}") from e
+
+    @require_api_key
+    def list_metrics(self):
+        try:
+            data = self.supaclient.from_("metrics").select("*").execute()
             return data.data
         except APIError as api_err:
             raise QuotientAIException(
