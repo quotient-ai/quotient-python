@@ -573,13 +573,26 @@ def save_results(job_id):
     type=int,
     help="Seed for the job (optional).",
 )
+@click.option(
+    "--metric",
+    type=str,
+    required=False,
+    multiple=True,
+)
 @click.option("--show-progress", is_flag=True, help="Show the job's progress.")
-def create_job(task_id, recipe_id, num_fewshot_examples, limit, seed, show_progress):
+def create_job(
+    task_id, recipe_id, num_fewshot_examples, limit, seed, metric, show_progress
+):
     """Command to create a new job."""
     try:
         client = QuotientClient()
         new_job = client.create_job(
-            task_id, recipe_id, num_fewshot_examples, limit, seed
+            task_id=task_id,
+            recipe_id=recipe_id,
+            num_fewshot_examples=num_fewshot_examples,
+            limit=limit,
+            seed=seed,
+            metrics=metric,
         )
         print(format_jobs_table([new_job]))
 
