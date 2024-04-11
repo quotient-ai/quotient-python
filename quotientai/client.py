@@ -943,10 +943,7 @@ class QuotientClient:
                 )
                 if metric_id.data:
                     metric_ids.append(metric_id.data[0]["id"])
-
-            my_string = ",".join(str(number) for number in metric_ids)
-
-            job_data.update({"metric_ids": my_string})
+            job_data.update({"metric_ids": metric_ids})
 
         try:
             url = f"{self.eval_scheduler_url}/create-eval-job"
@@ -954,7 +951,7 @@ class QuotientClient:
                 "Authorization": f"Bearer {self.api_key}",
                 "Accept": "application/json",
             }
-            response = requests.post(url, headers=headers, params=job_data)
+            response = requests.post(url, headers=headers, json=job_data)
             result = response.json()
             if response.status_code != 200:
                 if "detail" in result:
