@@ -185,7 +185,6 @@ def format_datasets_table(data):
     for item in data:
         id = item["id"]
         name = item["name"]
-        dataset_type = item["dataset_type"]
         url = (
             truncate_string(select_file_name_from_url(item["url"]))
             if item["url"] is not None
@@ -285,6 +284,31 @@ def format_results_table(data):
     has_more_results = len(data["results"]) > table_length
 
     return table, has_more_results
+
+
+def format_metrics_table(data):
+    table = PrettyTable()
+    table.field_names = [
+        "ID",
+        "Name",
+        "Owner",
+    ]
+
+    # Add row to the general table
+    for metric_data in data:
+        owner_id = (
+            metric_data["owner_profile_id"]
+            if metric_data["owner_profile_id"] is not None
+            else "Open to all"
+        )
+        table.add_row(
+            [
+                metric_data["id"],
+                metric_data["name"],
+                owner_id,
+            ]
+        )
+    return table
 
 
 def save_results_to_file(data):

@@ -6,6 +6,7 @@ from quotientai.cli.format import (
     format_api_keys_table,
     format_datasets_table,
     format_jobs_table,
+    format_metrics_table,
     format_models_table,
     format_prompt_template_table,
     format_recipes_table,
@@ -574,14 +575,14 @@ def save_results(job_id):
     help="Seed for the job (optional).",
 )
 @click.option(
-    "--metric",
+    "--metric-id",
     type=str,
     required=False,
     multiple=True,
 )
 @click.option("--show-progress", is_flag=True, help="Show the job's progress.")
 def create_job(
-    task_id, recipe_id, num_fewshot_examples, limit, seed, metric, show_progress
+    task_id, recipe_id, num_fewshot_examples, limit, seed, metric_id, show_progress
 ):
     """Command to create a new job."""
     try:
@@ -592,7 +593,7 @@ def create_job(
             num_fewshot_examples=num_fewshot_examples,
             limit=limit,
             seed=seed,
-            metrics=metric,
+            metric_ids=metric_id,
         )
         print(format_jobs_table([new_job]))
 
@@ -615,6 +616,54 @@ def list_job_progress(job_id):
     try:
         client = QuotientClient()
         show_job_progress(client, job_id)
+
+    except QuotientAIException as e:
+        click.echo(str(e))
+
+
+###########################
+#          Metrics        #
+###########################
+
+
+@list.command(name="metrics")
+def list_metrics():
+    """Command to list all available metrics"""
+    try:
+        client = QuotientClient()
+        metrics = client.list_metrics()
+        print(format_metrics_table(metrics))
+
+    except QuotientAIException as e:
+        click.echo(str(e))
+
+
+@create.command(name="rubric-based-metric")
+@click.option("--name", required=True, type=str, help="Name of the rubric metric.")
+@click.option(
+    "--description", required=True, type=str, help="Description of the rubric metric."
+)
+@click.option(
+    "--model-id", required=True, type=int, help="Model ID for the rubric metric."
+)
+@click.option(
+    "--rubric-template",
+    required=True,
+    type=str,
+    help="Rubric template for the rubric metric.",
+)
+def create_rubric_metric(name, description, model_id, rubric_template):
+    """Command to create a new rubric metric."""
+    try:
+        client = QuotientClient()
+        metrics = client.create_rubric_based_metric(
+            name=name,
+            description=description,
+            model_id=model_id,
+            rubric_template=rubric_template,
+        )
+
+        print(format_metrics_table([metrics]))
 
     except QuotientAIException as e:
         click.echo(str(e))
