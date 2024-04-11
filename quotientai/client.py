@@ -1049,7 +1049,7 @@ class QuotientClient:
     ###########################
 
     @require_api_key
-    def create_byo_rubric_metric(
+    def create_rubric_based_metric(
         self, name: str, description: str, model_id: int, rubric_template: str
     ) -> dict:
         """
@@ -1061,7 +1061,10 @@ class QuotientClient:
             The name of the metric
         description : str
             The description of the metric
-        mode
+        model_id : int
+            The ID of the model to use for the metric
+        rubric_template : str
+            The rubric template to use for the metric. Must include `{input_text}` with in the template.
 
         Returns:
         --------
@@ -1069,6 +1072,12 @@ class QuotientClient:
             The metric record from the API.
         """
         try:
+            # check for valid template
+            if "{input_text}" not in rubric_template:
+                raise QuotientAIInvalidInputException(
+                    "Rubric template must include `{input_text}`"
+                )
+
             byo_metric_data = {
                 "name": name,
                 "rubric_template": rubric_template,

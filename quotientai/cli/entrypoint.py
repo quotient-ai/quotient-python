@@ -656,7 +656,7 @@ def create_rubric_metric(name, description, model_id, rubric_template):
     """Command to create a new rubric metric."""
     try:
         client = QuotientClient()
-        metrics = client.create_byo_rubric_metric(
+        metrics = client.create_rubric_based_metric(
             name=name,
             description=description,
             model_id=model_id,
