@@ -348,6 +348,44 @@ def test_delete_model():
             assert response is None, "Expected model to be deleted"
 
 
+def test_list_metrics():
+    metrics = client.list_metrics()
+    assert metrics is not None, "Expected metrics to be returned"
+    assert isinstance(metrics, list), "Expected metrics to be a list"
+    for metric in metrics:
+        assert isinstance(metric, dict), "Expected each metric to be an object"
+        assert "id" in metric, "Expected each metric to have an 'id' field"
+
+
+def test_create_rubric_based_metric():
+    metric = client.create_rubric_based_metric(
+        name="Test metric",
+        description="Test metric description",
+        rubric_template="Test rubric template {input_text}",
+        model_id=1,
+    )
+    assert metric is not None, "Metric was not created"
+    assert isinstance(metric, dict), "Expected metric to be an object"
+    assert "id" in metric, "Expected metric to have an 'id' field"
+    assert (
+        "owner_profile_id" in metric
+    ), "Expected metric to have an 'owner_profile_id' field"
+    assert metric["owner_profile_id"] is not None, "Expected metric to have an owner"
+
+
+def test_create_rubric_based_metric_failure():
+    with pytest.raises(QuotientAIException) as exc_info:
+        client.create_rubric_based_metric(
+            name="Test metric",
+            description="Test metric description",
+            rubric_template="Invalid rubric text",
+            model_id=1,
+        )
+    assert "Rubric template must include `{input_text}`" in str(
+        exc_info.value
+    ), "Expected invalid rubric template to raise an exception"
+
+
 # TODO: results tests
 
 

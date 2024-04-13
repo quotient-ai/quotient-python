@@ -1074,9 +1074,7 @@ class QuotientClient:
         try:
             # check for valid template
             if "{input_text}" not in rubric_template:
-                raise QuotientAIInvalidInputException(
-                    "Rubric template must include `{input_text}`"
-                )
+                raise QuotientAIException("Rubric template must include `{input_text}`")
 
             byo_metric_data = {
                 "name": name,
