@@ -311,32 +311,6 @@ def format_metrics_table(data):
     return table
 
 
-def results_to_dataframe(data):
-    data_to_frame = []
-    for item in data["results"]:
-        content = item["content"]
-        row = {
-            "id": content["id"],
-            "input_text": content["input_text"],
-            "answer": content["answer"],
-            "completion": content["completion"],
-            "context": content["context"],
-            "formatted_content": content["formatted_content"],
-        }
-        data_to_frame.append(row)
-    df = pd.DataFrame(data_to_frame)
-
-    metrics_df = pd.json_normalize(data["results"])
-    # Select only columns that have "metric" in their header and clean the column names
-    metrics_df = metrics_df[
-        metrics_df.columns[metrics_df.columns.str.contains("metric")]
-    ]
-    metrics_df.columns = metrics_df.columns.str.replace("metric.", "")
-    full_df = df.join(metrics_df)
-
-    return full_df
-
-
 def save_results_to_file(data):
     data_to_frame = []
     for item in data["results"]:
