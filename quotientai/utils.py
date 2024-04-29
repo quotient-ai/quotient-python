@@ -129,5 +129,5 @@ def results_to_csv(data):
     file_name = f"quotient-results-{data['id']}.csv"
     df.to_csv(file_name, index=False)
     full_path = os.path.abspath(file_name)
-    print(f"Metrics saved to {full_path}")
+    print(f"Results saved to {full_path}")
     return full_path
