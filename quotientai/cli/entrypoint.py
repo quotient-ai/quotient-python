@@ -14,13 +14,10 @@ from quotientai.cli.format import (
     format_results_table,
     format_system_prompt_table,
     format_tasks_table,
-    save_eval_metadata_to_file,
-    save_metrics_to_file,
-    save_results_to_file,
 )
 from quotientai.client import QuotientClient
 from quotientai.exceptions import QuotientAIException
-from quotientai.utils import show_job_progress
+from quotientai.utils import results_to_csv, show_job_progress
 
 
 @click.group()
@@ -548,9 +545,7 @@ def save_results(job_id):
     try:
         client = QuotientClient()
         results = client.get_eval_results(job_id)
-        save_results_to_file(results)
-        save_metrics_to_file(results)
-        save_eval_metadata_to_file(results)
+        results_to_csv(results)
 
     except QuotientAIException as e:
         click.echo(str(e))

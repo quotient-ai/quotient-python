@@ -1,3 +1,4 @@
+import os
 import time
 
 import pandas as pd
@@ -121,3 +122,12 @@ def results_to_dataframe(data):
     full_df = df.join(metrics_df)
 
     return full_df
+
+
+def results_to_csv(data):
+    df = results_to_dataframe(data)
+    file_name = f"quotient-results-{data['id']}.csv"
+    df.to_csv(file_name, index=False)
+    full_path = os.path.abspath(file_name)
+    print(f"Metrics saved to {full_path}")
+    return full_path

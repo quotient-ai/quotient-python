@@ -9,7 +9,7 @@ from quotientai import (
     QuotientAIInvalidInputException,
     QuotientClient,
 )
-from quotientai.utils import results_to_dataframe
+from quotientai.utils import results_to_csv, results_to_dataframe
 
 client = QuotientClient()
 
@@ -433,6 +433,13 @@ def test_results_to_dataframe(test_ids):
     assert (
         "completion" in df.columns
     ), "Expected dataframe to have a 'completion' column"
+
+
+def test_results_to_csv(test_ids):
+    results = client.get_eval_results(test_ids["test_job_id"])
+    file_path = results_to_csv(results)
+    assert file_path is not None, "Expected filepath to be returned"
+    assert os.path.exists(file_path), "Expected file to be created"
 
 
 def test_delete_job(test_ids):
