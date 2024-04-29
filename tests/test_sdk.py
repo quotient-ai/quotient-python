@@ -9,8 +9,10 @@ from quotientai import (
     QuotientAIInvalidInputException,
     QuotientClient,
 )
+from quotientai.utils import results_to_dataframe
 
 client = QuotientClient()
+
 
 ###########################
 #      Setup/Cleanup      #
@@ -301,7 +303,7 @@ def test_list_jobs():
 
 
 def test_create_job(test_ids):
-    job = client.create_job(task_id=2, recipe_id=1, num_fewshot_examples=2, limit=1)
+    job = client.create_job(task_id=1, recipe_id=1, num_fewshot_examples=2, limit=1)
     assert job is not None, "Job was not created"
     assert isinstance(job, dict), "Expected job to be an object"
     assert "id" in job, "Expected job to have an 'id' field"
@@ -313,12 +315,6 @@ def test_filter_by_job_id(test_ids):
     for job in jobs:
         assert "status" in job, "Expected each job to have a 'status' field"
         assert job["status"] == "Scheduled", "Expected job to have status Scheduled"
-
-
-def test_delete_job(test_ids):
-    time.sleep(2)
-    response = client.delete_job(test_ids["test_job_id"])
-    assert response is None, "Expected job to be deleted"
 
 
 def test_create_model():
@@ -348,7 +344,101 @@ def test_delete_model():
             assert response is None, "Expected model to be deleted"
 
 
+def test_list_metrics():
+    metrics = client.list_metrics()
+    assert metrics is not None, "Expected metrics to be returned"
+    assert isinstance(metrics, list), "Expected metrics to be a list"
+    for metric in metrics:
+        assert isinstance(metric, dict), "Expected each metric to be an object"
+        assert "id" in metric, "Expected each metric to have an 'id' field"
+
+
+def test_create_rubric_based_metric():
+    metric = client.create_rubric_based_metric(
+        name="Test metric",
+        description="Test metric description",
+        rubric_template="Test rubric template {input_text}",
+        model_id=1,
+    )
+    assert metric is not None, "Metric was not created"
+    assert isinstance(metric, dict), "Expected metric to be an object"
+    assert "id" in metric, "Expected metric to have an 'id' field"
+    assert (
+        "owner_profile_id" in metric
+    ), "Expected metric to have an 'owner_profile_id' field"
+    assert metric["owner_profile_id"] is not None, "Expected metric to have an owner"
+
+
+def test_create_rubric_based_metric_failure():
+    with pytest.raises(QuotientAIException) as exc_info:
+        client.create_rubric_based_metric(
+            name="Test metric",
+            description="Test metric description",
+            rubric_template="Invalid rubric text",
+            model_id=1,
+        )
+    assert "Rubric template must include `{input_text}`" in str(
+        exc_info.value
+    ), "Expected invalid rubric template to raise an exception"
+
+
 # TODO: results tests
+
+
+def test_get_results(test_ids):
+    # wait for the job to complete
+    job_complete = False
+    while not job_complete:
+        time.sleep(10)
+        job_data = client.list_jobs({"id": test_ids["test_job_id"]})
+        job_status = job_data[0]["status"]
+        job_complete = job_status == "Completed" or job_status == "Failed"
+        print("Job status: ", job_status)
+
+    assert job_status == "Completed", "Expected job to complete successfully"
+
+    results = client.get_eval_results(test_ids["test_job_id"])
+
+    assert results is not None, "Expected results to be returned"
+    assert isinstance(results, dict), "Expected each result to be an object"
+    assert "model_name" in results, "Expected each result to have a 'model_name' field"
+    assert "task_name" in results, "Expected each result to have a 'task_name' field"
+    assert "id" in results, "Expected each result to have an 'id' field"
+    assert "results" in results, "Expected each result to have a 'results' field"
+    assert isinstance(results["results"], list), "Expected results to be a list"
+
+    for content in results["results"]:
+        assert isinstance(content, dict), "Expected each content to be an object"
+        assert "content" in content, "Expected each content to have a 'content' field"
+        assert "metric" in content, "Expected each content to have a 'metric' field"
+        assert "success" in content, "Expected each content to have a 'success' field"
+        assert (
+            "completion_time_ms" in content
+        ), "Expected each content to have a 'completion_time_ms' field"
+        assert len(content["metric"]) > 0, "Expected metric to have at least one field"
+
+
+def test_results_to_dataframe(test_ids):
+    results = client.get_eval_results(test_ids["test_job_id"])
+
+    df = results_to_dataframe(results)
+    assert df is not None, "Expected dataframe to be returned"
+    assert len(df) > 0, "Expected dataframe to have at least one row"
+    # assert columns
+    assert "id" in df.columns, "Expected dataframe to have an 'id' column"
+    assert (
+        "input_text" in df.columns
+    ), "Expected dataframe to have an 'input_text' column"
+    assert "answer" in df.columns, "Expected dataframe to have an 'answer' column"
+    assert (
+        "completion" in df.columns
+    ), "Expected dataframe to have a 'completion' column"
+
+
+def test_delete_job(test_ids):
+    time.sleep(2)
+    response = client.delete_job(test_ids["test_job_id"])
+    assert response is None, "Expected job to be deleted"
 
 
 ###########################
