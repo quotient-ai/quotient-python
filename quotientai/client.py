@@ -1,3 +1,4 @@
+import json
 import mimetypes
 import os
 import time
@@ -307,16 +308,16 @@ class QuotientClient:
         endpoint: str,
         description: str,
         method: str,
-        headers: str,
-        payload_template: str,
+        headers: dict,
+        payload_template: dict,
         path_to_data: str,
         path_to_context: str,
         model_type: str = "UserHostedModel",
     ) -> dict:
         external_model_config = {
             "method": method,
-            "headers": headers,
-            "payload_template": payload_template,
+            "headers": json.dumps(headers),
+            "payload_template": json.dumps(payload_template),
             "path_to_data": path_to_data,
             "path_to_context": path_to_context,
             "created_at": datetime.utcnow().isoformat(),

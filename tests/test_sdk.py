@@ -327,7 +327,15 @@ def test_create_model():
             "aws_access_key": "some_key",
             "aws_secret_access_key": "some_secret_key",
         },
-        payload_template='{"inputText": "{input_text}", "textGenerationConfig": {"maxTokenCount": 4096, "stopSequences": [], "temperature": 0, "topP": 1}}',
+        payload_template={
+            "inputText": "{input_text}",
+            "textGenerationConfig": {
+                "maxTokenCount": 4096,
+                "stopSequences": [],
+                "temperature": 0,
+                "topP": 1,
+            },
+        },
         path_to_data="$.results[0].outputText",
         path_to_context=None,
     )

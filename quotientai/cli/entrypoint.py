@@ -187,8 +187,8 @@ def create_model_from_config(config_path):
         endpoint = config["request"]["url"]
         description = config["description"]
         method = config["request"]["method"]
-        headers = json.dumps(config["request"]["headers"])
-        payload_template = json.dumps(config["request"]["payloadTemplate"])
+        headers = config["request"]["headers"]
+        payload_template = config["request"]["payloadTemplate"]
         path_to_data = config["responseParsing"]["pathToData"]
         path_to_context = config["responseParsing"].get("pathToContext", None)
 
