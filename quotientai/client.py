@@ -2,13 +2,17 @@ import json
 import mimetypes
 import os
 import time
+
 from datetime import datetime
+from typing import List
 
 import requests
+
 from postgrest import APIError, SyncPostgrestClient
 from requests.exceptions import ConnectionError, HTTPError, RequestException, Timeout
 
 from quotientai.exceptions import QuotientAIException, QuotientAIInvalidInputException
+from quotientai._enums import GenerateDatasetType
 
 
 class FastAPIError(Exception):
@@ -1121,3 +1125,58 @@ class QuotientClient:
             raise QuotientAIException(
                 f"Failed to retrieve job progress: {str(e)}"
             ) from e
+
+    @require_api_key
+    def generate_examples(
+        self,
+        generation_type: GenerateDatasetType,
+        description: str,
+        seed: str = None,
+    ) -> List[str]:
+        try:
+            url = f"{self.eval_scheduler_url}/datasets/generate-examples"
+
+            params = {
+                "input": """
+                Here is an example conversation between two people:
+
+                Person 1: Hi, how are you?
+                Person 2: I'm doing well, thanks for asking.
+                Person 1: What have you been up to lately?
+                Person 2: Not much, just working on some projects.
+                """,
+                # REPLACE ME with: "generation_type": generation_type.value
+                "generation_type": "customer-support-dialog-qa",
+                # ADD ME BACK
+                # "description": description,
+                "num_examples": 3,
+            }
+            # TBD: file path or dataset id?
+            if seed:
+                params["seed"] = seed
+
+            breakpoint()
+            headers = {
+                "Authorization": f"Bearer {self.api_key}",
+                "Accept": "application/json",
+            }
+            response = requests.post(
+                url,
+                headers=headers,
+                json=params,
+            )
+            result = response.json()
+            if response.status_code != 200:
+                if "detail" in result:
+                    raise FastAPIError(response.status_code, result["detail"])
+                else:
+                    response.raise_for_status()
+
+            return result
+        except FastAPIError as fast_err:
+            raise QuotientAIException(
+                f"Failed to generate examples: {fast_err.status_code} {fast_err.detail}"
+            ) from fast_err
+
+        except Exception as e:
+            raise QuotientAIException(f"Failed to generate examples: {str(e)}") from e
