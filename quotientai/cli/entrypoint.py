@@ -2,6 +2,15 @@ import json
 
 import click
 
+from rich import print
+from rich.prompt import IntPrompt, Prompt, Confirm
+from rich.table import Table
+from rich.console import Console
+from rich.panel import Panel
+from rich.text import Text
+from rich.syntax import Syntax
+from rich.pretty import Pretty, pprint
+
 from quotientai.cli.format import (
     format_api_keys_table,
     format_datasets_table,
@@ -27,31 +36,49 @@ def cli():
 
 @cli.group()
 def auth():
-    """Group of auth commands."""
+    """
+    Group of commands for authentication and API key management.
+    """
     pass
 
 
 @cli.group()
 def list():
-    """Group of list commands."""
+    """
+    Group of commands for listing data from the Quotient API.
+    """
     pass
 
 
 @cli.group()
 def save():
-    """Group of commands for saving data to your local disk."""
+    """
+    Group of commands for pulling data from the Quotient API.
+    """
     pass
 
 
 @cli.group()
 def create():
-    """Group of create commands."""
+    """
+    Group of commands for creating data in the Quotient API.
+    """
     pass
 
 
 @cli.group()
 def delete():
-    """Group of delete commands."""
+    """
+    Group of commands for deleting data from the Quotient API.
+    """
+    pass
+
+
+@cli.group()
+def generate():
+    """
+    Group of commands for generating datasets from the Quotient API.
+    """
     pass
 
 
