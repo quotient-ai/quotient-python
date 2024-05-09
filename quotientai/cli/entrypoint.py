@@ -102,6 +102,20 @@ def dataset_generation_flow(seed: str = None):
     """
     console = Console()
 
+    # create a panel that introduces the dataset generation flow and tells
+    # a user what to expect
+    console.print(
+        Panel(
+            "Welcome to the Quotient Eval Dataset Generator! 🚀\n\n"
+            "You will be asked to provide some information about your use case.\n\n"
+            "We will generate a few examples for you to grade, and then use your input to create a dataset"
+            "that you can use to evaluate models.\n\n"
+            "Let's get started!",
+            title="Quotient Dataset Generation",
+            style="bold green",
+        )
+    )
+    console.print()
     generation_type = console.print(
         "[bold]What type of dataset do you want to create?[/bold]\n"
         "--------------------------------------------------"
@@ -110,8 +124,8 @@ def dataset_generation_flow(seed: str = None):
     # Step 1
     generation_choices = {
         1: {
-            "type": "dialogue-question-answering",
-            "description": "A dataset that can be used for evaluating model abilities for question answering grounded in dialogue.",
+            "type": "grounded-question-answering",
+            "description": "A dataset that can be used for evaluating model abilities for question answering grounded in context.",
         },
         2: {
             "type": "summarization",
@@ -125,6 +139,7 @@ def dataset_generation_flow(seed: str = None):
             style="yellow",
         )
 
+    console.print()
     choice = IntPrompt.ask(
         "Choose an option",
         choices=[str(index) for index in generation_choices.keys()],
@@ -146,10 +161,10 @@ def dataset_generation_flow(seed: str = None):
         )
         if not seed_path:
             console.print(
-                "No problem! We'll generate some examples for you, and you can grade them.\n"
+                "No problem! We'll generate some examples for you, and you can grade them\n"
             )
         else:
-            filepath = Prompt.ask("Please provide the path to the seed file.")
+            filepath = Prompt.ask("Please provide the path to the seed file")
 
             valid_format = False
             while not valid_format:
