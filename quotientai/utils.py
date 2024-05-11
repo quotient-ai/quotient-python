@@ -1,5 +1,6 @@
 import os
 import time
+import warnings
 
 import pandas as pd
 from rich.console import Console
@@ -131,3 +132,21 @@ def results_to_csv(data):
     full_path = os.path.abspath(file_name)
     print(f"Results saved to {full_path}")
     return full_path
+
+
+def deprecated(message):
+    def deprecated_decorator(func):
+        def deprecated_func(*args, **kwargs):
+            warnings.warn(
+                "{} is deprecated and will go away in a future release. {}".format(
+                    func.__name__, message
+                ),
+                category=DeprecationWarning,
+                stacklevel=2,
+            )
+            warnings.simplefilter("default", DeprecationWarning)
+            return func(*args, **kwargs)
+
+        return deprecated_func
+
+    return deprecated_decorator

@@ -6,9 +6,9 @@ from datetime import datetime
 
 import requests
 from postgrest import APIError, SyncPostgrestClient
-from requests.exceptions import ConnectionError, HTTPError, RequestException, Timeout
-
 from quotientai.exceptions import QuotientAIException, QuotientAIInvalidInputException
+from quotientai.utils import deprecated
+from requests.exceptions import ConnectionError, HTTPError, RequestException, Timeout
 
 
 class FastAPIError(Exception):
@@ -792,6 +792,7 @@ class QuotientClient:
             raise QuotientAIException(f"Failed to list tasks: {str(e)}") from e
 
     @require_api_key
+    @deprecated("you only need to call create_dataset now.")
     def create_task(self, dataset_id, name, task_type) -> dict:
         """
         Create a new task with a given dataset, name, and task type.
