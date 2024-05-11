@@ -767,6 +767,7 @@ class QuotientClient:
     ###########################
 
     @require_api_key
+    @deprecated("the task api is not used anymore. you only need to use datasets")
     def list_tasks(self, filters=None) -> list:
         """
         List tasks with optional filters. If no filters are provided, all tasks are returned.
@@ -792,7 +793,7 @@ class QuotientClient:
             raise QuotientAIException(f"Failed to list tasks: {str(e)}") from e
 
     @require_api_key
-    @deprecated("you only need to call create_dataset now.")
+    @deprecated("the task api is not used anymore. you only need to create datasets")
     def create_task(self, dataset_id, name, task_type) -> dict:
         """
         Create a new task with a given dataset, name, and task type.
@@ -844,6 +845,7 @@ class QuotientClient:
             ) from e
 
     @require_api_key
+    @deprecated("the task api is not used anymore.")
     def delete_task(self, task_id):
         try:
             response = (
