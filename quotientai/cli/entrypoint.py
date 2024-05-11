@@ -1,16 +1,8 @@
 import json
+import time
 
 import click
-
-from rich import print
-from rich.prompt import IntPrompt, Prompt, Confirm
-from rich.table import Table
-from rich.console import Console
-from rich.panel import Panel
-from rich.text import Text
-from rich.syntax import Syntax
-from rich.pretty import Pretty, pprint
-
+from quotientai._enums import GenerateDatasetType
 from quotientai.cli.format import (
     format_api_keys_table,
     format_datasets_table,
@@ -27,6 +19,18 @@ from quotientai.cli.format import (
 from quotientai.client import QuotientClient
 from quotientai.exceptions import QuotientAIException
 from quotientai.utils import results_to_csv, show_job_progress
+from rich import print
+from rich.console import Console
+from rich.panel import Panel
+from rich.progress import (
+    Progress,
+    SpinnerColumn,
+    TextColumn,
+    TimeElapsedColumn,
+)
+from rich.prompt import Confirm, IntPrompt, Prompt
+
+INITIAL_GENERATION_EXAMPLES = 3
 
 
 @click.group()
@@ -108,7 +112,7 @@ def dataset_generation_flow(seed: str = None):
         Panel(
             "Welcome to the Quotient Eval Dataset Generator! 🚀\n\n"
             "You will be asked to provide some information about your use case.\n\n"
-            "We will generate a few examples for you to grade, and then use your input to create a dataset"
+            "We will generate a few examples for you to grade, and then use your input to create a dataset "
             "that you can use to evaluate models.\n\n"
             "Let's get started!",
             title="Quotient Dataset Generation",
@@ -118,17 +122,17 @@ def dataset_generation_flow(seed: str = None):
     console.print()
     generation_type = console.print(
         "[bold]What type of dataset do you want to create?[/bold]\n"
-        "--------------------------------------------------"
+        "-------------------------------------------"
     )
 
     # Step 1
     generation_choices = {
         1: {
-            "type": "grounded-question-answering",
+            "type": GenerateDatasetType.grounded_qa.value,
             "description": "A dataset that can be used for evaluating model abilities for question answering grounded in context.",
         },
         2: {
-            "type": "summarization",
+            "type": GenerateDatasetType.summarization.value,
             "description": "A dataset that can be used for evaluating model summarization abilties.",
         },
     }
@@ -144,9 +148,8 @@ def dataset_generation_flow(seed: str = None):
         "Choose an option",
         choices=[str(index) for index in generation_choices.keys()],
     )
-    console.print(
-        f"Awesome 👍! We will generate a dataset for {generation_choices[choice]['type']}\n"
-    )
+    generation_type = generation_choices[choice]["type"]
+    console.print(f"Awesome 👍! We will generate a dataset for {generation_type}\n")
 
     # Step 2
     description = Prompt.ask(
@@ -202,55 +205,60 @@ def dataset_generation_flow(seed: str = None):
             example_one = examples[0][field]
             console.print(example_one)
 
-    def grade_examples():
-        # Step 4
-        # client = QuotientClient()
-        # examples = client.generate_examples(
-        #     generation_type=generation_type,
-        #     description=description,
-        #     seed=seed,
-        # )
+    def grade_examples(generation_type: GenerateDatasetType):
+        with Progress(
+            TextColumn("[bold green]Generating", justify="right"),
+            SpinnerColumn(spinner_name="bouncingBar"),
+            TimeElapsedColumn(),
+        ) as progress:
+            task = progress.add_task("generation", total=0)
 
-        import time
-
-        from rich.progress import (
-            Progress,
-            SpinnerColumn,
-            TextColumn,
-            TimeElapsedColumn,
-        )
-
-        # with Progress(
-        #     TextColumn("[bold green]Generating", justify="right"),
-        #     SpinnerColumn(spinner_name="bouncingBar"),
-        #     TimeElapsedColumn(),
-        # ) as progress:
-        #     task = progress.add_task("[cyan]Generating...", total=0)
-        #     while not progress.finished:
-        #         time.sleep(0.10)
+            # Step 4
+            client = QuotientClient()
+            examples = client.generate_examples(
+                generation_type=generation_type,
+                description=description,
+                num_examples=INITIAL_GENERATION_EXAMPLES,
+                seed=seed,
+            )
+            progress.update(task, completed=1)
+            while not progress.finished:
+                time.sleep(0.10)
 
         # Step 5
-        console.print("🚀 [bold]Generated 3 examples. Please grade them![/bold]")
-        console.print()
+        step_message = "🚀 Generated 3 examples. Please grade them!"
+        console.print("-" * len(step_message))
+        console.print(f"[bold]{step_message}[/bold]")
+        console.print("")
 
-        examples = [
-            {
-                "context": "A: Hello, how are you doing today?\nB: I'm doing well, thank you. How about you?A: Hello, how are you doing today?\nB: I'm doing well, thank you. How about you?A: Hello, how are you doing today?\nB: I'm doing well, thank you. How about you?A: Hello, how are you doing today?\nB: I'm doing well, thank you. How about you?A: Hello, how are you doing today?\nB: I'm doing well, thank you. How about you?A: Hello, how are you doing today?\nB: I'm doing well, thank you. How about you?",
-                "question": "What is the context of the conversation?",
-                "answer": "A: Hello, how are you doing today?",
-            },
-            {
-                "context": "A: Hello, how are you doing today?\nB: I'm doing well, thank you. How about you?A: Hello, how are you doing today?\nB: I'm doing well, thank you. How about you?A: Hello, how are you doing today?\nB: I'm doing well, thank you. How about you?A: Hello, how are you doing today?\nB: I'm doing well, thank you. How about you?A: Hello, how are you doing today?\nB: I'm doing well, thank you. How about you?A: Hello, how are you doing today?\nB: I'm doing well, thank you. How about you?",
-                "question": "What is the context of the conversation?",
-                "answer": "A: Hello, how are you doing today?",
-            },
-        ]
-        for i, example in enumerate(examples):
+        context = examples["metadata"]["input_text"]
+
+        # if the generation type is grounded_qa, we will use the pull input_text and format the
+        # examples as context, question, and answer.
+        # otherwise if the generation type is summarization, we will use the input_text as the context
+        # and the generated text as the summary
+        if generation_type == GenerateDatasetType.grounded_qa.value:
+            data = [
+                {
+                    "context": context,
+                    "question": example["question"],
+                    "answer": example["answer"],
+                }
+                for example in examples["pairs"]
+            ]
+        else:
+            data = [
+                {
+                    "context": context,
+                    "summary": example["summary"],
+                }
+                for example in examples["data"]
+            ]
+
+        for idx, datum in enumerate(data):
             console.print("[bold]Example:")
             console.print(
-                Panel(
-                    f"[yellow]{json.dumps(example, indent=2, separators=(',', ': '))}"
-                )
+                Panel(f"[yellow]{json.dumps(datum, indent=2, separators=(',', ': '))}")
             )
             console.print()
             # Step 6
@@ -261,13 +269,14 @@ def dataset_generation_flow(seed: str = None):
                 explanation = Prompt.ask("[bold]Why do you consider this example good?")
 
             # add the grade and the explanation to the example
-            examples[i]["grade"] = 1 if is_good else 0
-            examples[i]["explanation"] = explanation
+            examples["grade"] = 1 if is_good else 0
+            examples["explanation"] = explanation
 
-            if i < len(examples) - 1:
+            if idx < len(examples) - 1:
                 console.print("👍 Got it! Here's the next one\n")
                 time.sleep(0.5)
 
+        console.print("-----------------------")
         console.print("🎉 [bold]All examples graded![/bold]")
         console.print()
         return examples
@@ -276,7 +285,7 @@ def dataset_generation_flow(seed: str = None):
 
     # Step 7
     while True:
-        graded = grade_examples()
+        graded = grade_examples(generation_type=generation_type)
         graded_examples.extend(graded)
 
         console.print(
@@ -304,6 +313,7 @@ def dataset_generation_flow(seed: str = None):
                 style="yellow",
             )
 
+        console.print()
         next_action = IntPrompt.ask(
             "Choose an option",
             choices=[str(index) for index in next_action_choices.keys()],
@@ -318,7 +328,7 @@ def dataset_generation_flow(seed: str = None):
 
     console.print()
     console.print(
-        "[bold]We will now generate a dataset using the graded examples as a seed.[/bold]"
+        "[bold]🧪 We will now generate a dataset using the graded examples as a seed.[/bold]"
     )
 
 
