@@ -2,17 +2,14 @@ import json
 import mimetypes
 import os
 import time
-
 from datetime import datetime
 from typing import List
 
 import requests
-
 from postgrest import APIError, SyncPostgrestClient
-from requests.exceptions import ConnectionError, HTTPError, RequestException, Timeout
-
-from quotientai.exceptions import QuotientAIException, QuotientAIInvalidInputException
 from quotientai._enums import GenerateDatasetType
+from quotientai.exceptions import QuotientAIException, QuotientAIInvalidInputException
+from requests.exceptions import ConnectionError, HTTPError, RequestException, Timeout
 
 
 class FastAPIError(Exception):
@@ -1131,39 +1128,28 @@ class QuotientClient:
         self,
         generation_type: GenerateDatasetType,
         description: str,
-        seed: str = None,
+        num_examples: int = 3,
+        seed_data: str = None,
     ) -> List[str]:
         try:
-            url = f"{self.eval_scheduler_url}/datasets/generate-examples"
+            url = f"http://0.0.0.0:8080/generate/dataset/examples"
 
-            params = {
-                "input": """
-                Here is an example conversation between two people:
-
-                Person 1: Hi, how are you?
-                Person 2: I'm doing well, thanks for asking.
-                Person 1: What have you been up to lately?
-                Person 2: Not much, just working on some projects.
-                """,
-                # REPLACE ME with: "generation_type": generation_type.value
-                "generation_type": "customer-support-dialog-qa",
-                # ADD ME BACK
-                # "description": description,
-                "num_examples": 3,
-            }
-            # TBD: file path or dataset id?
-            if seed:
-                params["seed"] = seed
-
-            breakpoint()
             headers = {
                 "Authorization": f"Bearer {self.api_key}",
-                "Accept": "application/json",
+            }
+            params = {
+                "generation_type": generation_type.value,
+            }
+            data = {
+                "input": seed_data,
+                # "description": description,
+                "num_examples": num_examples,
             }
             response = requests.post(
                 url,
                 headers=headers,
-                json=params,
+                params=params,
+                json=data,
             )
             result = response.json()
             if response.status_code != 200:
