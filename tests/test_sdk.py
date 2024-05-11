@@ -3,7 +3,6 @@ import time
 
 import pytest
 from postgrest import SyncPostgrestClient
-
 from quotientai import (
     QuotientAIException,
     QuotientAIInvalidInputException,

@@ -3,7 +3,6 @@ import os
 import pytest
 from click.testing import CliRunner
 from postgrest import SyncPostgrestClient
-
 from quotientai.cli import cli
 
 runner = CliRunner()
