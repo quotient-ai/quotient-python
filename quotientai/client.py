@@ -1132,7 +1132,7 @@ class QuotientClient:
         seed_data: str = None,
     ) -> List[str]:
         try:
-            url = f"http://0.0.0.0:8080/generate/dataset/examples"
+            url = f"{self.eval_scheduler_url}/generate/dataset/examples"
 
             headers = {
                 "Authorization": f"Bearer {self.api_key}",

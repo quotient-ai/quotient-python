@@ -22,12 +22,7 @@ from quotientai.utils import results_to_csv, show_job_progress
 from rich import print
 from rich.console import Console
 from rich.panel import Panel
-from rich.progress import (
-    Progress,
-    SpinnerColumn,
-    TextColumn,
-    TimeElapsedColumn,
-)
+from rich.progress import Progress, SpinnerColumn, TextColumn, TimeElapsedColumn
 from rich.prompt import Confirm, IntPrompt, Prompt
 
 INITIAL_GENERATION_EXAMPLES = 3
