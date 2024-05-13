@@ -3,12 +3,13 @@ import mimetypes
 import os
 import time
 from datetime import datetime
+from typing import List
 
 import requests
 from postgrest import APIError, SyncPostgrestClient
-from requests.exceptions import ConnectionError, HTTPError, RequestException, Timeout
-
+from quotientai._enums import GenerateDatasetType
 from quotientai.exceptions import QuotientAIException, QuotientAIInvalidInputException
+from requests.exceptions import ConnectionError, HTTPError, RequestException, Timeout
 
 
 class FastAPIError(Exception):
@@ -1121,3 +1122,47 @@ class QuotientClient:
             raise QuotientAIException(
                 f"Failed to retrieve job progress: {str(e)}"
             ) from e
+
+    @require_api_key
+    def generate_examples(
+        self,
+        generation_type: GenerateDatasetType,
+        description: str,
+        num_examples: int = 3,
+        seed_data: str = None,
+    ) -> List[str]:
+        try:
+            url = f"{self.eval_scheduler_url}/generate/dataset/examples"
+
+            headers = {
+                "Authorization": f"Bearer {self.api_key}",
+            }
+            params = {
+                "generation_type": generation_type.value,
+            }
+            data = {
+                "input": seed_data,
+                # "description": description,
+                "num_examples": num_examples,
+            }
+            response = requests.post(
+                url,
+                headers=headers,
+                params=params,
+                json=data,
+            )
+            result = response.json()
+            if response.status_code != 200:
+                if "detail" in result:
+                    raise FastAPIError(response.status_code, result["detail"])
+                else:
+                    response.raise_for_status()
+
+            return result
+        except FastAPIError as fast_err:
+            raise QuotientAIException(
+                f"Failed to generate examples: {fast_err.status_code} {fast_err.detail}"
+            ) from fast_err
+
+        except Exception as e:
+            raise QuotientAIException(f"Failed to generate examples: {str(e)}") from e
