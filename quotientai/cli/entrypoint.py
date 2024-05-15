@@ -121,11 +121,11 @@ def dataset_generation_flow(seed: str = None):
     # Step 1
     generation_choices = {
         1: {
-            "type": GenerateDatasetType.grounded_qa.value,
+            "type": GenerateDatasetType.grounded_qa,
             "description": "A dataset that can be used for evaluating model abilities for question answering grounded in context.",
         },
         2: {
-            "type": GenerateDatasetType.summarization.value,
+            "type": GenerateDatasetType.summarization,
             "description": "A dataset that can be used for evaluating model summarization abilties.",
         },
     }
@@ -156,6 +156,7 @@ def dataset_generation_flow(seed: str = None):
             "Do you have a seed file (.jsonl) with examples to assist the creation of the dataset?",
         )
         if not seed_path:
+            seed_data = "Here is some fake data REPLACE ME"
             console.print(
                 "No problem! We'll generate some examples for you, and you can grade them\n"
             )
@@ -174,8 +175,8 @@ def dataset_generation_flow(seed: str = None):
 
             try:
                 with open(filepath, "r") as file:
-                    examples = file.readlines()
-                    examples = [json.loads(example) for example in examples]
+                    seed_data = file.readlines()
+                    seed_data = [json.loads(seed) for seed in seed_data]
             except FileNotFoundError:
                 console.print(
                     "The file could not be found. Please provide a valid file."
@@ -184,7 +185,7 @@ def dataset_generation_flow(seed: str = None):
             valid_field = False
             # check that we can get the field name
             while not valid_field:
-                if field not in examples[0]:
+                if field not in seed_data[0]:
                     console.print(
                         f"The field '{field}' is not present in the seed file. Please provide a valid field."
                     )
@@ -195,10 +196,10 @@ def dataset_generation_flow(seed: str = None):
                     valid_field = True
 
             console.print("Here is an example from the seed file:")
-            example_one = examples[0][field]
-            console.print(example_one)
+            seed_one = seed_data[0][field]
+            console.print(seed_one)
 
-    def grade_examples(generation_type: GenerateDatasetType):
+    def grade_examples(generation_type: GenerateDatasetType, seed_data: str):
         with Progress(
             TextColumn("[bold green]Generating", justify="right"),
             SpinnerColumn(spinner_name="bouncingBar"),
@@ -211,7 +212,7 @@ def dataset_generation_flow(seed: str = None):
             examples = client.generate_examples(
                 generation_type=generation_type,
                 description=description,
-                seed=seed,
+                seed_data=seed_data,
             )
             progress.update(task, completed=1)
             while not progress.finished:
@@ -229,7 +230,7 @@ def dataset_generation_flow(seed: str = None):
         # examples as context, question, and answer.
         # otherwise if the generation type is summarization, we will use the input_text as the context
         # and the generated text as the summary
-        if generation_type == GenerateDatasetType.grounded_qa.value:
+        if GenerateDatasetType(generation_type) == GenerateDatasetType.grounded_qa:
             data = [
                 {
                     "context": context,
@@ -277,7 +278,10 @@ def dataset_generation_flow(seed: str = None):
 
     # Step 7
     while True:
-        graded = grade_examples(generation_type=generation_type)
+        graded = grade_examples(
+            generation_type=generation_type,
+            seed_data=seed_data,
+        )
         graded_examples.extend(graded)
 
         console.print(
