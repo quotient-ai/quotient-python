@@ -25,8 +25,6 @@ from rich.panel import Panel
 from rich.progress import Progress, SpinnerColumn, TextColumn, TimeElapsedColumn
 from rich.prompt import Confirm, IntPrompt, Prompt
 
-INITIAL_GENERATION_EXAMPLES = 3
-
 
 @click.group()
 def cli():
@@ -213,7 +211,6 @@ def dataset_generation_flow(seed: str = None):
             examples = client.generate_examples(
                 generation_type=generation_type,
                 description=description,
-                num_examples=INITIAL_GENERATION_EXAMPLES,
                 seed=seed,
             )
             progress.update(task, completed=1)
