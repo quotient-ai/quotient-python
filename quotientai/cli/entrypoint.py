@@ -467,10 +467,10 @@ def create_dataset(file_path: str = None):
     type=str,
     help="Path to a seed file for the dataset generation.",
 )
-def generate_dataset(seed: str = None):
+def generate_dataset(seed_path: str = None):
     """Command to generate a dataset."""
     try:
-        generation_workflow(seed=seed)
+        generation_workflow(seed=seed_path)
     except QuotientAIException as e:
         click.echo(str(e))
 
