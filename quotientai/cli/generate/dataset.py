@@ -1,4 +1,9 @@
+import json
+import time
+
 from quotientai._enums import GenerateDatasetType
+
+from quotientai.client import QuotientClient
 
 from rich import print
 from rich.console import Console
@@ -74,7 +79,7 @@ def grade_examples(generation_type: GenerateDatasetType, seed_data: str):
         client = QuotientClient()
         examples = client.generate_examples(
             generation_type=generation_type,
-            description=description,
+            description='description',
             seed_data=seed_data,
         )
         progress.update(task, completed=1)
@@ -176,11 +181,11 @@ def generation_workflow(seed: str = None):
 
     generation_choices = {
         1: {
-            "type": GenerateDatasetType.grounded_qa,
+            "type": GenerateDatasetType.grounded_qa.value,
             "description": "A dataset that can be used for evaluating model abilities for question answering grounded in context.",
         },
         2: {
-            "type": GenerateDatasetType.summarization,
+            "type": GenerateDatasetType.summarization.value,
             "description": "A dataset that can be used for evaluating model summarization abilties.",
         },
     }
@@ -196,7 +201,7 @@ def generation_workflow(seed: str = None):
         "Choose an option",
         choices=[str(index) for index in generation_choices.keys()],
     )
-    generation_type = generation_choices[choice]["type"]
+    generation_type = GenerateDatasetType(generation_choices[choice]["type"])
     console.print(f"Awesome 👍! We will generate a dataset for {generation_type}\n")
 
     description = Prompt.ask(
