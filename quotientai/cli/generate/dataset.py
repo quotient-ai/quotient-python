@@ -182,18 +182,18 @@ def generation_workflow(seed: str = None):
 
     generation_choices = {
         1: {
-            "type": GenerateDatasetType.grounded_qa.value,
+            "type": GenerateDatasetType.grounded_qa,
             "description": "A dataset that can be used for evaluating model abilities for question answering grounded in context.",
         },
         2: {
-            "type": GenerateDatasetType.summarization.value,
+            "type": GenerateDatasetType.summarization,
             "description": "A dataset that can be used for evaluating model summarization abilties.",
         },
     }
 
     for index, choice in generation_choices.items():
         console.print(
-            f"[magenta]{index}[/magenta]. {choice['type']}: [white]{choice['description']}[/white]",
+            f"[magenta]{index}[/magenta]. {choice['type'].value}: [white]{choice['description']}[/white]",
             style="yellow",
         )
 
@@ -202,11 +202,13 @@ def generation_workflow(seed: str = None):
         "Choose an option",
         choices=[str(index) for index in generation_choices.keys()],
     )
-    generation_type = GenerateDatasetType(generation_choices[choice]["type"])
-    console.print(f"Awesome 👍! We will generate a dataset for {generation_type}\n")
+    generation_type = generation_choices[choice]["type"]
+    console.print(
+        f"Awesome 👍! We will generate a dataset for {generation_type.value}\n"
+    )
 
     description = Prompt.ask(
-        "[bold]Please provide more detail on what you want the dataset to be used for[/bold]"
+        "[bold]Please describe in detail what the context is like[/bold]"
     )
 
     # if the seed is not provided, ask the user if they have a seed file
@@ -219,6 +221,9 @@ def generation_workflow(seed: str = None):
             generation_type=generation_type,
             description=description,
             seed_data=seed_data,
+            # preferences={
+            #     "context":
+            # }
         )
         graded_examples.extend(graded)
 

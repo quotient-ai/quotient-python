@@ -36,9 +36,7 @@ class QuotientClient:
         self.supabase_url = "https://hhqppcqltklzfpggdocb.supabase.co"
 
         # Eval Scheduler config
-        self.eval_scheduler_url = (
-            "http://localhost:8080"
-        )
+        self.eval_scheduler_url = "http://localhost:8080"
 
         self.supaclient = SyncPostgrestClient(
             self.supabase_url + "/rest/v1", headers={"apiKey": self.public_api_key}
@@ -1130,9 +1128,10 @@ class QuotientClient:
         description: str,
         num_examples: int = 3,
         seed_data: str = None,
+        preferences: dict = None,
     ) -> List[str]:
         try:
-            url = f"{self.eval_scheduler_url}/generate/dataset/examples"
+            url = f"{self.eval_scheduler_url}/generate/examples"
 
             headers = {
                 "Authorization": f"Bearer {self.api_key}",
@@ -1141,9 +1140,10 @@ class QuotientClient:
                 "generation_type": generation_type.value,
             }
             data = {
-                "input": seed_data,
-                # "description": description,
+                "inputs": seed_data,
+                "description": description,
                 "num_examples": num_examples,
+                "preferences": preferences,
             }
             response = requests.post(
                 url,
