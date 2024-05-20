@@ -37,7 +37,7 @@ class QuotientClient:
 
         # Eval Scheduler config
         self.eval_scheduler_url = (
-            "http://eval-scheduler-alb-887401167.us-east-2.elb.amazonaws.com"
+            "http://localhost:8080"
         )
 
         self.supaclient = SyncPostgrestClient(

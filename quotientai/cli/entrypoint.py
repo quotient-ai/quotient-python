@@ -2,7 +2,6 @@ import json
 import time
 
 import click
-from quotientai._enums import GenerateDatasetType
 from quotientai.cli.format import (
     format_api_keys_table,
     format_datasets_table,
@@ -16,16 +15,10 @@ from quotientai.cli.format import (
     format_system_prompt_table,
     format_tasks_table,
 )
+from quotientai.cli.generate.dataset import generation_workflow
 from quotientai.client import QuotientClient
 from quotientai.exceptions import QuotientAIException
 from quotientai.utils import results_to_csv, show_job_progress
-from rich import print
-from rich.console import Console
-from rich.panel import Panel
-from rich.progress import Progress, SpinnerColumn, TextColumn, TimeElapsedColumn
-from rich.prompt import Confirm, IntPrompt, Prompt
-
-INITIAL_GENERATION_EXAMPLES = 3
 
 
 @click.group()
@@ -79,252 +72,6 @@ def generate():
     Group of commands for generating datasets from the Quotient API.
     """
     pass
-
-
-def dataset_generation_flow(seed: str = None):
-    """
-    Flow to generate a dataset.
-
-    Steps:
-    ------
-    1. Prompt user for generation type.
-    2. Prompt user for description.
-    3. Prompt user for (optional) seed file with examples if not provided already.
-    4. Generate 3 dataset examples
-    5. Print dataset examples
-    6. Ask the question "Do you consider these examples good enough?"
-        If yes -> ask why
-        If no -> ask an explanation
-    7. Ask what do you want to do next?
-        a. Generate more examples (recommended: 5 to 10 more)
-        b. Stop grading and generate the dataset
-    """
-    console = Console()
-
-    # create a panel that introduces the dataset generation flow and tells
-    # a user what to expect
-    console.print(
-        Panel(
-            "Welcome to the Quotient Eval Dataset Generator! 🚀\n\n"
-            "You will be asked to provide some information about your use case.\n\n"
-            "We will generate a few examples for you to grade, and then use your input to create a dataset "
-            "that you can use to evaluate models.\n\n"
-            "Let's get started!",
-            title="Quotient Dataset Generation",
-            style="bold green",
-        )
-    )
-    console.print()
-    generation_type = console.print(
-        "[bold]What type of dataset do you want to create?[/bold]\n"
-        "-------------------------------------------"
-    )
-
-    # Step 1
-    generation_choices = {
-        1: {
-            "type": GenerateDatasetType.grounded_qa.value,
-            "description": "A dataset that can be used for evaluating model abilities for question answering grounded in context.",
-        },
-        2: {
-            "type": GenerateDatasetType.summarization.value,
-            "description": "A dataset that can be used for evaluating model summarization abilties.",
-        },
-    }
-
-    for index, choice in generation_choices.items():
-        console.print(
-            f"[magenta]{index}[/magenta]. {choice['type']}: [white]{choice['description']}[/white]",
-            style="yellow",
-        )
-
-    console.print()
-    choice = IntPrompt.ask(
-        "Choose an option",
-        choices=[str(index) for index in generation_choices.keys()],
-    )
-    generation_type = generation_choices[choice]["type"]
-    console.print(f"Awesome 👍! We will generate a dataset for {generation_type}\n")
-
-    # Step 2
-    description = Prompt.ask(
-        "[bold]Please provide more detail on what you want the dataset to be used for[/bold]"
-    )
-
-    # Step 3
-    # if the seed is not provided, ask the user if they have a seed file
-    if seed is None:
-        seed_path = Confirm.ask(
-            "Do you have a seed file (.jsonl) with examples to assist the creation of the dataset?",
-        )
-        if not seed_path:
-            console.print(
-                "No problem! We'll generate some examples for you, and you can grade them\n"
-            )
-        else:
-            filepath = Prompt.ask("Please provide the path to the seed file")
-
-            valid_format = False
-            while not valid_format:
-                filepath = Prompt.ask("Please provide the path to the seed file.")
-                if filepath.endswith(".jsonl"):
-                    valid_format = True
-                else:
-                    console.print(
-                        "The seed file should be in the .jsonl format. Please provide a valid file."
-                    )
-
-            try:
-                with open(filepath, "r") as file:
-                    examples = file.readlines()
-                    examples = [json.loads(example) for example in examples]
-            except FileNotFoundError:
-                console.print(
-                    "The file could not be found. Please provide a valid file."
-                )
-
-            valid_field = False
-            # check that we can get the field name
-            while not valid_field:
-                if field not in examples[0]:
-                    console.print(
-                        f"The field '{field}' is not present in the seed file. Please provide a valid field."
-                    )
-                    field = Prompt.ask(
-                        "Please indicate the field in the JSONL file that contain an example to use as a seed."
-                    )
-                else:
-                    valid_field = True
-
-            console.print("Here is an example from the seed file:")
-            example_one = examples[0][field]
-            console.print(example_one)
-
-    def grade_examples(generation_type: GenerateDatasetType):
-        with Progress(
-            TextColumn("[bold green]Generating", justify="right"),
-            SpinnerColumn(spinner_name="bouncingBar"),
-            TimeElapsedColumn(),
-        ) as progress:
-            task = progress.add_task("generation", total=0)
-
-            # Step 4
-            client = QuotientClient()
-            examples = client.generate_examples(
-                generation_type=generation_type,
-                description=description,
-                num_examples=INITIAL_GENERATION_EXAMPLES,
-                seed=seed,
-            )
-            progress.update(task, completed=1)
-            while not progress.finished:
-                time.sleep(0.10)
-
-        # Step 5
-        step_message = "🚀 Generated 3 examples. Please grade them!"
-        console.print("-" * len(step_message))
-        console.print(f"[bold]{step_message}[/bold]")
-        console.print("")
-
-        context = examples["metadata"]["input_text"]
-
-        # if the generation type is grounded_qa, we will use the pull input_text and format the
-        # examples as context, question, and answer.
-        # otherwise if the generation type is summarization, we will use the input_text as the context
-        # and the generated text as the summary
-        if generation_type == GenerateDatasetType.grounded_qa.value:
-            data = [
-                {
-                    "context": context,
-                    "question": example["question"],
-                    "answer": example["answer"],
-                }
-                for example in examples["pairs"]
-            ]
-        else:
-            data = [
-                {
-                    "context": context,
-                    "summary": example["summary"],
-                }
-                for example in examples["data"]
-            ]
-
-        for idx, datum in enumerate(data):
-            console.print("[bold]Example:")
-            console.print(
-                Panel(f"[yellow]{json.dumps(datum, indent=2, separators=(',', ': '))}")
-            )
-            console.print()
-            # Step 6
-            is_good = Confirm.ask("[bold]Do you consider this example good enough?")
-            if not is_good:
-                explanation = Prompt.ask("[bold]Please provide an explanation")
-            else:
-                explanation = Prompt.ask("[bold]Why do you consider this example good?")
-
-            # add the grade and the explanation to the example
-            examples["grade"] = 1 if is_good else 0
-            examples["explanation"] = explanation
-
-            if idx < len(examples) - 1:
-                console.print("👍 Got it! Here's the next one\n")
-                time.sleep(0.5)
-
-        console.print("-----------------------")
-        console.print("🎉 [bold]All examples graded![/bold]")
-        console.print()
-        return examples
-
-    graded_examples = []
-
-    # Step 7
-    while True:
-        graded = grade_examples(generation_type=generation_type)
-        graded_examples.extend(graded)
-
-        console.print(
-            f"You have graded [yellow]{len(graded_examples)}[yellow] examples."
-        )
-        console.print(
-            f"For better results, we recommend grading [red]5 to 10[/red] examples.\n"
-        )
-
-        next_action_choices = {
-            1: {
-                "type": "Generate more examples",
-                "description": "Continue grading more examples.",
-            },
-            2: {
-                "type": "Stop grading and generate the dataset",
-                "description": "Stop grading and generate the dataset.",
-            },
-        }
-
-        console.print("What would you like to do next?")
-        for index, choice in next_action_choices.items():
-            console.print(
-                f"[magenta]{index}[/magenta]. {choice['type']}: [white]{choice['description']}[/white]",
-                style="yellow",
-            )
-
-        console.print()
-        next_action = IntPrompt.ask(
-            "Choose an option",
-            choices=[str(index) for index in next_action_choices.keys()],
-        )
-
-        if next_action == 1:
-            # Generate more examples
-            continue
-        else:
-            # Stop grading and generate the dataset
-            break
-
-    console.print()
-    console.print(
-        "[bold]🧪 We will now generate a dataset using the graded examples as a seed.[/bold]"
-    )
 
 
 ###########################
@@ -696,28 +443,31 @@ def list_datasets(filter):
 
 @create.command(name="dataset")
 @click.option(
-    "--seed",
+    "--file-path",
     type=str,
-    help="Path to a seed dataset for the generation process.",
+    help="File path to the dataset",
 )
-def create_dataset(seed: str = None):
-    """Command to get all tasks with optional filters."""
+def create_dataset(file_path: str = None):
+    """Command to create a dataset."""
     try:
-        dataset_generation_flow(seed=seed)
+        client = QuotientClient()
+        datasets = client.create_dataset(file_path, name)
+        print("Created dataset with the following details:")
+        print(format_datasets_table([datasets]))
     except QuotientAIException as e:
         click.echo(str(e))
 
 
 @generate.command(name="dataset")
 @click.option(
-    "--seed",
-    type=int,
-    help="Seed for the dataset generation.",
+    "--seed-path",
+    type=str,
+    help="Path to a seed file for the dataset generation.",
 )
-def generate_dataset(seed: str = None):
+def generate_dataset(seed_path: str = None):
     """Command to generate a dataset."""
     try:
-        dataset_generation_flow(seed=seed)
+        generation_workflow(seed=seed_path)
     except QuotientAIException as e:
         click.echo(str(e))
 
