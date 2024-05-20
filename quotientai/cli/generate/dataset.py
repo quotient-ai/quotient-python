@@ -64,7 +64,11 @@ def get_seed_data(seed: str):
     return seed_data
 
 
-def grade_examples(generation_type: GenerateDatasetType, seed_data: str):
+def grade_examples(
+    generation_type: GenerateDatasetType,
+    description: str,
+    seed_data: str,
+):
     with Progress(
         TextColumn("[bold green]Generating", justify="right"),
         SpinnerColumn(spinner_name="bouncingBar"),
@@ -76,7 +80,7 @@ def grade_examples(generation_type: GenerateDatasetType, seed_data: str):
         client = QuotientClient()
         examples = client.generate_examples(
             generation_type=generation_type,
-            description="description",
+            description=description,
             seed_data=seed_data,
         )
         progress.update(task, completed=1)
@@ -213,6 +217,7 @@ def generation_workflow(seed: str = None):
     while True:
         graded = grade_examples(
             generation_type=generation_type,
+            description=description,
             seed_data=seed_data,
         )
         graded_examples.extend(graded)
