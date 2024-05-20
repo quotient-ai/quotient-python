@@ -1128,7 +1128,7 @@ class QuotientClient:
         description: str,
         num_examples: int = 3,
         seed_data: str = None,
-        preferences: dict = None,
+        preferences: List[dict] = None,
     ) -> List[str]:
         try:
             url = f"{self.eval_scheduler_url}/generate/examples"
@@ -1139,6 +1139,7 @@ class QuotientClient:
             params = {
                 "generation_type": generation_type.value,
             }
+
             data = {
                 "inputs": seed_data,
                 "description": description,
