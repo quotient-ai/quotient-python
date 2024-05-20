@@ -2,9 +2,7 @@ import json
 import time
 
 from quotientai._enums import GenerateDatasetType
-
 from quotientai.client import QuotientClient
-
 from rich import print
 from rich.console import Console
 from rich.panel import Panel
@@ -12,6 +10,7 @@ from rich.progress import Progress, SpinnerColumn, TextColumn, TimeElapsedColumn
 from rich.prompt import Confirm, IntPrompt, Prompt
 
 console = Console()
+
 
 def get_seed_data(seed: str):
     if seed is None:
@@ -28,7 +27,7 @@ def get_seed_data(seed: str):
             valid_format = False
             while not valid_format:
                 filepath = Prompt.ask("Please provide the path to the seed file.")
-                
+
                 if filepath.endswith(".jsonl") or filepath.endswith(".jsonlines"):
                     valid_format = True
                 else:
@@ -43,9 +42,7 @@ def get_seed_data(seed: str):
             seed_data = file.readlines()
             seed_data = [json.loads(seed) for seed in seed_data]
     except FileNotFoundError:
-        console.print(
-            "The file could not be found. Please provide a valid file."
-        )
+        console.print("The file could not be found. Please provide a valid file.")
 
         valid_field = False
         # check that we can get the field name by looking at the first example
@@ -79,7 +76,7 @@ def grade_examples(generation_type: GenerateDatasetType, seed_data: str):
         client = QuotientClient()
         examples = client.generate_examples(
             generation_type=generation_type,
-            description='description',
+            description="description",
             seed_data=seed_data,
         )
         progress.update(task, completed=1)
@@ -128,7 +125,7 @@ def grade_examples(generation_type: GenerateDatasetType, seed_data: str):
             explanation = Prompt.ask("[bold]Please provide an explanation")
         else:
             explanation = Prompt.ask("[bold]Why do you consider this example good?")
-            
+
         # add the grade and the explanation to the example
         examples["grade"] = 1 if is_good else 0
         examples["explanation"] = explanation
@@ -136,13 +133,13 @@ def grade_examples(generation_type: GenerateDatasetType, seed_data: str):
         if idx < len(examples) - 1:
             console.print("👍 Got it! Here's the next one\n")
             time.sleep(0.5)
-            
+
     console.print("-----------------------")
     console.print("🎉 [bold]All examples graded![/bold]")
     console.print()
     return examples
-            
-        
+
+
 def generation_workflow(seed: str = None):
     """
     Flow to generate a dataset.

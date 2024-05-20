@@ -2,6 +2,7 @@ import json
 import time
 
 import click
+
 from quotientai.cli.format import (
     format_api_keys_table,
     format_datasets_table,
@@ -15,7 +16,9 @@ from quotientai.cli.format import (
     format_system_prompt_table,
     format_tasks_table,
 )
+
 from quotientai.cli.generate.dataset import generation_workflow
+
 from quotientai.client import QuotientClient
 from quotientai.exceptions import QuotientAIException
 from quotientai.utils import results_to_csv, show_job_progress
