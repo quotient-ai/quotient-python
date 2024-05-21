@@ -11,6 +11,30 @@ from rich.prompt import Confirm, IntPrompt, Prompt
 
 console = Console()
 
+from rich.table import Table
+
+
+def view_examples(graded_examples):
+    table = Table(show_header=True, header_style="bold magenta")
+    table.add_column("ID")
+    table.add_column("Context")
+    table.add_column("Question")
+    table.add_column("Answer")
+    table.add_column("Grade")
+    table.add_column("Explanation")
+
+    for example in graded_examples:
+        table.add_row(
+            str(example["id"]),
+            example["context"],
+            example["question"],
+            example["answer"],
+            str(example["grade"]),
+            example["explanation"],
+        )
+
+    console.print(table)
+
 
 def get_seed_data(seed: str):
     if seed is None:
@@ -64,7 +88,13 @@ def get_seed_data(seed: str):
     return seed_data
 
 
-def grade_examples(generation_type: GenerateDatasetType, seed_data: str):
+def grade_examples(
+    generation_type: GenerateDatasetType,
+    description: str,
+    seed_data: str,
+    preferences: list[dict] = None,
+    num_examples: int = 3,
+):
     with Progress(
         TextColumn("[bold green]Generating", justify="right"),
         SpinnerColumn(spinner_name="bouncingBar"),
@@ -76,8 +106,10 @@ def grade_examples(generation_type: GenerateDatasetType, seed_data: str):
         client = QuotientClient()
         examples = client.generate_examples(
             generation_type=generation_type,
-            description="description",
+            description=description,
+            num_examples=num_examples,
             seed_data=seed_data,
+            preferences=preferences,
         )
         progress.update(task, completed=1)
         while not progress.finished:
@@ -98,6 +130,7 @@ def grade_examples(generation_type: GenerateDatasetType, seed_data: str):
     if GenerateDatasetType(generation_type) == GenerateDatasetType.grounded_qa:
         data = [
             {
+                "id": example["id"],
                 "context": context,
                 "question": example["question"],
                 "answer": example["answer"],
@@ -107,6 +140,7 @@ def grade_examples(generation_type: GenerateDatasetType, seed_data: str):
     else:
         data = [
             {
+                "id": example["id"],
                 "context": context,
                 "summary": example["summary"],
             }
@@ -127,8 +161,8 @@ def grade_examples(generation_type: GenerateDatasetType, seed_data: str):
             explanation = Prompt.ask("[bold]Why do you consider this example good?")
 
         # add the grade and the explanation to the example
-        examples["grade"] = 1 if is_good else 0
-        examples["explanation"] = explanation
+        datum["grade"] = 1 if is_good else 0
+        datum["explanation"] = explanation
 
         if idx < len(examples) - 1:
             console.print("👍 Got it! Here's the next one\n")
@@ -137,7 +171,7 @@ def grade_examples(generation_type: GenerateDatasetType, seed_data: str):
     console.print("-----------------------")
     console.print("🎉 [bold]All examples graded![/bold]")
     console.print()
-    return examples
+    return data
 
 
 def generation_workflow(seed: str = None):
@@ -158,8 +192,6 @@ def generation_workflow(seed: str = None):
         a. Generate more examples (recommended: 5 to 10 more)
         b. Stop grading and generate the dataset
     """
-    # create a panel that introduces the dataset generation flow and tells
-    # a user what to expect
     console.print(
         Panel(
             "Welcome to the Quotient Eval Dataset Generator! 🚀\n\n"
@@ -178,18 +210,18 @@ def generation_workflow(seed: str = None):
 
     generation_choices = {
         1: {
-            "type": GenerateDatasetType.grounded_qa.value,
+            "type": GenerateDatasetType.grounded_qa,
             "description": "A dataset that can be used for evaluating model abilities for question answering grounded in context.",
         },
         2: {
-            "type": GenerateDatasetType.summarization.value,
+            "type": GenerateDatasetType.summarization,
             "description": "A dataset that can be used for evaluating model summarization abilties.",
         },
     }
 
     for index, choice in generation_choices.items():
         console.print(
-            f"[magenta]{index}[/magenta]. {choice['type']}: [white]{choice['description']}[/white]",
+            f"[magenta]{index}[/magenta]. {choice['type'].value}: [white]{choice['description']}[/white]",
             style="yellow",
         )
 
@@ -198,24 +230,44 @@ def generation_workflow(seed: str = None):
         "Choose an option",
         choices=[str(index) for index in generation_choices.keys()],
     )
-    generation_type = GenerateDatasetType(generation_choices[choice]["type"])
-    console.print(f"Awesome 👍! We will generate a dataset for {generation_type}\n")
+    generation_type = generation_choices[choice]["type"]
+    console.print(
+        f"Awesome 👍! We will generate a dataset for {generation_type.value}\n"
+    )
 
     description = Prompt.ask(
-        "[bold]Please provide more detail on what you want the dataset to be used for[/bold]"
+        "[bold]Please describe in detail what the context is like[/bold]"
     )
 
     # if the seed is not provided, ask the user if they have a seed file
     seed_data = get_seed_data(seed=seed)
 
     graded_examples = []
-
+    preferences = []
+    num_examples = 3
     while True:
         graded = grade_examples(
             generation_type=generation_type,
+            description=description,
             seed_data=seed_data,
+            num_examples=num_examples,
+            preferences=preferences,
         )
         graded_examples.extend(graded)
+
+        # add the graded examples to the preferences
+        prefs = [
+            {
+                "id": example["id"],
+                "context": example["context"],
+                "question": example["question"],
+                "answer": example["answer"],
+                "grade": example["grade"],
+                "feedback": example["explanation"],
+            }
+            for example in graded_examples
+        ]
+        preferences.extend(prefs)
 
         console.print(
             f"You have graded [yellow]{len(graded_examples)}[yellow] examples."
@@ -230,6 +282,10 @@ def generation_workflow(seed: str = None):
                 "description": "Continue grading more examples.",
             },
             2: {
+                "type": "View graded examples",
+                "description": "View the graded examples.",
+            },
+            3: {
                 "type": "Stop grading and generate the dataset",
                 "description": "Stop grading and generate the dataset.",
             },
@@ -250,13 +306,35 @@ def generation_workflow(seed: str = None):
 
         if next_action == 1:
             # Generate more examples
+            # ask how many examples to generate
+            num_examples = IntPrompt.ask(
+                "How many more examples would you like to generate?",
+                default=3,
+                min_value=3,
+                max_value=10,
+            )
             continue
+        elif next_action == 2:
+            view_examples(graded_examples)
+            if Confirm.ask("Would you like to continue grading more examples?"):
+                num_examples = IntPrompt.ask(
+                    "How many more examples would you like to generate?",
+                    default=3,
+                    min_value=3,
+                    max_value=10,
+                )
+                continue
+            else:
+                # Stop grading and generate the dataset
+                console.print()
+                console.print(
+                    "[bold]🧪 We will now generate a dataset using the graded examples as a seed.[/bold]"
+                )
+                return
         else:
             # Stop grading and generate the dataset
-            break
-
-    console.print()
-    console.print(
-        "[bold]🧪 We will now generate a dataset using the graded examples as a seed.[/bold]"
-    )
-    return
+            console.print()
+            console.print(
+                "[bold]🧪 We will now generate a dataset using the graded examples as a seed.[/bold]"
+            )
+            return
