@@ -35,7 +35,6 @@ class QuotientClient:
         # Base URL for the Supabase project
         self.supabase_url = "https://hhqppcqltklzfpggdocb.supabase.co"
 
-        # Eval Scheduler config
         self.eval_scheduler_url = "http://eval-scheduler-alb-887401167.us-east-2.elb.amazonaws.com"
 
         self.supaclient = SyncPostgrestClient(
