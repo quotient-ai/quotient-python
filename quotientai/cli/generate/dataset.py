@@ -309,9 +309,6 @@ def generation_workflow(seed: str = None):
             # ask how many examples to generate
             num_examples = IntPrompt.ask(
                 "How many more examples would you like to generate?",
-                default=3,
-                min_value=3,
-                max_value=10,
             )
             continue
         elif next_action == 2:
