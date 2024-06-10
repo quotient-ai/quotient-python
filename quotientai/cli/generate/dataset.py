@@ -12,13 +12,13 @@ from rich.console import Console
 from rich.panel import Panel
 from rich.progress import Progress, SpinnerColumn, TextColumn, TimeElapsedColumn
 from rich.prompt import Confirm, IntPrompt, Prompt
-
-console = Console()
-
 from rich.table import Table
 
+console = Console()
+client = QuotientClient()
 
-def view_examples(graded_examples):
+
+def show_graded_examples(graded_examples):
     table = Table(show_header=True, header_style="bold magenta")
     table.add_column("ID")
     table.add_column("Context")
@@ -76,13 +76,14 @@ def get_seed_data(seed: str) -> List[Optional[str]]:
     valid_field = False
     # check that we can get the field name by looking at the first example
     while not valid_field:
+        available_fields = list(raw_data[0].keys())
         field = Prompt.ask(
-            "Please indicate the field in the JSONL file that contain an example to use as a seed."
+            "Please indicate the field in the file that contains examples to use as a seed. "
+            f"Available fields: [magenta]{available_fields}"
         )
         if field not in raw_data[0]:
-            available_fields = list(raw_data[0].keys())
             console.print(
-                f"The field '{field}' is not present in the seed file. Available fields: [magenta]{available_fields}"
+                f"The field '{field}' is not present in the seed file."
             )
         else:
             valid_field = True
@@ -110,8 +111,6 @@ def grade_examples(
         task = progress.add_task("generation", total=0)
 
         # Step 4
-        client = QuotientClient()
-
         examples = client.generate_examples(
             generation_type=generation_type,
             description=description,
@@ -180,6 +179,37 @@ def grade_examples(
     console.print("🎉 [bold]All examples graded![/bold]")
     console.print()
     return data
+
+
+def select_next_action():
+    next_action_choices = {
+        1: {
+            "type": "Generate more examples",
+            "description": "Continue grading more examples.",
+        },
+        2: {
+            "type": "View graded examples",
+            "description": "View the graded examples.",
+        },
+        3: {
+            "type": "Stop grading and generate the dataset",
+            "description": "Stop grading and generate the dataset.",
+        },
+    }
+
+    console.print("What would you like to do next?")
+    for index, choice in next_action_choices.items():
+        console.print(
+            f"[magenta]{index}[/magenta]. {choice['type']}: [white]{choice['description']}[/white]",
+            style="yellow",
+        )
+
+    console.print()
+    next_action = IntPrompt.ask(
+        "Choose an option",
+        choices=[str(index) for index in next_action_choices.keys()],
+    )
+
 
 
 def generation_workflow(seed: str = None):
@@ -251,7 +281,7 @@ def generation_workflow(seed: str = None):
     seed_data: Optional[List[str]] = get_seed_data(seed=seed)
     if seed_data:
         seed_data = seed_data[0]
-    
+
     graded_examples = []
     preferences = []
     num_examples = 3
@@ -286,33 +316,7 @@ def generation_workflow(seed: str = None):
             f"For better results, we recommend grading [red]5 to 10[/red] examples.\n"
         )
 
-        next_action_choices = {
-            1: {
-                "type": "Generate more examples",
-                "description": "Continue grading more examples.",
-            },
-            2: {
-                "type": "View graded examples",
-                "description": "View the graded examples.",
-            },
-            3: {
-                "type": "Stop grading and generate the dataset",
-                "description": "Stop grading and generate the dataset.",
-            },
-        }
-
-        console.print("What would you like to do next?")
-        for index, choice in next_action_choices.items():
-            console.print(
-                f"[magenta]{index}[/magenta]. {choice['type']}: [white]{choice['description']}[/white]",
-                style="yellow",
-            )
-
-        console.print()
-        next_action = IntPrompt.ask(
-            "Choose an option",
-            choices=[str(index) for index in next_action_choices.keys()],
-        )
+        next_action = select_next_action()
 
         if next_action == 1:
             # Generate more examples
@@ -322,26 +326,27 @@ def generation_workflow(seed: str = None):
             )
             continue
         elif next_action == 2:
-            view_examples(graded_examples)
-            if Confirm.ask("Would you like to continue grading more examples?"):
-                num_examples = IntPrompt.ask(
-                    "How many more examples would you like to generate?",
-                    default=3,
-                    min_value=3,
-                    max_value=10,
-                )
-                continue
-            else:
-                # Stop grading and generate the dataset
-                console.print()
-                console.print(
-                    "[bold]🧪 We will now generate a dataset using the graded examples as a seed.[/bold]"
-                )
-                return
+            show_graded_examples(graded_examples)
         else:
             # Stop grading and generate the dataset
             console.print()
             console.print(
-                "[bold]🧪 We will now generate a dataset using the graded examples as a seed.[/bold]"
+                "[bold]🧪 We will now generate a dataset using the graded examples as a seed...[/bold]\n"
             )
+            client.generate_dataset(
+                generation_type=generation_type,
+                description=description,
+                num_examples=num_examples,
+                seed_data=seed_data,
+                preferences=preferences,
+            )
+            console.print(
+                "[green][bold]🚀 Dataset request submitted! "
+                "You will soon receive an email with your downloadable dataset![/bold][/green]"
+            )
+            console.print(
+                "[yellow]Note: If you see the email in your spam folder please "
+                "let us know at [red]support@quotientai.co[/red][/yellow]"
+            )
+            time.sleep(0.5)
             return
