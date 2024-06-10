@@ -1,5 +1,9 @@
 import json
+import os
 import time
+
+from pathlib import Path
+from typing import List, Optional
 
 from quotientai._enums import GenerateDatasetType
 from quotientai.client import QuotientClient
@@ -36,55 +40,58 @@ def view_examples(graded_examples):
     console.print(table)
 
 
-def get_seed_data(seed: str):
+def get_seed_data(seed: str) -> List[Optional[str]]:
     if seed is None:
         seed_path = Confirm.ask(
-            "Do you have a seed file (.jsonl) with examples to assist the creation of the dataset?",
+            "Do you have a seed file ([green].jsonl[/green]) with examples to assist the creation of the dataset?",
         )
         if not seed_path:
-            seed_data = "Here is some fake data REPLACE ME"
             console.print(
                 "No problem! We'll generate some examples for you, and you can grade them\n"
             )
-            return
+            return []
         else:
-            valid_format = False
-            while not valid_format:
-                filepath = Prompt.ask("Please provide the path to the seed file.")
+            valid_file = False
+            while not valid_file:
+                filepath = Prompt.ask("Please provide the path to the seed file")
 
-                if filepath.endswith(".jsonl") or filepath.endswith(".jsonlines"):
-                    valid_format = True
+                is_valid_format = filepath.endswith(".jsonl") or filepath.endswith(".jsonlines")
+                is_valid_path = os.path.exists(filepath)
+                if is_valid_format and is_valid_path:
+                    valid_file = True
                 else:
                     console.print(
-                        "The seed file should be in the .jsonl format. Please provide a valid file."
+                        f"[yellow]Please provide a valid .jsonl file. Got {filepath}"
                     )
     else:
         filepath = seed
 
     try:
         with open(filepath, "r") as file:
-            seed_data = file.readlines()
-            seed_data = [json.loads(seed) for seed in seed_data]
+            raw_data = file.readlines()
+            raw_data = [json.loads(line) for line in raw_data]
     except FileNotFoundError:
         console.print("The file could not be found. Please provide a valid file.")
 
-        valid_field = False
-        # check that we can get the field name by looking at the first example
-        while not valid_field:
-            field = Prompt.ask(
-                "Please indicate the field in the JSONL file that contain an example to use as a seed."
+    valid_field = False
+    # check that we can get the field name by looking at the first example
+    while not valid_field:
+        field = Prompt.ask(
+            "Please indicate the field in the JSONL file that contain an example to use as a seed."
+        )
+        if field not in raw_data[0]:
+            available_fields = list(raw_data[0].keys())
+            console.print(
+                f"The field '{field}' is not present in the seed file. Available fields: [magenta]{available_fields}"
             )
-            if field not in seed_data[0]:
-                console.print(
-                    f"The field '{field}' is not present in the seed file. Please provide a valid field."
-                )
-            else:
-                valid_field = True
+        else:
+            valid_field = True
 
-    console.print("Here is an example from the seed file:")
-    seed_one = seed_data[0][field]
-    console.print(seed_one)
+    console.print("\nHere is an example from the seed file:")
+    seed_one = raw_data[0][field]
+    console.print(f"[green] {seed_one}\n")
 
+    seed_data = [line[field] for line in raw_data]
     return seed_data
 
 
@@ -104,6 +111,7 @@ def grade_examples(
 
         # Step 4
         client = QuotientClient()
+
         examples = client.generate_examples(
             generation_type=generation_type,
             description=description,
@@ -236,12 +244,14 @@ def generation_workflow(seed: str = None):
     )
 
     description = Prompt.ask(
-        "[bold]Please describe in detail what the context is like[/bold]"
+        "[bold]Please describe in detail the context of your problem[/bold]"
     )
 
     # if the seed is not provided, ask the user if they have a seed file
-    seed_data = get_seed_data(seed=seed)
-
+    seed_data: Optional[List[str]] = get_seed_data(seed=seed)
+    if seed_data:
+        seed_data = seed_data[0]
+    
     graded_examples = []
     preferences = []
     num_examples = 3
