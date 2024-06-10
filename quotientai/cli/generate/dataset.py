@@ -209,6 +209,7 @@ def select_next_action():
         "Choose an option",
         choices=[str(index) for index in next_action_choices.keys()],
     )
+    return next_action
 
 
 
@@ -337,13 +338,14 @@ def generation_workflow(seed: str = None):
             console.print(
                 f"[bold]🧪 We will now generate a dataset with {num_dataset_examples} examples, using the graded examples as a seed...[/bold]\n"
             )
-            client.generate_dataset(
-                generation_type=generation_type,
-                description=description,
-                num_examples=num_examples,
-                seed_data=seed_data,
-                preferences=preferences,
-            )
+            time.sleep(5)
+            # client.generate_dataset(
+            #     generation_type=generation_type,
+            #     description=description,
+            #     num_examples=num_examples,
+            #     seed_data=seed_data,
+            #     preferences=preferences,
+            # )
             console.print(
                 "[green][bold]🚀 Dataset request submitted! "
                 "You will soon receive an email with your downloadable dataset![/bold][/green]"
