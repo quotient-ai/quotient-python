@@ -330,8 +330,12 @@ def generation_workflow(seed: str = None):
         else:
             # Stop grading and generate the dataset
             console.print()
+            console.print("Sweet!")
+            num_dataset_examples = IntPrompt.ask(
+                "How many examples would you like to generate for your dataset? [magenta](Max: 1000)[/magenta]",
+            )
             console.print(
-                "[bold]🧪 We will now generate a dataset using the graded examples as a seed...[/bold]\n"
+                f"[bold]🧪 We will now generate a dataset with {num_dataset_examples} examples, using the graded examples as a seed...[/bold]\n"
             )
             client.generate_dataset(
                 generation_type=generation_type,
