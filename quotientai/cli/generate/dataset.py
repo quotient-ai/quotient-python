@@ -180,7 +180,6 @@ def grade_examples(
     console.print()
     return data
 
-
 def select_next_action():
     next_action_choices = {
         1: {
@@ -210,7 +209,6 @@ def select_next_action():
         choices=[str(index) for index in next_action_choices.keys()],
     )
     return next_action
-
 
 
 def generation_workflow(seed: str = None):
