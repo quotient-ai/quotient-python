@@ -1167,3 +1167,50 @@ class QuotientClient:
 
         except Exception as e:
             raise QuotientAIException(f"Failed to generate examples: {str(e)}") from e
+
+    @require_api_key
+    def generate_dataset(
+        self,
+        generation_type: GenerateDatasetType,
+        description: str,
+        num_examples: int = 3,
+        seed_data: str = None,
+        preferences: List[dict] = None,
+    ) -> List[str]:
+        try:
+            url = f"{self.eval_scheduler_url}/generate/dataset"
+
+            headers = {
+                "Authorization": f"Bearer {self.api_key}",
+            }
+            params = {
+                "generation_type": generation_type.value,
+            }
+
+            data = {
+                "inputs": seed_data,
+                "description": description,
+                "num_examples": num_examples,
+                "preferences": preferences,
+            }
+            response = requests.post(
+                url,
+                headers=headers,
+                params=params,
+                json=data,
+            )
+            result = response.json()
+            if response.status_code != 200:
+                if "detail" in result:
+                    raise FastAPIError(response.status_code, result["detail"])
+                else:
+                    response.raise_for_status()
+
+            return result
+        except FastAPIError as fast_err:
+            raise QuotientAIException(
+                f"Failed to generate dataset: {fast_err.status_code} {fast_err.detail}"
+            ) from fast_err
+
+        except Exception as e:
+            raise QuotientAIException(f"Failed to generate dataset: {str(e)}") from e
