@@ -1,7 +1,6 @@
 import json
 import os
 import time
-
 from pathlib import Path
 from typing import List, Optional
 
@@ -55,7 +54,9 @@ def get_seed_data(seed: str) -> List[Optional[str]]:
             while not valid_file:
                 filepath = Prompt.ask("Please provide the path to the seed file")
 
-                is_valid_format = filepath.endswith(".jsonl") or filepath.endswith(".jsonlines")
+                is_valid_format = filepath.endswith(".jsonl") or filepath.endswith(
+                    ".jsonlines"
+                )
                 is_valid_path = os.path.exists(filepath)
                 if is_valid_format and is_valid_path:
                     valid_file = True
@@ -82,9 +83,7 @@ def get_seed_data(seed: str) -> List[Optional[str]]:
             f"Available fields: [magenta]{available_fields}"
         )
         if field not in raw_data[0]:
-            console.print(
-                f"The field '{field}' is not present in the seed file."
-            )
+            console.print(f"The field '{field}' is not present in the seed file.")
         else:
             valid_field = True
 
@@ -179,6 +178,7 @@ def grade_examples(
     console.print("🎉 [bold]All examples graded![/bold]")
     console.print()
     return data
+
 
 def select_next_action():
     next_action_choices = {
@@ -280,6 +280,8 @@ def generation_workflow(seed: str = None):
     seed_data: Optional[List[str]] = get_seed_data(seed=seed)
     if seed_data:
         seed_data = seed_data[0]
+    else:
+        seed_data = None
 
     graded_examples = []
     preferences = []
@@ -331,7 +333,7 @@ def generation_workflow(seed: str = None):
             console.print()
             console.print("Sweet!")
             num_dataset_examples = IntPrompt.ask(
-                "How many examples would you like to generate for your dataset? [magenta](Max: 1000)[/magenta]",
+                "How many examples would you like to generate for your dataset? [magenta](Max: 100)[/magenta]",
             )
             console.print(
                 f"[bold]🧪 We will now generate a dataset with {num_dataset_examples} examples, using the graded examples as a seed...[/bold]\n"
