@@ -8,3 +8,4 @@ class GenerateDatasetType(Enum):
 
     grounded_qa: str = "grounded-question-answering"
     summarization: str = "summarization"
+    translation: str = "translation"

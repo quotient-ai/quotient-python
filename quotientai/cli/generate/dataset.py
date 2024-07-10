@@ -1,5 +1,6 @@
 import json
 import os
+import random
 import time
 from pathlib import Path
 from typing import List, Optional
@@ -91,14 +92,22 @@ def get_seed_data(seed: str) -> List[Optional[str]]:
     seed_one = raw_data[0][field]
     console.print(f"[green] {seed_one}\n")
 
-    seed_data = [line[field] for line in raw_data]
+    try:
+        seed_data = [line[field] for line in raw_data]
+    except KeyError:
+        raise Exception(
+            f"could not find field '{field}' in one or more lines. "
+            "please ensure all lines have the field available"
+        )
+
     return seed_data
 
 
 def grade_examples(
     generation_type: GenerateDatasetType,
     description: str,
-    seed_data: str,
+    language: str = None,
+    seed_data: List[str] = [],
     preferences: list[dict] = None,
     num_examples: int = 3,
 ):
@@ -109,11 +118,18 @@ def grade_examples(
     ) as progress:
         task = progress.add_task("generation", total=0)
 
+        # randomly sample `num_examples` number of rows for
+        # initial generation
+        seed_data = random.sample(
+            seed_data,
+            min(len(seed_data), num_examples),
+        )
         # Step 4
         examples = client.generate_examples(
             generation_type=generation_type,
             description=description,
             num_examples=num_examples,
+            language=language,
             seed_data=seed_data,
             preferences=preferences,
         )
@@ -122,12 +138,12 @@ def grade_examples(
             time.sleep(0.10)
 
     # Step 5
-    step_message = "🚀 Generated 3 examples. Please grade them!"
+    step_message = f"🚀 Generated {len(examples)} examples. Please grade them!"
     console.print("-" * len(step_message))
     console.print(f"[bold]{step_message}[/bold]")
     console.print("")
 
-    context = examples["metadata"]["input_text"]
+    context = examples["metadata"]["inputs"]
 
     # if the generation type is grounded_qa, we will use the pull input_text and format the
     # examples as context, question, and answer.
@@ -137,20 +153,29 @@ def grade_examples(
         data = [
             {
                 "id": example["id"],
-                "context": context,
+                "context": example["context"],
                 "question": example["question"],
                 "answer": example["answer"],
             }
             for example in examples["pairs"]
         ]
-    else:
+    elif GenerateDatasetType(generation_type) == GenerateDatasetType.summarization:
         data = [
             {
                 "id": example["id"],
                 "context": context,
                 "summary": example["summary"],
             }
-            for example in examples["data"]
+            for example in examples["pairs"]
+        ]
+    elif GenerateDatasetType(generation_type) == GenerateDatasetType.translation:
+        data = [
+            {
+                "id": example["id"],
+                "text": example["text"],
+                "translation": example["translation"],
+            }
+            for example in examples["pairs"]
         ]
 
     for idx, datum in enumerate(data):
@@ -168,7 +193,7 @@ def grade_examples(
 
         # add the grade and the explanation to the example
         datum["grade"] = 1 if is_good else 0
-        datum["explanation"] = explanation
+        datum["feedback"] = explanation
 
         if idx < len(examples) - 1:
             console.print("👍 Got it! Here's the next one\n")
@@ -254,6 +279,10 @@ def generation_workflow(seed: str = None):
             "type": GenerateDatasetType.summarization,
             "description": "A dataset that can be used for evaluating model summarization abilties.",
         },
+        3: {
+            "type": GenerateDatasetType.translation,
+            "description": "A dataset that can be used for evaluating model translation abilities.",
+        },
     }
 
     for index, choice in generation_choices.items():
@@ -276,39 +305,28 @@ def generation_workflow(seed: str = None):
         "[bold]Please describe in detail the context of your problem[/bold]"
     )
 
-    # if the seed is not provided, ask the user if they have a seed file
-    seed_data: Optional[List[str]] = get_seed_data(seed=seed)
-    if seed_data:
-        seed_data = seed_data[0]
+    if generation_type == GenerateDatasetType.translation:
+        language = Prompt.ask(
+            "[bold]Please tell us what language you want to translate to[/bold]"
+        )
     else:
-        seed_data = None
+        language = None
+
+    # if the seed is not provided, ask the user if they have a seed file
+    seed_data: List[Optional[str]] = get_seed_data(seed=seed)
 
     graded_examples = []
-    preferences = []
     num_examples = 3
     while True:
         graded = grade_examples(
             generation_type=generation_type,
             description=description,
-            seed_data=seed_data,
             num_examples=num_examples,
-            preferences=preferences,
+            language=language,
+            seed_data=seed_data,
+            preferences=graded_examples,
         )
         graded_examples.extend(graded)
-
-        # add the graded examples to the preferences
-        prefs = [
-            {
-                "id": example["id"],
-                "context": example["context"],
-                "question": example["question"],
-                "answer": example["answer"],
-                "grade": example["grade"],
-                "feedback": example["explanation"],
-            }
-            for example in graded_examples
-        ]
-        preferences.extend(prefs)
 
         console.print(
             f"You have graded [yellow]{len(graded_examples)}[yellow] examples."

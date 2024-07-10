@@ -35,9 +35,7 @@ class QuotientClient:
         # Base URL for the Supabase project
         self.supabase_url = "https://hhqppcqltklzfpggdocb.supabase.co"
 
-        self.eval_scheduler_url = (
-            "http://eval-scheduler-alb-887401167.us-east-2.elb.amazonaws.com"
-        )
+        self.eval_scheduler_url = "http://eval-scheduler-alb-887401167.us-east-2.elb.amazonaws.com"
 
         self.supaclient = SyncPostgrestClient(
             self.supabase_url + "/rest/v1", headers={"apiKey": self.public_api_key}
@@ -1128,29 +1126,28 @@ class QuotientClient:
         generation_type: GenerateDatasetType,
         description: str,
         num_examples: int = 3,
-        seed_data: str = None,
+        language: str = None,
+        seed_data: List[str] = [],
         preferences: List[dict] = None,
     ) -> List[str]:
         try:
-            url = f"{self.eval_scheduler_url}/generate/examples"
+            url = f"{self.eval_scheduler_url}/generate/examples/{generation_type.value}"
 
             headers = {
                 "Authorization": f"Bearer {self.api_key}",
             }
-            params = {
-                "generation_type": generation_type.value,
-            }
-
             data = {
                 "inputs": seed_data,
                 "description": description,
                 "num_examples": num_examples,
                 "preferences": preferences,
             }
+            if generation_type == GenerateDatasetType.translation:
+                data["language"] = language
+
             response = requests.post(
                 url,
                 headers=headers,
-                params=params,
                 json=data,
             )
             result = response.json()
@@ -1176,6 +1173,7 @@ class QuotientClient:
         description: str,
         num_examples: int = 3,
         seed_data: str = None,
+        language: str = None,
         preferences: List[dict] = None,
     ) -> List[str]:
         try:
@@ -1194,10 +1192,10 @@ class QuotientClient:
                 "num_examples": num_examples,
                 "preferences": preferences,
             }
+
             response = requests.post(
                 url,
                 headers=headers,
-                params=params,
                 json=data,
             )
             result = response.json()
