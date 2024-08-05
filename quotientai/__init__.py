@@ -1,13 +1,7 @@
-from .client import QuotientClient
-from .exceptions import (
-    QuotientAIAuthException,
-    QuotientAIException,
-    QuotientAIInvalidInputException,
-)
+from .client import QuotientAI
+from .exceptions import QuotientAIError
 
 __all__ = [
-    "QuotientClient",
-    "QuotientAIException",
-    "QuotientAIAuthException",
-    "QuotientAIInvalidInputException",
+    "QuotientAI",
+    "QuotientAIError",
 ]
