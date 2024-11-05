@@ -137,7 +137,7 @@ class DatasetsResource:
 
         return datasets
 
-    def get(self, id: str, include_rows: bool = False) -> Dataset:
+    def get(self, id: str) -> Dataset:
         """
         Get a dataset by ID.
 
@@ -153,35 +153,30 @@ class DatasetsResource:
         Dataset
             The dataset with the given ID.
         """
-        if include_rows:
-            response = self._client._get(f"/datasets/{id}?include_rows=true")
-        else:
-            response = self._client._get(f"/datasets/{id}")
+        response = self._client._get(f"/datasets/{id}")
 
-        response = response.json()
         response["created_at"] = datetime.fromisoformat(response["created_at"])
         response["updated_at"] = datetime.fromisoformat(response["updated_at"])
 
-        if include_rows:
-            rows = []
-            for row in response["rows"]:
-                row["created_at"] = datetime.fromisoformat(row["created_at"])
-                row["updated_at"] = datetime.fromisoformat(row["updated_at"])
-                rows.append(DatasetRow(
-                    id=row["id"],
-                    input=row["input"],
-                    context=row["context"],
-                    expected=row["expected"],
-                    metadata=DatasetRowMetadata(
-                        annotation=row["annotation"],
-                        annotation_note=row["annotation_note"],
-                    ),
-                    created_at=row["created_at"],
-                    created_by=row["created_by"],
-                    updated_at=row["updated_at"],
-                ))
+        rows = []
+        for row in response["dataset_rows"]:
+            row["created_at"] = datetime.fromisoformat(row["created_at"])
+            row["updated_at"] = datetime.fromisoformat(row["updated_at"])
+            rows.append(DatasetRow(
+                id=row["dataset_row_id"],
+                input=row["input"],
+                context=row["context"],
+                expected=row["expected"],
+                metadata=DatasetRowMetadata(
+                    annotation=row["annotation"],
+                    annotation_note=row["annotation_note"],
+                ),
+                created_at=row["created_at"],
+                created_by=row["created_by"],
+                updated_at=row["updated_at"],
+            ))
 
-            response["rows"] = rows
+        response["rows"] = rows
 
         dataset = Dataset(
             id=response["id"],
@@ -317,7 +312,7 @@ class DatasetsResource:
     ) -> Dataset:
         """
         Append rows to an existing dataset.
-
+ 
         Parameters
         ----------
         dataset : Dataset
@@ -342,8 +337,10 @@ class DatasetsResource:
                     input=row_response["input"],
                     context=row_response["context"],
                     expected=row_response["expected"],
-                    annotation=row_response["annotation"],
-                    annotation_note=row_response["annotation_note"],
+                    metadata=DatasetRowMetadata(
+                        annotation=row_response["annotation"],
+                        annotation_note=row_response["annotation_note"],
+                    ),
                     created_at=row_response["created_at"],
                     created_by=row_response["created_by"],
                     updated_at=row_response["updated_at"],
@@ -357,7 +354,7 @@ class DatasetsResource:
             created_at=dataset.created_at,
             updated_at=dataset.updated_at,
             created_by=dataset.created_by,
-            rows=row_responses,
+            rows=dataset.rows + row_responses,
         )
         return dataset
 
