@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "quotientai"
-version = "0.0.7"
+version = "0.1.0"
 authors = [
     "Vic Weiss <vic@quotientai.co>",
     "Freddie Vargus <freddie@quotientai.co>",
@@ -20,12 +20,7 @@ python = "^3.9"
 typer = "^0.9.0"
 rich = "^13.7.0"
 click = "^8.1.7"
-prettytable = "^3.9.0"
-requests = "^2.31.0"
-numpy = "^1.26.4"
-python-dotenv = "^1.0.1"
-pandas = "^1.5.3"
-postgrest = "^0.16.2"
+httpx = "^0.27.0"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^8.0.0"
@@ -37,4 +32,4 @@ requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
 
 [tool.poetry.scripts]
-quotient = "quotientai.cli.entrypoint:cli"
+quotient = "quotientai.cli.entrypoint:app"

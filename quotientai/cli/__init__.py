@@ -1,3 +1,3 @@
-from .entrypoint import cli
+from .entrypoint import app
 
-__all__ = ["cli"]
+__all__ = ["app"]
