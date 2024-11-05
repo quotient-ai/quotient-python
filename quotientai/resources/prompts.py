@@ -56,7 +56,7 @@ class PromptsResource:
                     name=prompt["name"],
                     version=prompt["prompt_version"],
                     system_prompt=prompt["system_prompt"],
-                    user_prompt=prompt["prompt_template_str"],
+                    user_prompt=prompt["user_prompt"],
                     created_at=prompt["created_at"],
                     updated_at=prompt["updated_at"],
                 )
@@ -80,7 +80,7 @@ class PromptsResource:
             name=response["name"],
             version=response["prompt_version"],
             system_prompt=response["system_prompt"],
-            user_prompt=response["prompt_template_str"],
+            user_prompt=response["user_prompt"],
             created_at=response["created_at"],
             updated_at=response["updated_at"],
         )
@@ -95,7 +95,7 @@ class PromptsResource:
         data = {
             "name": name,
             "system_prompt": system_prompt,
-            "prompt_template_str": user_prompt,
+            "user_prompt": user_prompt,
         }
         response = self._client._post("/prompts", data=data)
         prompt = Prompt(
@@ -103,7 +103,7 @@ class PromptsResource:
             name=response["name"],
             version=response["prompt_version"],
             system_prompt=response["system_prompt"],
-            user_prompt=response["prompt_template_str"],
+            user_prompt=response["user_prompt"],
             created_at=response["created_at"],
             updated_at=response["updated_at"],
         )
@@ -125,7 +125,7 @@ class PromptsResource:
             "id": prompt.id,
             "name": name,
             "system_prompt": system_prompt,
-            "prompt_template_str": user_prompt,
+            "user_prompt": user_prompt,
         }
         response = self._client._patch(f"/prompts/{prompt.id}", data=data)
         prompt = Prompt(
@@ -133,7 +133,7 @@ class PromptsResource:
             name=response["name"],
             version=response["prompt_version"],
             system_prompt=response["system_prompt"],
-            user_prompt=response["prompt_template_str"],
+            user_prompt=response["user_prompt"],
             created_at=response["created_at"],
             updated_at=response["updated_at"],
         )
