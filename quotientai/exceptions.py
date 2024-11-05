@@ -161,6 +161,18 @@ def _parse_unprocessable_entity_error(response: httpx.Response) -> None:
             return message
     else:
         raise APIResponseValidationError(response, body)
+    
+def _parse_bad_request_error(response: httpx.Response) -> None:
+    try:
+        body = response.json()
+    except ValueError:
+        raise APIResponseValidationError(response, None)
+    
+    if "detail" in body:
+        message = body["detail"]
+        return message
+    else:
+        raise APIResponseValidationError(response, body)
 
 def handle_errors(func):
     @wraps(func)
@@ -170,8 +182,9 @@ def handle_errors(func):
             response.raise_for_status()
         except httpx.HTTPStatusError as exc:
             if exc.response.status_code == 400:
+                message = _parse_bad_request_error(exc.response)
                 raise BadRequestError(
-                    message="bad request: the server could not understand the request due to invalid syntax.",
+                    message=message,
                     response=exc.response,
                     body=exc.response.text,
                 )

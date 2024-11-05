@@ -54,7 +54,7 @@ class PromptsResource:
                 Prompt(
                     id=prompt["id"],
                     name=prompt["name"],
-                    version=prompt["prompt_version"],
+                    version=prompt["version"],
                     system_prompt=prompt["system_prompt"],
                     user_prompt=prompt["user_prompt"],
                     created_at=prompt["created_at"],
@@ -78,7 +78,7 @@ class PromptsResource:
         prompt = Prompt(
             id=response["id"],
             name=response["name"],
-            version=response["prompt_version"],
+            version=response["version"],
             system_prompt=response["system_prompt"],
             user_prompt=response["user_prompt"],
             created_at=response["created_at"],
@@ -101,7 +101,7 @@ class PromptsResource:
         prompt = Prompt(
             id=response["id"],
             name=response["name"],
-            version=response["prompt_version"],
+            version=response["version"],
             system_prompt=response["system_prompt"],
             user_prompt=response["user_prompt"],
             created_at=response["created_at"],
@@ -131,7 +131,7 @@ class PromptsResource:
         prompt = Prompt(
             id=response["id"],
             name=response["name"],
-            version=response["prompt_version"],
+            version=response["version"],
             system_prompt=response["system_prompt"],
             user_prompt=response["user_prompt"],
             created_at=response["created_at"],
