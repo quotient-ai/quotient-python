@@ -112,20 +112,12 @@ class PromptsResource:
     def update(
         self,
         prompt: Prompt,
-        name: Optional[str] = None,
-        system_prompt: Optional[str] = None,
-        user_prompt: Optional[str] = None,
     ) -> Prompt:
-        if all(param is None for param in [name, system_prompt, user_prompt]):
-            raise ValueError(
-                "at least one field must be provided to update the prompt."
-            )
-
         data = {
             "id": prompt.id,
-            "name": name,
-            "system_prompt": system_prompt,
-            "user_prompt": user_prompt,
+            "name": prompt.name,
+            "system_prompt": prompt.system_prompt,
+            "user_prompt": prompt.user_prompt,
         }
         response = self._client._patch(f"/prompts/{prompt.id}", data=data)
         prompt = Prompt(
