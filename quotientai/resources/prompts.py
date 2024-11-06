@@ -132,7 +132,16 @@ class PromptsResource:
         return prompt
 
     def delete(self, prompt: Prompt) -> Optional[None]:
-        response = self._client._delete(f"/prompts/{prompt.id}")
+        data = {
+            "id": prompt.id,
+            "name": prompt.name,
+            "system_prompt": prompt.system_prompt,
+            "user_prompt": prompt.user_prompt,
+            # soft delete
+            "is_deleted": True,
+        }
+        
+        response = self._client._update(f"/prompts/{prompt.id}", data=data)
         if response.status_code == HTTPStatus.NO_CONTENT:
             return None
         else:
