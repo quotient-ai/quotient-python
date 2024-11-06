@@ -1,8 +1,6 @@
 
-
 from dataclasses import dataclass
 from datetime import datetime
-from http import HTTPStatus
 from typing import List, Optional
 
 
@@ -69,9 +67,11 @@ class PromptsResource:
         if version is not None:
             path += f"/versions/{version}"
 
-        response = self._client._get(path)
+        prompts = self._client._get(path)
+        if not prompts:
+            raise ValueError(f"Prompt with id {id} not found.")
 
-        response = response[0]
+        response = prompts[0]
         response["created_at"] = datetime.fromisoformat(response["created_at"])
         response["updated_at"] = datetime.fromisoformat(response["updated_at"])
 
@@ -112,20 +112,12 @@ class PromptsResource:
     def update(
         self,
         prompt: Prompt,
-        name: Optional[str] = None,
-        system_prompt: Optional[str] = None,
-        user_prompt: Optional[str] = None,
     ) -> Prompt:
-        if all(param is None for param in [name, system_prompt, user_prompt]):
-            raise ValueError(
-                "at least one field must be provided to update the prompt."
-            )
-
         data = {
             "id": prompt.id,
-            "name": name,
-            "system_prompt": system_prompt,
-            "user_prompt": user_prompt,
+            "name": prompt.name,
+            "system_prompt": prompt.system_prompt,
+            "user_prompt": prompt.user_prompt,
         }
         response = self._client._patch(f"/prompts/{prompt.id}", data=data)
         prompt = Prompt(
@@ -140,8 +132,14 @@ class PromptsResource:
         return prompt
 
     def delete(self, prompt: Prompt) -> Optional[None]:
-        response = self._client._delete(f"/prompts/{prompt.id}")
-        if response.status_code == HTTPStatus.NO_CONTENT:
-            return None
-        else:
-            raise Exception(f"failed to delete prompt. response: {response.json()}")
+        data = {
+            "id": prompt.id,
+            "name": prompt.name,
+            "system_prompt": prompt.system_prompt,
+            "user_prompt": prompt.user_prompt,
+            # soft delete
+            "is_deleted": True,
+        }
+        
+        self._client._patch(f"/prompts/{prompt.id}", data=data)
+        return None
