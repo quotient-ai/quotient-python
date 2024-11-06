@@ -16,7 +16,8 @@ class DatasetRowMetadata:
     annotation_note : str, optional
         An optional annotation note field. Contains information about the annotation decision.
     """
-    annotation: Optional[str] = 'ungraded'
+
+    annotation: Optional[str] = "ungraded"
     annotation_note: Optional[str] = None
 
 
@@ -127,13 +128,14 @@ class DatasetsResource:
             dataset["updated_at"] = datetime.fromisoformat(dataset["updated_at"])
             datasets.append(
                 Dataset(
-                id=dataset["id"],
-                name=dataset["name"],
-                description=dataset["description"],
-                created_at=dataset["created_at"],
-                updated_at=dataset["updated_at"],
-                created_by=dataset["created_by"],
-            ))
+                    id=dataset["id"],
+                    name=dataset["name"],
+                    description=dataset["description"],
+                    created_at=dataset["created_at"],
+                    updated_at=dataset["updated_at"],
+                    created_by=dataset["created_by"],
+                )
+            )
 
         return datasets
 
@@ -147,7 +149,7 @@ class DatasetsResource:
             The unique identifier for the dataset.
         include_rows : bool, optional
             Whether to include the rows in the dataset.
-        
+
         Returns
         -------
         Dataset
@@ -162,19 +164,21 @@ class DatasetsResource:
         for row in response["dataset_rows"]:
             row["created_at"] = datetime.fromisoformat(row["created_at"])
             row["updated_at"] = datetime.fromisoformat(row["updated_at"])
-            rows.append(DatasetRow(
-                id=row["dataset_row_id"],
-                input=row["input"],
-                context=row["context"],
-                expected=row["expected"],
-                metadata=DatasetRowMetadata(
-                    annotation=row["annotation"],
-                    annotation_note=row["annotation_note"],
-                ),
-                created_at=row["created_at"],
-                created_by=row["created_by"],
-                updated_at=row["updated_at"],
-            ))
+            rows.append(
+                DatasetRow(
+                    id=row["dataset_row_id"],
+                    input=row["input"],
+                    context=row["context"],
+                    expected=row["expected"],
+                    metadata=DatasetRowMetadata(
+                        annotation=row["annotation"],
+                        annotation_note=row["annotation_note"],
+                    ),
+                    created_at=row["created_at"],
+                    created_by=row["created_by"],
+                    updated_at=row["updated_at"],
+                )
+            )
 
         response["rows"] = rows
 
@@ -271,7 +275,7 @@ class DatasetsResource:
             The new description for the dataset.
         rows : List[DatasetRow], optional
             A list of dataset rows to update within the dataset.
-        
+
         Returns
         -------
         Dataset
@@ -304,7 +308,7 @@ class DatasetsResource:
             created_by=response["created_by"],
         )
         return dataset
-    
+
     def append(
         self,
         dataset: Dataset,
@@ -312,7 +316,7 @@ class DatasetsResource:
     ) -> Dataset:
         """
         Append rows to an existing dataset.
- 
+
         Parameters
         ----------
         dataset : Dataset
@@ -346,7 +350,7 @@ class DatasetsResource:
                     updated_at=row_response["updated_at"],
                 )
             )
-        
+
         dataset = Dataset(
             id=dataset.id,
             name=dataset.name,
@@ -376,13 +380,29 @@ class DatasetsResource:
         if rows:
             # Delete specific rows within the dataset
             for row in rows:
-                response = self._client._delete(f"/datasets/{dataset.id}/dataset_rows/{row.id}")
-                if response.status_code != HTTPStatus.NO_CONTENT:
-                    raise Exception(f"failed to delete row with ID {row.id}. response: {response.json()}")
+                self._client._patch(
+                    f"/datasets/{dataset.id}/dataset_rows/{row.id}",
+                    data={
+                        "id": row.id,
+                        "input": row.input,
+                        "context": row.context,
+                        "expected": row.expected,
+                        "annotation": row.metadata.annotation,
+                        "annotation_note": row.metadata.annotation_note,
+                        # soft delete
+                        "is_deleted": True,
+                    },
+                )
         else:
             # delete the entire dataset
-            response = self._client._delete(f"/datasets/{dataset.id}")
-            if response.status_code != HTTPStatus.NO_CONTENT:
-                raise Exception(f"failed to delete dataset. response: {response.json()}")
-        
+            self._client._patch(
+                f"/datasets/{dataset.id}",
+                # soft delete
+                data={
+                    "name": dataset.name,
+                    "description": dataset.description,
+                    "is_deleted": True,
+                },
+            )
+
         return None

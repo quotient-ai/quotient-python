@@ -1,8 +1,6 @@
 
-
 from dataclasses import dataclass
 from datetime import datetime
-from http import HTTPStatus
 from typing import List, Optional
 
 
@@ -69,9 +67,11 @@ class PromptsResource:
         if version is not None:
             path += f"/versions/{version}"
 
-        response = self._client._get(path)
+        prompts = self._client._get(path)
+        if not prompts:
+            raise ValueError(f"Prompt with id {id} not found.")
 
-        response = response[0]
+        response = prompts[0]
         response["created_at"] = datetime.fromisoformat(response["created_at"])
         response["updated_at"] = datetime.fromisoformat(response["updated_at"])
 
@@ -141,8 +141,5 @@ class PromptsResource:
             "is_deleted": True,
         }
         
-        response = self._client._update(f"/prompts/{prompt.id}", data=data)
-        if response.status_code == HTTPStatus.NO_CONTENT:
-            return None
-        else:
-            raise Exception(f"failed to delete prompt. response: {response.json()}")
+        self._client._patch(f"/prompts/{prompt.id}", data=data)
+        return None
