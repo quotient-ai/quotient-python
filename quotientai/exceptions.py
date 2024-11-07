@@ -162,7 +162,7 @@ def _parse_unprocessable_entity_error(response: httpx.Response) -> None:
     else:
         raise APIResponseValidationError(response, body)
     
-def _parse_bad_request_error(response: httpx.Response) -> None:
+def _parse_basic_detail(response: httpx.Response) -> None:
     try:
         body = response.json()
     except ValueError:
@@ -182,15 +182,16 @@ def handle_errors(func):
             response.raise_for_status()
         except httpx.HTTPStatusError as exc:
             if exc.response.status_code == 400:
-                message = _parse_bad_request_error(exc.response)
+                message = _parse_basic_detail(exc.response)
                 raise BadRequestError(
                     message=message,
                     response=exc.response,
                     body=exc.response.text,
                 )
             elif exc.response.status_code == 401:
+                message = _parse_basic_detail(exc.response)
                 raise AuthenticationError(
-                    message="unauthorized: the request requires user authentication. ensure your API key is correct.",
+                    message=message,
                     response=exc.response,
                     body=exc.response.text,
                 )
@@ -201,8 +202,9 @@ def handle_errors(func):
                     body=exc.response.text,
                 )
             elif exc.response.status_code == 404:
+                message = _parse_basic_detail(exc.response)
                 raise NotFoundError(
-                    message="not found: the server can not find the requested resource.",
+                    message=message,
                     response=exc.response,
                     body=exc.response.text,
                 )
