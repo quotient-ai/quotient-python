@@ -1,9 +1,15 @@
 import os
+from typing import List
 
 import httpx
 
 from quotientai import resources
 from quotientai.exceptions import QuotientAIError, handle_errors
+from quotientai.resources.prompts import Prompt
+from quotientai.resources.models import Model
+from quotientai.resources.datasets import Dataset
+from quotientai.resources.runs import Run
+
 
 
 class _BaseQuotientClient(httpx.Client):
@@ -65,3 +71,51 @@ class QuotientAI:
         self.prompts = resources.PromptsResource(_client)
         self.datasets = resources.DatasetsResource(_client)
         self.models = resources.ModelsResource(_client)
+        self.runs = resources.RunsResource(_client)
+
+
+    def evaluate(
+        self,
+        *,
+        prompt: Prompt,
+        dataset: Dataset,
+        model: Model,
+        parameters: dict,
+        metrics: List[str],
+    ) -> Run:
+        def _validate_parameters(parameters):
+            """
+            Validate the parameters dictionary. Currently the only valid parameters are:
+
+            - temperature: float
+            - top_k: int
+            - top_p: float
+            - max_tokens: int
+            - repetition_penalty: float
+            """
+            valid_parameters = [
+                "temperature",
+                "top_k",
+                "top_p",
+                "max_tokens",
+            ]
+
+            invalid_parameters = set(parameters.keys()) - set(valid_parameters)
+            if invalid_parameters:
+                raise QuotientAIError(
+                    f"invalid parameters: {', '.join(invalid_parameters)}. "
+                    f"valid parameters are: {', '.join(valid_parameters)}"
+                )
+
+            return parameters
+
+        parameters = _validate_parameters(parameters)
+
+        run = self.runs.create(
+            prompt=prompt,
+            dataset=dataset,
+            model=model,
+            parameters=parameters,
+            metrics=metrics,
+        )
+        return run

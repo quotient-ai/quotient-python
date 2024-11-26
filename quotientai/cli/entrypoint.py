@@ -1,8 +1,11 @@
 import click
 import typer
 
+from pathlib import Path
+
 from rich.console import Console
 
+from quotientai.cli.imports import import_evaluate
 from quotientai.client import QuotientAI
 from quotientai.exceptions import QuotientAIError
 
@@ -67,6 +70,31 @@ def list_datasets():
         console.print(datasets)
     except QuotientAIError as e:
         click.echo(str(e))
+
+
+###############
+# Evaluations #
+###############
+
+@app.command(name="run")
+def run_eval(
+    file: Path = typer.Argument(
+        # ... means required in Typer
+        ...,
+        exists=True,
+        file_okay=True,
+        dir_okay=True,
+        help="Path to the evaluation file or directory to search in",
+    ),
+):
+    """Command to run an eval."""
+    try:
+        evaluate_func = import_evaluate(file)
+        run = evaluate_func()
+        run.progress(show=True)
+        run.summarize()
+    except QuotientAIError as e:
+        raise
 
 
 if __name__ == "__main__":
