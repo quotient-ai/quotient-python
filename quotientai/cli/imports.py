@@ -7,17 +7,20 @@ from quotientai.exceptions import QuotientAIError
 from quotientai.resources.runs import Run
 
 
-def import_evaluate(path: Path) -> callable:
+def exec_evaluate(path: Path) -> callable:
     """
-    Searches for and imports the quotient.evaluate call from the specified path.
+    Searches for and executes the quotient.evaluate call from the specified path.
 
-    Args:
-        path: Path to either the specific evaluation file or directory to search in
+    Parameters:
+    -----------
+        path: Path to a file or directory containing the evaluation file
 
     Returns:
+    --------
         A callable that returns a Run object when executed
 
-    Raises:
+    Exceptions:
+    -----------
         QuotientAIError: If no valid evaluation file or function is found
     """
     if path.is_file():
@@ -47,19 +50,9 @@ def import_evaluate(path: Path) -> callable:
             spec.loader.exec_module(module)
 
             # Look through module's contents
-            for name, obj in inspect.getmembers(module):
-                # First check if it's a callable
-                if callable(obj):
-                    try:
-                        # Try calling the function
-                        result = obj()
-                        # Check if it returns a Run object
-                        if isinstance(result, Run):
-                            return obj
-                    except:
-                        # Skip if calling the function fails
-                        continue
-
+            for _, obj in inspect.getmembers(module):
+                if isinstance(obj, Run):
+                    return obj
         except Exception as e:
             raise QuotientAIError(
                 f"error running evaluation with {file_path}: {str(e)}"

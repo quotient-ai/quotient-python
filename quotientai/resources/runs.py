@@ -1,7 +1,5 @@
-import random
-
 from dataclasses import dataclass
-from datetime import datetime, time
+from datetime import datetime
 from typing import List, Optional
 
 from quotientai.resources.prompts import Prompt
@@ -10,7 +8,7 @@ from quotientai.resources.datasets import Dataset
 
 
 @dataclass
-class RunResults:
+class RunResult:
     """
     A run result represents each processed row in a dataset, when
     the prompt is run against a model with the parameters specified.
@@ -29,9 +27,6 @@ class RunResults:
 
     def __rich_repr__(self):
         yield "id", self.id
-        yield "run_id", self.run_id
-        yield "dataset_row_id", self.dataset_row_id
-        yield "model_output", self.model_output
         yield "metrics", self.metrics
         yield "created_at", self.created_at
         yield "created_by", self.created_by
@@ -55,36 +50,15 @@ class Run:
 
     # all outputs of a run, will get filled in as we progress
     status: str
-    results: Optional[RunResults] = None
-    progress: float = 0.0
-    total_time: Optional[time] = None
+    results: Optional[List[RunResult]] = None
     created_at: Optional[datetime] = None
     finished_at: Optional[datetime] = None
 
     def __rich_repr__(self):
         yield "id", self.id
         yield "name", self.name
-
-    def progress(self, show: bool = True):
-        """
-        Return a progress bar for the run.
-        """
-        self.status = "in-progress"
-        while self.progress < 100.0:
-            # send requests to the API to get the progress of the run
-            resource = RunsResource("FILLMEIN")
-            run = resource.get(self.id)
-            self.progress = run.progress
-            if show:
-                print(f"Progress: {self.progress}%")
-
-            time.sleep(random.randint(1, 5))
-
-        # now get the results of the run
-        self.results = run.results
-        self.status = run.status
-        self.total_time = run.total_time
-        return None
+        yield "model", self.model
+        yield "status", self.status
 
     def summarize(
         self,
@@ -167,24 +141,60 @@ class RunsResource:
 
     def __init__(self, client) -> None:
         self._client = client
-        # raise NotImplementedError("this resource is not implemented yet in the API")
 
     def list(self) -> List[Run]:
         response = self._client._get("/runs")
 
         runs = []
         for run in response:
-            run["created_at"] = datetime.fromisoformat(run["created_at"])
-            runs.append(Run(**run))
+            runs.append(
+                Run(
+                    id=run["id"],
+                    prompt=run["prompt"],
+                    dataset=run["dataset"],
+                    model=run["model"],
+                    parameters=run["parameters"],
+                    metrics=run["metrics"],
+                    status=run["status"],
+                    created_at=(
+                        datetime.fromisoformat(run["created_at"])
+                        if run["created_at"] is not None
+                        else None
+                    ),
+                    finished_at=(
+                        datetime.fromisoformat(run["finished_at"])
+                        if run["finished_at"] is not None
+                        else None
+                    ),
+                )
+            )
 
         return runs
 
     def get(self, run_id: str) -> Run:
         response = self._client._get(f"/runs/{run_id}")
 
-        response = response.json()
-        response["created_at"] = datetime.fromisoformat(response["created_at"])
-        run = Run(**response)
+        breakpoint()
+
+        run = Run(
+            id=response["id"],
+            prompt=response["prompt"],
+            dataset=response["dataset"],
+            model=response["model"],
+            parameters=response["parameters"],
+            metrics=response["metrics"],
+            status=response["status"],
+            created_at=(
+                datetime.fromisoformat(response["created_at"])
+                if response["created_at"] is not None
+                else None
+            ),
+            finished_at=(
+                datetime.fromisoformat(response["finished_at"])
+                if response["finished_at"] is not None
+                else None
+            ),
+        )
         return run
 
     def create(
