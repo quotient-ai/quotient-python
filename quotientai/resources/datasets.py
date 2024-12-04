@@ -112,9 +112,14 @@ class DatasetsResource:
     def __init__(self, client):
         self._client = client
 
-    def list(self) -> List[Dataset]:
+    def list(self, include_rows: bool = False) -> List[Dataset]:
         """
-        List all datasets.
+        List all datasets, optionally including their rows.
+
+        Parameters
+        ----------
+        include_rows : bool, optional
+            Whether to include the rows in each dataset.
 
         Returns
         -------
@@ -126,6 +131,32 @@ class DatasetsResource:
         for dataset in response:
             dataset["created_at"] = datetime.fromisoformat(dataset["created_at"])
             dataset["updated_at"] = datetime.fromisoformat(dataset["updated_at"])
+
+            # Initialize rows as empty; we'll populate it if include_rows is True
+            rows = []
+
+            if include_rows:
+                # Fetch rows for this dataset
+                rows_response = self._client._get(f"/datasets/{dataset['id']}/dataset_rows")
+                for row in rows_response:
+                    row["created_at"] = datetime.fromisoformat(row["created_at"])
+                    row["updated_at"] = datetime.fromisoformat(row["updated_at"])
+                    rows.append(
+                        DatasetRow(
+                            id=row["dataset_row_id"],
+                            input=row["input"],
+                            context=row["context"],
+                            expected=row["expected"],
+                            metadata=DatasetRowMetadata(
+                                annotation=row["annotation"],
+                                annotation_note=row["annotation_note"],
+                            ),
+                            created_at=row["created_at"],
+                            created_by=row["created_by"],
+                            updated_at=row["updated_at"],
+                        )
+                    )
+
             datasets.append(
                 Dataset(
                     id=dataset["id"],
@@ -134,10 +165,12 @@ class DatasetsResource:
                     created_at=dataset["created_at"],
                     updated_at=dataset["updated_at"],
                     created_by=dataset["created_by"],
+                    rows=rows,
                 )
             )
 
         return datasets
+
 
     def get(self, id: str) -> Dataset:
         """
