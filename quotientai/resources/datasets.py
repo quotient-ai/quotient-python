@@ -307,7 +307,8 @@ class DatasetsResource:
             updated_at=response["updated_at"],
             created_by=response["created_by"],
         )
-        return dataset
+        updated_dataset = self.get(id=dataset.id)
+        return updated_dataset
 
     def append(
         self,
