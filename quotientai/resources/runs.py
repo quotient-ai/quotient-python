@@ -174,8 +174,6 @@ class RunsResource:
     def get(self, run_id: str) -> Run:
         response = self._client._get(f"/runs/{run_id}")
 
-        breakpoint()
-
         run = Run(
             id=response["id"],
             prompt=response["prompt"],
