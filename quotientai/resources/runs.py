@@ -36,7 +36,6 @@ class RunResult:
 class Run:
     # identifiers
     id: str
-    # name: str
 
     # all inputs needed for a run
     # TODO: get prompt and dataset from their respective resources
@@ -56,7 +55,6 @@ class Run:
 
     def __rich_repr__(self):
         yield "id", self.id
-        yield "name", self.name
         yield "model", self.model
         yield "status", self.status
 
@@ -82,7 +80,6 @@ class Run:
 
         summary = {
             "run_id": self.id,
-            "name": self.name,
             "model": self.model,
             "provider": self.provider,
             "parameters": self.parameters,
@@ -100,26 +97,11 @@ class Run:
                         for result in self.results
                     )
                     / len(self.results),
-                    "previous_value": sum(
-                        result.metrics[metric] for result in self.previous.results
-                    )
-                    / len(self.previous.results),
                 }
                 for metric in self.metrics
             },
             "created_at": self.created_at,
         }
-
-        # compare the run to the previous run
-        if self.previous:
-            summary["comparison"] = {
-                metric: {
-                    "value": summary["metrics"][metric]["value"]
-                    - summary["metrics"][metric]["previous_value"],
-                    "stddev": summary["metrics"][metric]["stddev"],
-                }
-                for metric in self.metrics
-            }
 
         if best_n is not None and best_n > 0:
             summary["best_n"] = sorted(
@@ -267,7 +249,7 @@ class RunsResource:
             }
         elif len(runs) > 2:
             comparison = {
-                run.name: {
+                run.id: {
                     metric: {
                         "value": summaries[0]["metrics"][metric]["value"]
                         - summaries[1]["metrics"][metric]["value"],

@@ -132,6 +132,7 @@ def run_evaluation(
             progress_percentage = 0.0
             while not run_progress.finished:
                 # Simulate progress
+                # TODO: replace this when we can actually GET eval runs with results
                 if progress_percentage >= 100:
                     run.status = "completed"
                 else:
@@ -159,7 +160,7 @@ def run_evaluation(
 
                 if progress_percentage >= 100:
                     break
-
+        
         # Generate the summary after completion
         summary = run.summarize()
         console.print(summary)
