@@ -1,8 +1,16 @@
+import time
+
 import click
 import typer
 
-from rich.console import Console
+from pathlib import Path
 
+from rich.console import Console, Group
+from rich.live import Live
+from rich.panel import Panel
+from rich.progress import Progress, BarColumn, SpinnerColumn, TextColumn, TimeRemainingColumn
+
+from quotientai.cli.imports import exec_evaluate
 from quotientai.client import QuotientAI
 from quotientai.exceptions import QuotientAIError
 
@@ -67,6 +75,108 @@ def list_datasets():
         console.print(datasets)
     except QuotientAIError as e:
         click.echo(str(e))
+
+
+###############
+# Evaluations #
+###############
+
+@app.command(name="run")
+def run_evaluation(
+    file: Path = typer.Argument(
+        ...,
+        exists=True,
+        file_okay=True,
+        dir_okay=True,
+        help="Path to the evaluation file or directory to search in",
+    ),
+):
+    """Command to run an evaluation"""
+    try:
+        # show an initial progress bar to indicate that we're kicking things off
+        initial_progress = Progress(
+            TextColumn("Not Started"),
+            SpinnerColumn(spinner_name="bouncingBar"),
+        )
+
+        # Use Live to manage both the panel and progress
+        with Live(refresh_per_second=4) as live:
+            quotient = QuotientAI()
+
+            # Create the panel content
+            panel_content = Panel(
+                f"[green]Kicking off an evaluation. Hold tight 🚀[/green]\n\n",
+                title="Evaluation In Progress",
+                subtitle="QuotientAI",
+                expand=False,
+            )
+            layout = Group(panel_content, initial_progress)
+            live.update(layout)
+
+            # execute the evaluation from the `*evaluate.py` file
+            run = exec_evaluate(file)
+
+            # show a new progress bar with the actual progress since we have the run object
+            run_progress = Progress(
+                TextColumn("[progress.description]{task.description}"),
+                BarColumn(),
+                "[progress.percentage]{task.percentage:>3.0f}%",
+                TimeRemainingColumn(),
+            )
+            task = run_progress.add_task("Not Started", total=100)
+            run_progress.update(task, description="Started evaluation")
+
+            layout = Group(panel_content, run_progress)
+            live.update(layout)
+
+            progress_percentage = 0.0
+            while not run_progress.finished:
+                # Simulate progress
+                # TODO: replace this when we can actually GET eval runs with results
+                if progress_percentage >= 100:
+                    run.status = "completed"
+                else:
+                    # Simulated increment
+                    progress_percentage += 10
+
+                # Update progress
+                run_progress.update(task, completed=progress_percentage)
+                # Update panel content with the run status
+                panel_content = Panel(
+                    f"[green]Kicking off an evaluation. Hold tight 🚀[/green]\n\n"
+                    f"[yellow]Run ID:[/yellow] {run.id}\n"
+                    f"[yellow]Status:[/yellow] {run.status}",
+                    title="Evaluation In Progress",
+                    subtitle="QuotientAI",
+                    expand=False,
+                )
+
+                # Combine the progress bar and panel in a group
+                layout = Group(panel_content, run_progress)
+                live.update(layout)
+
+                # Simulate a delay (replace with actual logic)
+                time.sleep(1)
+
+                if progress_percentage >= 100:
+                    break
+        
+        # Generate the summary after completion
+        summary = run.summarize()
+        console.print(summary)
+    except QuotientAIError as e:
+        raise
+
+
+@list_app.command(name="runs")
+def list_runs():
+    """Command to get all runs."""
+    try:
+        quotient = QuotientAI()
+        runs = quotient.runs.list()
+        console.print(runs)
+    except QuotientAIError as e:
+        raise
 
 
 if __name__ == "__main__":
