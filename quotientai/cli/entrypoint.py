@@ -131,12 +131,9 @@ def run_evaluation(
 
             progress_percentage = 0.0
             while not run_progress.finished:
-                # Update run status
-                run = quotient.runs.get(run.id)
-
-                # Simulate progresss
-                if run.status == "completed":
-                    progress_percentage = 100.0
+                # Simulate progress
+                if progress_percentage >= 100:
+                    run.status = "completed"
                 else:
                     # Simulated increment
                     progress_percentage += 10
@@ -163,21 +160,9 @@ def run_evaluation(
                 if progress_percentage >= 100:
                     break
 
-            # Generate the summary after completion
-            summary = run.summarize()
-
-            # Update the panel content with the summary once the evaluation is completed
-            panel_content = Panel(
-                f"[green]Evaluation Completed 🎉[/green]\n\n"
-                f"[yellow]Run ID:[/yellow] {run.id}\n"
-                f"[yellow]Status:[/yellow] {run.status}\n\n"
-                f"Summary:\n{summary}",
-                title="Evaluation Summary",
-                subtitle="QuotientAI",
-                expand=False,
-            )
-            live.update(panel_content)
-
+        # Generate the summary after completion
+        summary = run.summarize()
+        console.print(summary)
     except QuotientAIError as e:
         raise
 
