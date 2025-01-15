@@ -108,7 +108,7 @@ def run_evaluation(
             task = status_progress.add_task("Starting...", total=None)  # No total needed
             
             panel_content = Panel(
-                "Initializing evaluation...",
+                "Initializing evaluation. Hold tight 🚀...",
                 title="Evaluation In Progress",
                 subtitle="QuotientAI",
                 expand=False,
