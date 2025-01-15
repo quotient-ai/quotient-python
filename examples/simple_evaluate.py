@@ -45,7 +45,7 @@ models = quotient.models.list()
 # get gpt4o-mini model
 model = next((model for model in models if model.name == 'gpt-4o-mini-2024-07-18'))
 
-# create a run with all of the metrics
+# create a run with all of the metrics we care about
 run = quotient.evaluate(
     prompt=prompt,
     dataset=dataset,
@@ -57,27 +57,8 @@ run = quotient.evaluate(
         "max_tokens": 100,
     },
     metrics=[
-        'answer_correctness_ragas',
-        'answer_relevance_ragas',
-        'context_recall_ragas',
-        'chunk_relevance',
         'bertscore',
         'exactmatch',
-        'faithfulness_ragas',
-        'faithfulness_selfcheckgpt',
-        'f1score',
-        'jaccard_similarity',
-        'knowledge_f1score',
-        'meteor',
-        'normalized_exactmatch',
-        'retrieval_at_k',
-        'rouge_for_context',
-        'rouge1',
-        'rouge2',
-        'rougeL',
-        'rougeLsum',
-        'sacrebleu',
-        'sentence_tranformers_similarity',
         'verbosity_ratio',
     ],
 )
