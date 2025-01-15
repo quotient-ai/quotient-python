@@ -8,7 +8,8 @@ from pathlib import Path
 from rich.console import Console, Group
 from rich.live import Live
 from rich.panel import Panel
-from rich.progress import Progress, BarColumn, SpinnerColumn, TextColumn, TimeRemainingColumn
+from rich.progress import Progress, SpinnerColumn, TextColumn, TimeElapsedColumn
+from rich.table import Table
 
 from quotientai.cli.imports import exec_evaluate
 from quotientai.client import QuotientAI
@@ -94,76 +95,89 @@ def run_evaluation(
     """Command to run an evaluation"""
     try:
         # show an initial progress bar to indicate that we're kicking things off
-        initial_progress = Progress(
-            TextColumn("Not Started"),
-            SpinnerColumn(spinner_name="bouncingBar"),
-        )
-
-        # Use Live to manage both the panel and progress
         with Live(refresh_per_second=4) as live:
             quotient = QuotientAI()
-
-            # Create the panel content
+            
+            # Create a progress display focused on status rather than percentage
+            status_progress = Progress(
+                SpinnerColumn(),
+                TextColumn("[progress.description]{task.description}"),
+                TimeElapsedColumn(),
+            )
+            
+            task = status_progress.add_task("Starting...", total=None)  # No total needed
+            
             panel_content = Panel(
-                f"[green]Kicking off an evaluation. Hold tight 🚀[/green]\n\n",
+                "Initializing evaluation...",
                 title="Evaluation In Progress",
                 subtitle="QuotientAI",
                 expand=False,
             )
-            layout = Group(panel_content, initial_progress)
+            
+            layout = Group(panel_content, status_progress)
             live.update(layout)
-
-            # execute the evaluation from the `*evaluate.py` file
+            
+            # Kick off the actual evaluation
             run = exec_evaluate(file)
-
-            # show a new progress bar with the actual progress since we have the run object
-            run_progress = Progress(
-                TextColumn("[progress.description]{task.description}"),
-                BarColumn(),
-                "[progress.percentage]{task.percentage:>3.0f}%",
-                TimeRemainingColumn(),
-            )
-            task = run_progress.add_task("Not Started", total=100)
-            run_progress.update(task, description="Started evaluation")
-
-            layout = Group(panel_content, run_progress)
-            live.update(layout)
-
-            progress_percentage = 0.0
-            while not run_progress.finished:
-                # Simulate progress
-                # TODO: replace this when we can actually GET eval runs with results
-                if progress_percentage >= 100:
-                    run.status = "completed"
-                else:
-                    # Simulated increment
-                    progress_percentage += 10
-
-                # Update progress
-                run_progress.update(task, completed=progress_percentage)
-                # Update panel content with the run status
+            # Actually fetch the current status from the run
+            current_status = run.status
+            
+            while True:
+                if current_status == "not-started":
+                    status_desc = "Initializing evaluation..."
+                    style = "yellow"
+                elif current_status == "running":
+                    status_desc = "Processing evaluation..."
+                    style = "blue"
+                elif current_status == "completed":
+                    status_desc = "Evaluation complete!"
+                    style = "green"
+                    break
+                
+                status_progress.update(task, description=status_desc)
                 panel_content = Panel(
-                    f"[green]Kicking off an evaluation. Hold tight 🚀[/green]\n\n"
-                    f"[yellow]Run ID:[/yellow] {run.id}\n"
-                    f"[yellow]Status:[/yellow] {run.status}",
+                    f"[{style}]{status_desc}[/{style}]\n\n"
+                    f"Run ID: {run.id}\n"
+                    f"Status: {current_status}",
                     title="Evaluation In Progress",
                     subtitle="QuotientAI",
                     expand=False,
                 )
-
-                # Combine the progress bar and panel in a group
-                layout = Group(panel_content, run_progress)
+                
+                layout = Group(panel_content, status_progress)
                 live.update(layout)
-
-                # Simulate a delay (replace with actual logic)
+                
+                # Fetch the current status from the run
                 time.sleep(1)
-
-                if progress_percentage >= 100:
-                    break
+                run = quotient.runs.get(run.id)
+                current_status = run.status
         
         # Generate the summary after completion
         summary = run.summarize()
-        console.print(summary)
+        console.print()
+        console.print("Evaluation complete!")
+        console.print()
+
+        # turn the summary into a table and print it
+        # print the metadata of the run
+        table = Table(title=f"Run: {summary['run_id']}", title_justify='left')
+        table.add_column("Key")
+        table.add_column("Value")
+        table.add_row("Run ID", summary["run_id"])
+        table.add_row("Model", summary["model"]["name"])
+        table.add_row("Parameters", str(summary["parameters"]))
+        table.add_row("Created At", str(summary["created_at"]))
+        console.print(table)
+
+        table = Table(title="Evaluation Summary", title_justify='left')
+        table.add_column("Metric")
+        table.add_column("Average")
+        table.add_column("Std Dev")
+        for metric, values in summary["metrics"].items():
+            table.add_row(metric, str(values["avg"]), str(values["stddev"]))
+
+        console.print(table)
+
     except QuotientAIError as e:
         raise
 
