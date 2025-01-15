@@ -18,7 +18,7 @@ class RunResult:
     input: str
     output: str
     # contains {"metric_name": value}
-    metrics: dict
+    values: dict
     created_at: datetime
     created_by: str
 
@@ -27,7 +27,7 @@ class RunResult:
 
     def __rich_repr__(self):
         yield "id", self.id
-        yield "metrics", self.metrics
+        yield "values", self.values
         yield "created_at", self.created_at
         yield "created_by", self.created_by
 
@@ -81,16 +81,14 @@ class Run:
         summary = {
             "run_id": self.id,
             "model": self.model,
-            "provider": self.provider,
             "parameters": self.parameters,
             "metrics": {
                 metric: {
-                    "value": sum(result.metrics[metric] for result in self.results)
-                    / len(self.results),
+                    "avg": sum(result['values'][metric] for result in self.results) / len(self.results),
                     "stddev": sum(
                         (
-                            result.metrics[metric]
-                            - sum(result.metrics[metric] for result in self.results)
+                            result['values'][metric]
+                            - sum(result['values'][metric] for result in self.results)
                             / len(self.results)
                         )
                         ** 2
@@ -103,14 +101,29 @@ class Run:
             "created_at": self.created_at,
         }
 
+        def get_aggregate_score(result):
+            """
+            Get the aggregate score for a result. Used for sorting.
+            """
+            values = result['values']
+            scores = [
+                float(value) if isinstance(value, bool) else value 
+                for value in values.values()
+            ]
+            return sum(scores) / len(scores)
+
         if best_n is not None and best_n > 0:
-            summary["best_n"] = sorted(
-                self.results, key=lambda result: result.metrics["value"], reverse=True
+            summary[f"best_{best_n}"] = sorted(
+                self.results,
+                key=get_aggregate_score,
+                reverse=True
             )[:best_n]
 
         if worst_n is not None and worst_n > 0:
-            summary["worst_n"] = sorted(
-                self.results, key=lambda result: result.metrics["value"], reverse=False
+            summary[f"worst_{worst_n}"] = sorted(
+                self.results,
+                key=get_aggregate_score,
+                reverse=False
             )[:worst_n]
 
         return summary
@@ -138,6 +151,7 @@ class RunsResource:
                     parameters=run["parameters"],
                     metrics=run["metrics"],
                     status=run["status"],
+                    results=run["results"],
                     created_at=(
                         datetime.fromisoformat(run["created_at"])
                         if run["created_at"] is not None
@@ -164,6 +178,7 @@ class RunsResource:
             parameters=response["parameters"],
             metrics=response["metrics"],
             status=response["status"],
+            results=response["results"],
             created_at=(
                 datetime.fromisoformat(response["created_at"])
                 if response["created_at"] is not None
