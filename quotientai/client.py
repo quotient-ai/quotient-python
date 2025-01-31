@@ -72,6 +72,7 @@ class QuotientAI:
         self.datasets = resources.DatasetsResource(_client)
         self.models = resources.ModelsResource(_client)
         self.runs = resources.RunsResource(_client)
+        self.metrics = resources.MetricsResource(_client)
 
 
     def evaluate(

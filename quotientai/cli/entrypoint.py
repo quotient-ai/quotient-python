@@ -193,11 +193,11 @@ def list_runs():
         raise
 
 
-@list_app.command(name="runs")
+@list_app.command(name="metrics")
 def list_metrics():
     try:
         quotient = QuotientAI()
-        response = quotient.runs.list_metrics()
+        response = quotient.metrics.list()
         console.print(response.json()['data'])
     except QuotientAIError as e:
         raise 
