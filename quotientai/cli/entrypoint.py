@@ -193,5 +193,15 @@ def list_runs():
         raise
 
 
+@list_app.command(name="runs")
+def list_metrics():
+    try:
+        quotient = QuotientAI()
+        response = quotient.runs.list_metrics()
+        console.print(response.json()['data'])
+    except QuotientAIError as e:
+        raise 
+
+
 if __name__ == "__main__":
     typer.run(app)

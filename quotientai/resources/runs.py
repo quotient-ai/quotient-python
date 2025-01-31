@@ -278,3 +278,8 @@ class RunsResource:
             comparison = None
 
         return comparison
+
+
+    def list_metrics(self):
+        response = self._client._get("/runs/metrics")
+        return response
