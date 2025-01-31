@@ -5,4 +5,4 @@ class MetricsResource:
 
     def list(self):
         response = self._client._get("/runs/metrics")
-        return response
+        return response['data']

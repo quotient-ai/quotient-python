@@ -198,7 +198,7 @@ def list_metrics():
     try:
         quotient = QuotientAI()
         response = quotient.metrics.list()
-        console.print(response.json()['data'])
+        console.print(response)
     except QuotientAIError as e:
         raise 
 
