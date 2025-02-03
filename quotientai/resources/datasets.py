@@ -253,29 +253,10 @@ class DatasetsResource:
         dataset_response = self._client._post("/datasets", data=data)
         id = dataset_response["id"]
 
-        # TODO: update the dataset_rows API to take in a list of rows
-        # rather than one row at a time. This should be the expected behavior.
-        row_responses = []
-        for row in rows:
-            row_response = self._client._post(
-                f"/datasets/{id}/dataset_rows",
-                data=row,
-            )
-            row_responses.append(
-                DatasetRow(
-                    id=row_response["dataset_row_id"],
-                    input=row_response["input"],
-                    context=row_response["context"],
-                    expected=row_response["expected"],
-                    metadata=DatasetRowMetadata(
-                        annotation=row_response["annotation"],
-                        annotation_note=row_response["annotation_note"],
-                    ),
-                    created_at=row_response["created_at"],
-                    created_by=row_response["created_by"],
-                    updated_at=row_response["updated_at"],
-                )
-            )
+        row_response = self._client._post(
+            f"/datasets/{id}/dataset_rows/batch",
+            data=rows,
+        )
 
         dataset = Dataset(
             id=id,
@@ -284,7 +265,7 @@ class DatasetsResource:
             created_at=dataset_response["created_at"],
             updated_at=dataset_response["updated_at"],
             created_by=dataset_response["created_by"],
-            rows=row_responses,
+            rows=row_response,
         )
         return dataset
 
