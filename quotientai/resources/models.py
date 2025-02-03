@@ -48,7 +48,7 @@ class ModelsResource:
             model["created_at"] = datetime.fromisoformat(model["created_at"])
             model["provider"] = ModelProvider(**model["provider"])
             if model["name"] == name:
-                model_obj = Model(**model))
+                model_obj = Model(**model)
 
         if model_obj is None:
             raise Exception(f"model with name {name} not found. please check the list of available models using quotient.models.list()")
