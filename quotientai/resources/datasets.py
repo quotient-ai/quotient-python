@@ -257,7 +257,7 @@ class DatasetsResource:
         # rather than one row at a time. This should be the expected behavior.
         row_responses = []
         self.batch_create_rows(id, rows, row_responses)
-        rows = [
+        dataset_rows = [
                 DatasetRow(
                     id=row_response["dataset_row_id"],
                     input=row_response["input"],
@@ -281,7 +281,7 @@ class DatasetsResource:
             created_at=dataset_response["created_at"],
             updated_at=dataset_response["updated_at"],
             created_by=dataset_response["created_by"],
-            rows=rows,
+            rows=dataset_rows,
         )
         return dataset
 

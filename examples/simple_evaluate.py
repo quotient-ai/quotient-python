@@ -4,9 +4,6 @@ quotient = QuotientAI()
 
 # create a prompt
 prompt = quotient.prompts.create(
-    # TODO: ensure that the name only can be created once.
-    # otherwise, it should return an error, and the user should be able to update the prompt
-    # with quotient.prompts.update(prompt, name="new-name")
     name="quotient-demo-prompt",
     system_prompt="I have a problem",
     user_prompt="Here is a user's inquiry {{input}}, and the context {{context}}",

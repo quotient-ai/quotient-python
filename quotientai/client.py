@@ -26,7 +26,11 @@ class _BaseQuotientClient(httpx.Client):
 
     @handle_errors
     def _post(self, path: str, data: dict = {}) -> dict:
-        data = {k: v for k, v in data.items() if v is not None}
+        if isinstance(data, dict):
+            data = {k: v for k, v in data.items() if v is not None}
+        elif isinstance(data, list):
+            data = [v for v in data if v is not None]
+
         response = self.post(
             url=path,
             json=data,
@@ -72,6 +76,7 @@ class QuotientAI:
         self.datasets = resources.DatasetsResource(_client)
         self.models = resources.ModelsResource(_client)
         self.runs = resources.RunsResource(_client)
+        self.metrics = resources.MetricsResource(_client)
 
 
     def evaluate(
