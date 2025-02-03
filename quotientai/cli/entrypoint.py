@@ -195,6 +195,7 @@ def list_runs():
 
 @list_app.command(name="metrics")
 def list_metrics():
+    """Command to get all available metrics."""
     try:
         quotient = QuotientAI()
         response = quotient.metrics.list()
