@@ -253,10 +253,26 @@ class DatasetsResource:
         dataset_response = self._client._post("/datasets", data=data)
         id = dataset_response["id"]
 
-        row_response = self._client._post(
-            f"/datasets/{id}/dataset_rows/batch",
-            data=rows,
-        )
+        # TODO: update the dataset_rows API to take in a list of rows
+        # rather than one row at a time. This should be the expected behavior.
+        row_responses = []
+        self.batch_create_rows(id, rows, row_responses)
+        dataset_rows = [
+                DatasetRow(
+                    id=row_response["dataset_row_id"],
+                    input=row_response["input"],
+                    context=row_response["context"],
+                    expected=row_response["expected"],
+                    metadata=DatasetRowMetadata(
+                        annotation=row_response["annotation"],
+                        annotation_note=row_response["annotation_note"],
+                    ),
+                    created_at=row_response["created_at"],
+                    created_by=row_response["created_by"],
+                    updated_at=row_response["updated_at"],
+                )
+                for row_response in row_responses
+        ]
 
         dataset = Dataset(
             id=id,
@@ -265,7 +281,7 @@ class DatasetsResource:
             created_at=dataset_response["created_at"],
             updated_at=dataset_response["updated_at"],
             created_by=dataset_response["created_by"],
-            rows=row_response,
+            rows=dataset_rows,
         )
         return dataset
 
@@ -420,3 +436,24 @@ class DatasetsResource:
             )
 
         return None
+    
+    def batch_create_rows(self, dataset_id: str, rows: List[dict], row_responses: List[DatasetRow], batch_size: int = 10):
+        """
+        Batch create rows for a dataset.
+        """
+        # iterate over the rows in batches
+        for i in range(0, len(rows), batch_size):
+            batch = rows[i:i + batch_size]
+            try:
+                response = self._client._post(
+                    f"/datasets/{dataset_id}/dataset_rows/batch",
+                    data={"rows": batch},
+                )
+                row_responses.extend(response)
+            except Exception as e:
+                # If the batch create fails, divide batch size by two and recursively try
+                if batch_size == 1:
+                    raise e
+                else:
+                    self.batch_create_rows(dataset_id, batch, row_responses, batch_size // 2)
+        return row_responses
