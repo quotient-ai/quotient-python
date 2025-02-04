@@ -444,7 +444,6 @@ class DatasetsResource:
         # iterate over the rows in batches
         for i in range(0, len(rows), batch_size):
             batch = rows[i:i + batch_size]
-            print(f"Creating batch of {len(batch)} rows")
             try:
                 response = self._client._post(
                     f"/datasets/{dataset_id}/dataset_rows/batch",
@@ -454,9 +453,7 @@ class DatasetsResource:
             except Exception as e:
                 # If the batch create fails, divide batch size by two and recursively try
                 if batch_size == 1:
-                    print(f"Failed to batch create rows: {e}")
                     raise e
                 else:
-                    print(f"Retrying with batch size: {batch_size // 2}")
                     self.batch_create_rows(dataset_id, batch, row_responses, batch_size // 2)
         return row_responses
