@@ -38,7 +38,7 @@ QUESTION = "What is the company's vacation policy?"
 ########################################################
 # Decorator for creating a trace
 ########################################################
-@quotient.log(tags=["v1", "gpt-4o"], environment="dev")
+@quotient.log(tags=["v1", "gpt-4o"], environment="dev", hallucination_analysis=True)
 def model_completion(documents, model_input):
     formatted_prompt = chevron.render(
         PROMPT, {"context": documents, "question": model_input}

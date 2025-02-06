@@ -40,7 +40,7 @@ class LogsResource:
         except Exception as e:
             raise e
 
-    def background_create(
+    def async_create(
         self,
         model_input: str,
         model_output: str,
@@ -50,7 +50,8 @@ class LogsResource:
         hallucination_analysis: bool = False,
         environment: str = None,
     ):
-        asyncio.run(
+        # Schedule the create method to run asynchronously
+        asyncio.create_task(
             self.create(
                 model_input=model_input,
                 model_output=model_output,
@@ -61,3 +62,5 @@ class LogsResource:
                 environment=environment,
             )
         )
+        # Instantly return True for fire and forget
+        return True

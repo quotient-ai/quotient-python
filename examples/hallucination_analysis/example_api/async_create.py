@@ -1,6 +1,6 @@
 import os
 import chevron
-from fastapi import APIRouter, BackgroundTasks
+from fastapi import APIRouter
 from dotenv import load_dotenv
 from openai import OpenAI
 from quotientai import QuotientAI
@@ -19,8 +19,8 @@ quotient = QuotientAI()
 router = APIRouter()
 
 
-@router.post("/create-log-in-background/")
-async def create_log_in_background(background_tasks: BackgroundTasks):
+@router.post("/create-log-async/")
+async def create_log_async():
     """
     Create a log for the model completion using BackgroundTasks to create the log in the background
     """
@@ -41,10 +41,9 @@ async def create_log_in_background(background_tasks: BackgroundTasks):
     model_output = response.choices[0].message.content
 
     ########################################################
-    # Example implementation of creating a log event in the background
+    # Example implementation of creating a non-blocking log event
     ########################################################
-    background_tasks.add_task(
-        quotient.logs.background_create,
+    quotient.logs.async_create(
         model_input=QUESTION,
         documents=RETRIEVED_DOCUMENTS,
         model_output=model_output,
