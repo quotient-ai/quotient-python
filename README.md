@@ -62,5 +62,13 @@ from quotientai import QuotientAI
 
 quotient = QuotientAI()
 
-quotient.logs.async_create(model_input="Sample input", model_output="Sample output", documents=[{"page_content": "Sample document"}], environment="production", tags=["v1", "model-1"], hallucination_analysis=True)
+quotient.logs.async_create(
+    model_input="Sample input",
+    model_output="Sample output",
+    documents=[{"page_content": "Sample document"}],
+    environment="production",
+    tags=["v1", "model-1"],
+    contexts=["Sample context"],
+    hallucination_analysis=True
+)
 ```
