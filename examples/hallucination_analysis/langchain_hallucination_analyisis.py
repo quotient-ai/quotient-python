@@ -15,14 +15,25 @@ load_dotenv()
 quotient = QuotientAI()
 llm = ChatOpenAI(model="gpt-4o-mini")
 
+
 def create_vectorstore_example():
     # Create simple example documents
     documents = [
-        Document(page_content="Document 1: Overview of employee benefits. Health insurance, dental, vision, etc."),
-        Document(page_content="Document 2: Company policies on remote work. Remote work is allowed, but must be approved by the manager."),
-        Document(page_content="Document 3: PTO policy. Unlimited PTO is allowed, but must be approved by the manager."),
-        Document(page_content="Document 4: Payroll policy. Payroll is processed on the 15th of each month."),
-        Document(page_content="Document 5: How to bake a cake. This document contains all the instructions for baking a cake."),
+        Document(
+            page_content="Document 1: Overview of employee benefits. Health insurance, dental, vision, etc."
+        ),
+        Document(
+            page_content="Document 2: Company policies on remote work. Remote work is allowed, but must be approved by the manager."
+        ),
+        Document(
+            page_content="Document 3: PTO policy. Unlimited PTO is allowed, but must be approved by the manager."
+        ),
+        Document(
+            page_content="Document 4: Payroll policy. Payroll is processed on the 15th of each month."
+        ),
+        Document(
+            page_content="Document 5: How to bake a cake. This document contains all the instructions for baking a cake."
+        ),
         # Random documents
     ]
 
@@ -38,20 +49,21 @@ def create_vectorstore_example():
 
     return vectorstore.as_retriever()
 
+
 def format_docs(docs):
     return "\n\n".join(doc.page_content for doc in docs)
 
-@quotient.rca(
-    metadata={"env": os.getenv("ENV")}
-)
+
+@quotient.rca(metadata={"env": os.getenv("ENV")})
 def invoke_rag_chain(rag_chain, model_input):
     return rag_chain.invoke(model_input)
+
 
 def get_completions():
     retriever = create_vectorstore_example()
     prompt = hub.pull("rlm/rag-prompt")
 
-        # Define the RAG chain
+    # Define the RAG chain
     rag_chain = (
         {"context": retriever | format_docs, "question": RunnablePassthrough()}
         | prompt
@@ -79,6 +91,7 @@ def get_completions():
     for question, response in responses:
         print(f"\n\nQuestion: {question}")
         print(f"Answer: {response}\n")
+
 
 if __name__ == "__main__":
     get_completions()

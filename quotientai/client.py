@@ -13,7 +13,6 @@ from quotientai.resources.datasets import Dataset
 from quotientai.resources.runs import Run
 
 
-
 class _BaseQuotientClient(httpx.Client):
     def __init__(self, api_key: str):
         super().__init__(
@@ -140,7 +139,12 @@ class QuotientAI:
         except RuntimeError:
             threading.Thread(target=lambda: asyncio.run(coro), daemon=True).start()
 
-    def log(self, environment: str, tags: list[str] = None, hallucination_analysis: bool = False):
+    def log(
+        self,
+        environment: str,
+        tags: list[str] = None,
+        hallucination_analysis: bool = False,
+    ):
         def decorator(func):
             """
             Decorator to create an RCA trace for a function.
@@ -154,28 +158,41 @@ class QuotientAI:
             - hallucination_analysis: bool - whether to perform hallucination analysis
             """
             if asyncio.iscoroutinefunction(func):
+
                 async def async_wrapper(*args, **kwargs):
                     print(f"async wrapper: {kwargs}")
                     result = await func(*args, **kwargs)
-                    self._fire_and_forget(self.logs.create(model_input=kwargs.get("model_input"),
-                                                                model_output=str(result),
-                                                                documents=kwargs.get("documents"),
-                                                                contexts=kwargs.get("contexts"),
-                                                                tags=tags,
-                                                                hallucination_analysis=hallucination_analysis,
-                                                                environment=environment))
+                    self._fire_and_forget(
+                        self.logs.create(
+                            model_input=kwargs.get("model_input"),
+                            model_output=str(result),
+                            documents=kwargs.get("documents"),
+                            contexts=kwargs.get("contexts"),
+                            tags=tags,
+                            hallucination_analysis=hallucination_analysis,
+                            environment=environment,
+                        )
+                    )
                     return result
+
                 return async_wrapper
             else:
+
                 def sync_wrapper(*args, **kwargs):
                     result = func(*args, **kwargs)
-                    self._fire_and_forget(self.logs.create(model_input=kwargs.get("model_input"),
-                                                                model_output=str(result),
-                                                                documents=kwargs.get("documents"),
-                                                                contexts=kwargs.get("contexts"),
-                                                                tags=tags,
-                                                                hallucination_analysis=hallucination_analysis,
-                                                                environment=environment))
+                    self._fire_and_forget(
+                        self.logs.create(
+                            model_input=kwargs.get("model_input"),
+                            model_output=str(result),
+                            documents=kwargs.get("documents"),
+                            contexts=kwargs.get("contexts"),
+                            tags=tags,
+                            hallucination_analysis=hallucination_analysis,
+                            environment=environment,
+                        )
+                    )
                     return result
+
                 return sync_wrapper
+
         return decorator

@@ -35,25 +35,23 @@ You are a helpful assistant that can answer questions about the context.
 RETRIEVED_DOCUMENTS = [
     {
         "page_content": "Our company has unlimited vacation days",
-        "metadata": {
-            "document_id": "123"
-        }
+        "metadata": {"document_id": "123"},
     }
 ]
 QUESTION = "What is the company's vacation policy?"
 
+
 ########################################################
 # Model completion functions, with and without decorator
 ########################################################
-@quotient.log(
-    tags=["v1", "gpt-4o"],
-    environment="dev"
-)
+@quotient.log(tags=["v1", "gpt-4o"], environment="dev")
 def model_completion(documents, model_input):
     """
     Model completion function with decorator
     """
-    formatted_prompt = chevron.render(PROMPT, {'context': documents, 'question': model_input})
+    formatted_prompt = chevron.render(
+        PROMPT, {"context": documents, "question": model_input}
+    )
 
     response = client.chat.completions.create(
         messages=[
@@ -66,12 +64,15 @@ def model_completion(documents, model_input):
     )
 
     return response
+
 
 def model_completion_without_decorator(documents, model_input):
     """
     Model completion function without decorator
     """
-    formatted_prompt = chevron.render(PROMPT, {'context': documents, 'question': model_input})
+    formatted_prompt = chevron.render(
+        PROMPT, {"context": documents, "question": model_input}
+    )
 
     response = client.chat.completions.create(
         messages=[
@@ -84,6 +85,7 @@ def model_completion_without_decorator(documents, model_input):
     )
 
     return response
+
 
 ########################################################
 # FastAPI endpoints
@@ -99,7 +101,6 @@ async def create_log_with_decorator():
     return {"response": model_output}
 
 
-   
 @app.post("/create-log-without-decorator/")
 async def create_log_without_decorator(background_tasks: BackgroundTasks):
     """
@@ -107,7 +108,9 @@ async def create_log_without_decorator(background_tasks: BackgroundTasks):
 
     Uses the BackgroundTasks to create the log in the background
     """
-    response = model_completion_without_decorator(documents=RETRIEVED_DOCUMENTS, model_input=QUESTION)
+    response = model_completion_without_decorator(
+        documents=RETRIEVED_DOCUMENTS, model_input=QUESTION
+    )
     model_output = response.choices[0].message.content
 
     # Use a sample rate to create a log event in the background
@@ -117,8 +120,12 @@ async def create_log_without_decorator(background_tasks: BackgroundTasks):
         documents=RETRIEVED_DOCUMENTS,
         model_output=model_output,
         environment="dev",
-        contexts=["Additional context to consider", "If you need to add more context, ask for it", "If you don't know the answer, say so"],
-        tags = ["v1", "gpt-4o"]
+        contexts=[
+            "Additional context to consider",
+            "If you need to add more context, ask for it",
+            "If you don't know the answer, say so",
+        ],
+        tags=["v1", "gpt-4o"],
     )
 
     return {"response": model_output}
