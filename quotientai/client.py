@@ -1,7 +1,5 @@
 import os
 from typing import List
-import asyncio
-import threading
 
 import httpx
 

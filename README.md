@@ -62,7 +62,7 @@ from quotientai import QuotientAI
 
 quotient = QuotientAI()
 
-quotient.logs.async_create(
+quotient.log(
     model_input="Sample input",
     model_output="Sample output",
     documents=[{"page_content": "Sample document"}],
