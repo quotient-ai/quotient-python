@@ -7,7 +7,7 @@ class LogsResource:
     def __init__(self, client) -> None:
         self._client = client
 
-    async def create(
+    async def async_create(
         self,
         model_input: str,
         model_output: str,
@@ -17,6 +17,9 @@ class LogsResource:
         hallucination_analysis: bool = False,
         environment: str = None,
     ):
+        """
+        Create a log asynchronously
+        """
         data = {
             "model_input": model_input,
             "model_output": model_output,
@@ -40,7 +43,7 @@ class LogsResource:
         except Exception as e:
             raise e
 
-    def async_create(
+    def non_blocking_create(
         self,
         model_input: str,
         model_output: str,
@@ -50,9 +53,12 @@ class LogsResource:
         hallucination_analysis: bool = False,
         environment: str = None,
     ):
+        """
+        Non-blocking create log
+        """
         # Schedule the create method to run asynchronously
         asyncio.create_task(
-            self.create(
+            self.async_create(
                 model_input=model_input,
                 model_output=model_output,
                 documents=documents,

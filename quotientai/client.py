@@ -149,7 +149,7 @@ class QuotientAI:
         - tags: List[str] = None - The tags to associate with the log
         - hallucination_analysis: bool = False - Whether to perform hallucination analysis
         """
-        return self.logs.async_create(
+        log = self.logs.non_blocking_create(
             model_input=model_input,
             model_output=model_output,
             documents=documents,
@@ -158,3 +158,5 @@ class QuotientAI:
             hallucination_analysis=hallucination_analysis,
             environment=environment,
         )
+
+        return log
