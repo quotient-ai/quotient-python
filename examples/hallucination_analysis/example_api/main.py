@@ -44,7 +44,7 @@ QUESTION = "What is the company's vacation policy?"
 ########################################################
 # Model completion functions, with and without decorator
 ########################################################
-@quotient.log(tags=["v1", "gpt-4o"], environment="dev")
+@quotient.log(tags=["v1", "gpt-4o"], environment="dev", hallucination_analysis=True)
 def model_completion(documents, model_input):
     """
     Model completion function with decorator
@@ -63,7 +63,9 @@ def model_completion(documents, model_input):
         model="gpt-4o",
     )
 
-    return response
+    completion = response.choices[0].message.content
+
+    return completion
 
 
 def model_completion_without_decorator(documents, model_input):
@@ -74,7 +76,7 @@ def model_completion_without_decorator(documents, model_input):
         PROMPT, {"context": documents, "question": model_input}
     )
 
-    response = client.chat.completions.create(
+    completion = client.chat.completions.create(
         messages=[
             {
                 "role": "user",
@@ -84,7 +86,7 @@ def model_completion_without_decorator(documents, model_input):
         model="gpt-4o",
     )
 
-    return response
+    return completion
 
 
 ########################################################
@@ -96,9 +98,8 @@ async def create_log_with_decorator():
     Get the model completion using the decorator
     """
     response = model_completion(documents=RETRIEVED_DOCUMENTS, model_input=QUESTION)
-    model_output = response.choices[0].message.content
 
-    return {"response": model_output}
+    return {"response": response}
 
 
 @app.post("/create-log-without-decorator/")
@@ -122,10 +123,9 @@ async def create_log_without_decorator(background_tasks: BackgroundTasks):
         environment="dev",
         contexts=[
             "Additional context to consider",
-            "If you need to add more context, ask for it",
-            "If you don't know the answer, say so",
         ],
         tags=["v1", "gpt-4o"],
+        hallucination_analysis=True,
     )
 
     return {"response": model_output}
