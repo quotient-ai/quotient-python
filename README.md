@@ -51,3 +51,16 @@ new_dataset = quotient.datasets.create(
 
 print(new_dataset)
 ```
+
+**Create a log with hallucination analysis:**
+Log an event with hallucination analysis. This will create a log event in Quotient and perform hallucination analysis on the model output, input, and documents. This is a fire and forget operation, so it will not block the execution of your code.
+
+Additional examples can be found in the [examples](examples) directory.
+
+```python
+from quotientai import QuotientAI
+
+quotient = QuotientAI()
+
+quotient.logs.async_create(model_input="Sample input", model_output="Sample output", documents=[{"page_content": "Sample document"}], environment="production", tags=["v1", "model-1"], hallucination_analysis=True)
+```
