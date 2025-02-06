@@ -54,7 +54,6 @@ def format_docs(docs):
     return "\n\n".join(doc.page_content for doc in docs)
 
 
-@quotient.log(environment="dev", tags=["v1", "gpt-4o"], hallucination_analysis=True)
 def invoke_rag_chain(rag_chain, model_input):
     return rag_chain.invoke(model_input)
 

@@ -43,7 +43,7 @@ async def create_log_async():
     ########################################################
     # Example implementation of creating a non-blocking log event
     ########################################################
-    quotient.logs.async_create(
+    quotient.log(
         model_input=QUESTION,
         documents=RETRIEVED_DOCUMENTS,
         model_output=model_output,

@@ -128,71 +128,35 @@ class QuotientAI:
         )
         return run
 
-    @staticmethod
-    def _fire_and_forget(coro):
-        """
-        Schedule a coroutine to run in the background without blocking.
-        """
-        try:
-            loop = asyncio.get_running_loop()
-            loop.create_task(coro)
-        except RuntimeError:
-            threading.Thread(target=lambda: asyncio.run(coro), daemon=True).start()
-
     def log(
         self,
+        model_input: str,
+        model_output: str,
+        documents: List[str],
         environment: str,
-        tags: list[str] = None,
+        contexts: List[str] = None,
+        tags: List[str] = None,
         hallucination_analysis: bool = False,
     ):
-        def decorator(func):
-            """
-            Decorator to create an RCA trace for a function.
+        """
+        Create a log asynchronously
 
-            The function accepts the following arguments:
-            - model_input: str - the input to the model
-            - model_output: str - the output of the model
-            - documents: List[str] - the documents used to generate the model output
-            - contexts: List[str] - additional contexts used to generate the model output
-            - tags: List[str] - tags to associate with the log
-            - hallucination_analysis: bool - whether to perform hallucination analysis
-            """
-            if asyncio.iscoroutinefunction(func):
+        This method will return True for fire and forget.
 
-                async def async_wrapper(*args, **kwargs):
-                    print(f"async wrapper: {kwargs}")
-                    result = await func(*args, **kwargs)
-                    self._fire_and_forget(
-                        self.logs.create(
-                            model_input=kwargs.get("model_input"),
-                            model_output=str(result),
-                            documents=kwargs.get("documents"),
-                            contexts=kwargs.get("contexts"),
-                            tags=tags,
-                            hallucination_analysis=hallucination_analysis,
-                            environment=environment,
-                        )
-                    )
-                    return result
-
-                return async_wrapper
-            else:
-
-                def sync_wrapper(*args, **kwargs):
-                    result = func(*args, **kwargs)
-                    self._fire_and_forget(
-                        self.logs.create(
-                            model_input=kwargs.get("model_input"),
-                            model_output=str(result),
-                            documents=kwargs.get("documents"),
-                            contexts=kwargs.get("contexts"),
-                            tags=tags,
-                            hallucination_analysis=hallucination_analysis,
-                            environment=environment,
-                        )
-                    )
-                    return result
-
-                return sync_wrapper
-
-        return decorator
+        - model_input: str - The input to the model
+        - model_output: str - The output of the model
+        - documents: List[str] - The documents used to generate the model output
+        - environment: str - The environment the log was created in
+        - contexts: List[str] = None - The contexts used to generate the model output
+        - tags: List[str] = None - The tags to associate with the log
+        - hallucination_analysis: bool = False - Whether to perform hallucination analysis
+        """
+        return self.logs.async_create(
+            model_input=model_input,
+            model_output=model_output,
+            documents=documents,
+            contexts=contexts,
+            tags=tags,
+            hallucination_analysis=hallucination_analysis,
+            environment=environment,
+        )
