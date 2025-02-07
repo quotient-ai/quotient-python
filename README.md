@@ -76,7 +76,7 @@ quotient_logger.log(
     model_output="Sample output",
     # Documents from your retriever used to generate the model output
     documents=[{"page_content": "Sample document"}], 
-    # optional additional context to help with hallucination detection
+    # optional additional context to help with hallucination detection, e.g. rules, constraints, etc
     contexts=["Sample context"], 
 )
 ```

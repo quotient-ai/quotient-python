@@ -1,4 +1,4 @@
-from typing import List
+from typing import Any, Dict, List, Optional
 import asyncio
 import httpx
 
@@ -11,13 +11,13 @@ class LogsResource:
         self,
         app_name: str,
         environment: str,
-        tags: dict,
         hallucination_detection: bool,
         inconsistency_detection: bool,
         model_input: str,
         model_output: str,
         documents: List[str],
-        contexts: List[str],
+        tags: Optional[Dict[str, Any]] = {},
+        contexts: Optional[List[str]] = [],
     ):
         """
         Create a log asynchronously
@@ -51,13 +51,13 @@ class LogsResource:
         self,
         app_name: str,
         environment: str,
-        tags: dict,
         hallucination_detection: bool,
         inconsistency_detection: bool,
         model_input: str,
         model_output: str,
         documents: List[str],
-        contexts: List[str],
+        tags: Optional[Dict[str, Any]] = {},
+        contexts: Optional[List[str]] = [],
     ):
         """
         Non-blocking create log

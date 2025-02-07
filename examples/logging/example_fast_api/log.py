@@ -12,7 +12,9 @@ load_dotenv()
 # Initialize OpenAI client
 client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
 
-# Initialize QuotientAI
+########################################################
+# Initialize QuotientAI and QuotientAI Logger
+########################################################
 quotient = QuotientAI()
 quotient_logger = quotient.logger.init(
     app_name="my-app",
