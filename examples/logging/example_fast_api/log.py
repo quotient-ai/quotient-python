@@ -31,7 +31,7 @@ async def create_log():
     Create a log for the model completion using BackgroundTasks to create the log in the background
     """
     formatted_prompt = chevron.render(
-        PROMPT, {"context": RETRIEVED_DOCUMENTS, "question": QUESTION}
+        PROMPT, {"context": RETRIEVED_DOCUMENTS, "question": QUESTION, "rules": RULES}
     )
 
     response = client.chat.completions.create(
