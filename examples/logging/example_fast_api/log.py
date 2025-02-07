@@ -14,13 +14,19 @@ client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
 
 # Initialize QuotientAI
 quotient = QuotientAI()
+quotient_logger = quotient.logger.init(
+    app_name="my-app",
+    environment="dev",
+    tags={"v1": "gpt-4o"},
+    hallucination_detection=True,
+)
 
 # Create a router for the endpoint
 router = APIRouter()
 
 
-@router.post("/create-log-async/")
-async def create_log_async():
+@router.post("/create-log/")
+async def create_log():
     """
     Create a log for the model completion using BackgroundTasks to create the log in the background
     """
@@ -43,16 +49,13 @@ async def create_log_async():
     ########################################################
     # Example implementation of creating a non-blocking log event
     ########################################################
-    quotient.log(
+    quotient_logger.log(
         model_input=QUESTION,
         documents=RETRIEVED_DOCUMENTS,
         model_output=model_output,
-        environment="dev",
         contexts=[
             "Additional context to consider",
         ],
-        tags=["v1", "gpt-4o"],
-        hallucination_analysis=True,
     )
 
     return {"response": model_output}

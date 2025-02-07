@@ -61,14 +61,22 @@ Additional examples can be found in the [examples](examples) directory.
 from quotientai import QuotientAI
 
 quotient = QuotientAI()
+quotient_logger = quotient.logger.init(
+    # Required
+    app_name="my-app",
+    environment="dev",
+    # dynamic labels for slicing/dicing analytics e.g. by customer, feature, etc
+    tags={"v1": "gpt-4o"},
+    hallucination_detection=True,
+    inconsistency_detection=True,
+)
 
-quotient.log(
+quotient_logger.log(
     model_input="Sample input",
     model_output="Sample output",
-    documents=[{"page_content": "Sample document"}],
-    environment="production",
-    tags=["v1", "model-1"],
-    contexts=["Sample context"],
-    hallucination_analysis=True
+    # Documents from your retriever used to generate the model output
+    documents=[{"page_content": "Sample document"}], 
+    # optional additional context to help with hallucination detection
+    contexts=["Sample context"], 
 )
 ```

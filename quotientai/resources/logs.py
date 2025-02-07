@@ -9,25 +9,29 @@ class LogsResource:
 
     async def async_create(
         self,
+        app_name: str,
+        environment: str,
+        tags: dict,
+        hallucination_detection: bool,
+        inconsistency_detection: bool,
         model_input: str,
         model_output: str,
         documents: List[str],
-        contexts: List[str] = None,
-        tags: List[str] = None,
-        hallucination_analysis: bool = False,
-        environment: str = None,
+        contexts: List[str],
     ):
         """
         Create a log asynchronously
         """
         data = {
+            "app_name": app_name,
+            "environment": environment,
+            "tags": tags,
+            "hallucination_detection": hallucination_detection,
+            "inconsistency_detection": inconsistency_detection,
             "model_input": model_input,
             "model_output": model_output,
             "documents": documents,
             "contexts": contexts,
-            "tags": tags,
-            "hallucination_analysis": hallucination_analysis,
-            "environment": environment,
         }
 
         try:
@@ -45,13 +49,15 @@ class LogsResource:
 
     def non_blocking_create(
         self,
+        app_name: str,
+        environment: str,
+        tags: dict,
+        hallucination_detection: bool,
+        inconsistency_detection: bool,
         model_input: str,
         model_output: str,
         documents: List[str],
-        contexts: List[str] = None,
-        tags: List[str] = None,
-        hallucination_analysis: bool = False,
-        environment: str = None,
+        contexts: List[str],
     ):
         """
         Non-blocking create log
@@ -59,13 +65,15 @@ class LogsResource:
         # Schedule the create method to run asynchronously
         asyncio.create_task(
             self.async_create(
+                app_name=app_name,
+                environment=environment,
+                tags=tags,
+                hallucination_detection=hallucination_detection,
+                inconsistency_detection=inconsistency_detection,
                 model_input=model_input,
                 model_output=model_output,
                 documents=documents,
                 contexts=contexts,
-                tags=tags,
-                hallucination_analysis=hallucination_analysis,
-                environment=environment,
             )
         )
         # Instantly return True for fire and forget
