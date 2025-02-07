@@ -4,7 +4,7 @@ from fastapi import APIRouter
 from dotenv import load_dotenv
 from openai import OpenAI
 from quotientai import QuotientAI
-from constants import RETRIEVED_DOCUMENTS, QUESTION, PROMPT
+from constants import RETRIEVED_DOCUMENTS, QUESTION, PROMPT, RULES
 
 # Load environment variables
 load_dotenv()
@@ -53,9 +53,7 @@ async def create_log():
         model_input=QUESTION,
         model_output=model_output,
         documents=RETRIEVED_DOCUMENTS,
-        contexts=[
-            "Additional context to consider",
-        ],
+        contexts=RULES,
     )
 
     return {"response": model_output}

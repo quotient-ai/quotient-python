@@ -38,7 +38,7 @@ class LogsResource:
             # Temporary longer timeout to avoid throwing timeout error will be fixed with new endpoint
             # TODO: Remove timeout once new endpoint is ready and implement new endpoint /logs
             response = await asyncio.to_thread(
-                self._client._post, "/rca/metadata", data, timeout=500
+                self._client._post, "/logs", data, timeout=500
             )
             return response
         except httpx.ReadTimeout:
