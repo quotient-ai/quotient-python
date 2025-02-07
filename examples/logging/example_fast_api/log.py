@@ -17,7 +17,7 @@ quotient = QuotientAI()
 quotient_logger = quotient.logger.init(
     app_name="my-app",
     environment="dev",
-    tags={"v1": "gpt-4o"},
+    tags={"model": "gpt-4o", "feature": "customer-support"},
     hallucination_detection=True,
 )
 
@@ -51,8 +51,8 @@ async def create_log():
     ########################################################
     quotient_logger.log(
         model_input=QUESTION,
-        documents=RETRIEVED_DOCUMENTS,
         model_output=model_output,
+        documents=RETRIEVED_DOCUMENTS,
         contexts=[
             "Additional context to consider",
         ],

@@ -52,8 +52,8 @@ new_dataset = quotient.datasets.create(
 print(new_dataset)
 ```
 
-**Create a log with hallucination analysis:**
-Log an event with hallucination analysis. This will create a log event in Quotient and perform hallucination analysis on the model output, input, and documents. This is a fire and forget operation, so it will not block the execution of your code.
+**Create a log with hallucination detection:**
+Log an event with hallucination detection. This will create a log event in Quotient and perform hallucination detection on the model output, input, and documents. This is a fire and forget operation, so it will not block the execution of your code.
 
 Additional examples can be found in the [examples](examples) directory.
 
@@ -66,7 +66,7 @@ quotient_logger = quotient.logger.init(
     app_name="my-app",
     environment="dev",
     # dynamic labels for slicing/dicing analytics e.g. by customer, feature, etc
-    tags={"v1": "gpt-4o"},
+    tags={"model": "gpt-4o", "feature": "customer-support"},
     hallucination_detection=True,
     inconsistency_detection=True,
 )
