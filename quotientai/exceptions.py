@@ -6,6 +6,12 @@ from typing_extensions import Literal
 
 import httpx
 
+from tenacity import (
+    retry,
+    stop_after_attempt,
+    wait_exponential,
+    retry_if_exception_type,
+)
 
 __all__ = [
     "BadRequestError",
@@ -18,6 +24,8 @@ __all__ = [
     "InternalServerError",
 ]
 
+
+_DEFAULT_REQUEST_TIMEOUT = 10.0
 
 class QuotientAIError(Exception):
     """
@@ -174,12 +182,22 @@ def _parse_bad_request_error(response: httpx.Response) -> None:
     else:
         raise APIResponseValidationError(response, body)
 
+
+
 def handle_errors(func):
+    @retry(
+        stop=stop_after_attempt(3),
+        wait=wait_exponential(multiplier=1, max=_DEFAULT_REQUEST_TIMEOUT),
+        retry=retry_if_exception_type(httpx.ReadTimeout),
+        reraise=True
+    )
     @wraps(func)
-    def wrapper(*args, **kwargs):
+    def wrapper(client, *args, **kwargs):
         try:
-            response = func(*args, **kwargs)
+            response = func(client, *args, **kwargs)
             response.raise_for_status()
+            return response.json()
+            
         except httpx.HTTPStatusError as exc:
             if exc.response.status_code == 400:
                 message = _parse_bad_request_error(exc.response)
@@ -219,12 +237,11 @@ def handle_errors(func):
                     response=exc.response,
                     body=exc.response.text,
                 )
+        
         except httpx.RequestError as exc:
             raise APIConnectionError(
                 message="connection error. please try again later.",
                 request=exc.request,
             )
-
-        return response.json()
 
     return wrapper
