@@ -10,7 +10,6 @@ from quotientai.resources.models import Model
 from quotientai.resources.datasets import Dataset
 from quotientai.resources.runs import Run
 
-
 class _BaseQuotientClient(httpx.Client):
     def __init__(self, api_key: str):
         super().__init__(
@@ -19,8 +18,8 @@ class _BaseQuotientClient(httpx.Client):
         )
 
     @handle_errors
-    def _get(self, path: str) -> dict:
-        response = self.get(path)
+    def _get(self, path: str, timeout: int = None) -> dict:
+        response = self.get(path, timeout=timeout)
         return response
 
     @handle_errors
@@ -38,17 +37,18 @@ class _BaseQuotientClient(httpx.Client):
         return response
 
     @handle_errors
-    def _patch(self, path: str, data: dict = {}) -> dict:
+    def _patch(self, path: str, data: dict = {}, timeout: int = None) -> dict:
         data = {k: v for k, v in data.items() if v is not None}
         response = self.patch(
             url=path,
             json=data,
+            timeout=timeout,
         )
         return response
 
     @handle_errors
-    def _delete(self, path: str) -> dict:
-        response = self.delete(path)
+    def _delete(self, path: str, timeout: int = None) -> dict:
+        response = self.delete(path, timeout=timeout)
         return response
 
 
