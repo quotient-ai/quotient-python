@@ -84,11 +84,12 @@ class Run:
             "parameters": self.parameters,
             "metrics": {
                 metric: {
-                    "avg": sum(result['values'][metric] for result in self.results) / len(self.results),
+                    "avg": sum(result["values"][metric] for result in self.results)
+                    / len(self.results),
                     "stddev": sum(
                         (
-                            result['values'][metric]
-                            - sum(result['values'][metric] for result in self.results)
+                            result["values"][metric]
+                            - sum(result["values"][metric] for result in self.results)
                             / len(self.results)
                         )
                         ** 2
@@ -105,25 +106,21 @@ class Run:
             """
             Get the aggregate score for a result. Used for sorting.
             """
-            values = result['values']
+            values = result["values"]
             scores = [
-                float(value) if isinstance(value, bool) else value 
+                float(value) if isinstance(value, bool) else value
                 for value in values.values()
             ]
             return sum(scores) / len(scores)
 
         if best_n is not None and best_n > 0:
             summary[f"best_{best_n}"] = sorted(
-                self.results,
-                key=get_aggregate_score,
-                reverse=True
+                self.results, key=get_aggregate_score, reverse=True
             )[:best_n]
 
         if worst_n is not None and worst_n > 0:
             summary[f"worst_{worst_n}"] = sorted(
-                self.results,
-                key=get_aggregate_score,
-                reverse=False
+                self.results, key=get_aggregate_score, reverse=False
             )[:worst_n]
 
         return summary
@@ -225,6 +222,157 @@ class RunsResource:
     # and either show scores on average for a prompt, or for a model.
     # all done here in the runs resource, as it's the most logical place
     def compare(
+        self,
+        runs: List[Run],
+    ):
+        # ensure the datasets are the same, and then compare the runs.
+        if len(set(run.dataset for run in runs)) > 1:
+            raise ValueError(
+                "all runs must be on the same dataset in order to compare them"
+            )
+
+        # prompts can be the different or models can be the different, but not both
+        # inference parameteres can be different, but not metrics, in order to compare
+        # evenly across the runs
+        if (
+            len(set(run.prompt for run in runs)) > 1
+            and len(set(run.model for run in runs)) > 1
+        ):
+            raise ValueError(
+                "all runs must be on the same prompt or model in order to compare them"
+            )
+
+        # compare the runs. a comparison will show the average scores for each metric
+        # across all runs, and the standard deviation for each metric, using their summaries.
+        #
+        # it will also highlight which run is the best and which is the worst.
+        # if there are only two runs, it will also show the difference between the two.
+        # if there are more than two runs, it will show the difference in scores between
+        # each run sorted by creation date.
+        summaries = [run.summarize() for run in runs]
+        if len(runs) == 2:
+            comparison = {
+                metric: {
+                    "value": summaries[0]["metrics"][metric]["value"]
+                    - summaries[1]["metrics"][metric]["value"],
+                    "stddev": summaries[0]["metrics"][metric]["stddev"],
+                }
+                for metric in runs[0].metrics
+            }
+        elif len(runs) > 2:
+            comparison = {
+                run.id: {
+                    metric: {
+                        "value": summaries[0]["metrics"][metric]["value"]
+                        - summaries[1]["metrics"][metric]["value"],
+                        "stddev": summaries[0]["metrics"][metric]["stddev"],
+                    }
+                    for metric in runs[0].metrics
+                }
+                for run in runs
+            }
+        else:
+            comparison = None
+
+        return comparison
+
+
+class AsyncRunsResource:
+    """
+    An asynchronous resource for interacting with models in the QuotientAI API.
+    """
+
+    def __init__(self, client) -> None:
+        self._client = client
+
+    async def list(self) -> List[Run]:
+        response = await self._client._get("/runs")
+
+        runs = []
+        for run in response:
+            runs.append(
+                Run(
+                    id=run["id"],
+                    prompt=run["prompt"],
+                    dataset=run["dataset"],
+                    model=run["model"],
+                    parameters=run["parameters"],
+                    metrics=run["metrics"],
+                    status=run["status"],
+                    results=run["results"],
+                    created_at=(
+                        datetime.fromisoformat(run["created_at"])
+                        if run["created_at"] is not None
+                        else None
+                    ),
+                    finished_at=(
+                        datetime.fromisoformat(run["finished_at"])
+                        if run["finished_at"] is not None
+                        else None
+                    ),
+                )
+            )
+
+        return runs
+
+    async def get(self, run_id: str) -> Run:
+        response = await self._client._get(f"/runs/{run_id}")
+
+        run = Run(
+            id=response["id"],
+            prompt=response["prompt"],
+            dataset=response["dataset"],
+            model=response["model"],
+            parameters=response["parameters"],
+            metrics=response["metrics"],
+            status=response["status"],
+            results=response["results"],
+            created_at=(
+                datetime.fromisoformat(response["created_at"])
+                if response["created_at"] is not None
+                else None
+            ),
+            finished_at=(
+                datetime.fromisoformat(response["finished_at"])
+                if response["finished_at"] is not None
+                else None
+            ),
+        )
+        return run
+
+    async def create(
+        self,
+        prompt: Prompt,
+        dataset: Dataset,
+        model: Model,
+        parameters: dict,
+        metrics: List[str],
+    ) -> Run:
+        data = {
+            "prompt_id": prompt.id,
+            "dataset_id": dataset.id,
+            "model_id": model.id,
+            "parameters": parameters,
+            "metrics": metrics,
+        }
+        response = await self._client._post("/runs", data=data)
+        run = Run(
+            id=response["id"],
+            prompt=prompt.id,
+            dataset=dataset.id,
+            model=model.id,
+            parameters=parameters,
+            metrics=metrics,
+            status=response["status"],
+            created_at=datetime.fromisoformat(response["created_at"]),
+            finished_at=datetime.fromisoformat(response["finished_at"]),
+        )
+        return run
+
+    # create a method to compare two or more runs across the same dataset
+    # and either show scores on average for a prompt, or for a model.
+    # all done here in the runs resource, as it's the most logical place
+    async def compare(
         self,
         runs: List[Run],
     ):
