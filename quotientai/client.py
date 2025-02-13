@@ -14,7 +14,8 @@ from quotientai.resources.runs import Run
 class _BaseQuotientClient(httpx.Client):
     def __init__(self, api_key: str):
         super().__init__(
-            base_url="https://api.quotientai.co/api/v1",
+            # base_url="https://api.quotientai.co/api/v1",
+            base_url="http://127.0.0.1:8082/api/v1",
             headers={"Authorization": f"Bearer {api_key}"},
         )
 
@@ -93,16 +94,17 @@ class QuotientLogger:
     def log(
         self,
         *,
-        model_input: str,
+        user_query: str,
         model_output: str,
-        documents: List[dict],
-        contexts: Optional[List[str]] = None,
+        documents: Optional[List[str]] = None,
+        message_history: Optional[List[Dict[str, Any]]] = None,
+        instructions: Optional[List[str]] = None,
         tags: Optional[Dict[str, Any]] = {},
         hallucination_detection: Optional[bool] = None,
         inconsistency_detection: Optional[bool] = None,
     ):
         """
-        Log the model interaction asynchronously.
+        Log the model interaction synchronously.
 
         Merges the default tags (set via init) with any runtime-supplied tags and calls the
         underlying non_blocking_create function.
@@ -127,17 +129,20 @@ class QuotientLogger:
             else self.inconsistency_detection
         )
 
-        return self.logs_resource.create(
+        log = self.logs_resource.create(
             app_name=self.app_name,
             environment=self.environment,
-            model_input=model_input,
+            user_query=user_query,
             model_output=model_output,
             documents=documents,
-            contexts=contexts,
+            message_history=message_history,
+            instructions=instructions,
             tags=merged_tags,
             hallucination_detection=hallucination_detection,
             inconsistency_detection=inconsistency_detection,
         )
+
+        return log
 
 
 class QuotientAI:

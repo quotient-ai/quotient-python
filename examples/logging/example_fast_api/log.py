@@ -2,17 +2,17 @@ import os
 import chevron
 from fastapi import APIRouter
 from dotenv import load_dotenv
-from openai import OpenAI
+from openai import OpenAI, AsyncOpenAI
 from quotientai import QuotientAI, AsyncQuotientAI
 
-from constants import RETRIEVED_DOCUMENTS, QUESTION, PROMPT, RULES
+from constants import INSTRUCTIONS, RETRIEVED_DOCUMENTS, QUESTION, PROMPT, INSTRUCTIONS
 
 # Load environment variables
 load_dotenv()
 
 # Initialize OpenAI client
 client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
-
+async_client = AsyncOpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
 # Create a router for the endpoint
 router = APIRouter()
 
@@ -45,7 +45,7 @@ def create_log():
     Create a log for the model completion using BackgroundTasks to create the log in the background
     """
     formatted_prompt = chevron.render(
-        PROMPT, {"context": RETRIEVED_DOCUMENTS, "question": QUESTION, "rules": RULES}
+        PROMPT, {"context": RETRIEVED_DOCUMENTS, "question": QUESTION, "instructions": INSTRUCTIONS}
     )
 
     response = client.chat.completions.create(
@@ -60,14 +60,16 @@ def create_log():
 
     model_output = response.choices[0].message.content
 
+    document_contents = [doc["page_content"] for doc in RETRIEVED_DOCUMENTS]
+
     ########################################################
     # Example synchronous log event
     ########################################################
     quotient_logger.log(
-        model_input=QUESTION,
+        user_query=QUESTION,
         model_output=model_output,
-        documents=RETRIEVED_DOCUMENTS,
-        contexts=RULES,
+        documents=document_contents,
+        instructions=INSTRUCTIONS,
     )
 
     return {"response": model_output}
@@ -76,10 +78,10 @@ def create_log():
 @router.post("/create-log-async/")
 async def create_log_async():
     formatted_prompt = chevron.render(
-        PROMPT, {"context": RETRIEVED_DOCUMENTS, "question": QUESTION, "rules": RULES}
+        PROMPT, {"context": RETRIEVED_DOCUMENTS, "question": QUESTION, "instructions": INSTRUCTIONS}
     )
 
-    response = client.chat.completions.create(
+    response = await async_client.chat.completions.create(
         messages=[
             {
                 "role": "user",
@@ -91,14 +93,16 @@ async def create_log_async():
 
     model_output = response.choices[0].message.content
 
+    document_contents = [doc["page_content"] for doc in RETRIEVED_DOCUMENTS]
+
     ########################################################
     # Example of an async log event
     ########################################################
     await quotient_async_logger.log(
-        model_input=QUESTION,
+        user_query=QUESTION,
         model_output=model_output,
-        documents=RETRIEVED_DOCUMENTS,
-        contexts=RULES,
+        documents=document_contents,
+        instructions=INSTRUCTIONS,
     )
 
     return {"response": model_output}

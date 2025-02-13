@@ -27,6 +27,7 @@ __all__ = [
 
 _DEFAULT_REQUEST_TIMEOUT = 10.0
 
+
 class QuotientAIError(Exception):
     """
     Generic error for all QuotientAI exceptions.
@@ -169,13 +170,14 @@ def _parse_unprocessable_entity_error(response: httpx.Response) -> None:
             return message
     else:
         raise APIResponseValidationError(response, body)
-    
+
+
 def _parse_bad_request_error(response: httpx.Response) -> None:
     try:
         body = response.json()
     except ValueError:
         raise APIResponseValidationError(response, None)
-    
+
     if "detail" in body:
         message = body["detail"]
         return message
@@ -183,13 +185,12 @@ def _parse_bad_request_error(response: httpx.Response) -> None:
         raise APIResponseValidationError(response, body)
 
 
-
 def handle_errors(func):
     @retry(
         stop=stop_after_attempt(3),
         wait=wait_exponential(multiplier=1, max=_DEFAULT_REQUEST_TIMEOUT),
         retry=retry_if_exception_type(httpx.ReadTimeout),
-        reraise=True
+        reraise=True,
     )
     @wraps(func)
     def wrapper(client, *args, **kwargs):
@@ -197,7 +198,7 @@ def handle_errors(func):
             response = func(client, *args, **kwargs)
             response.raise_for_status()
             return response.json()
-            
+
         except httpx.HTTPStatusError as exc:
             if exc.response.status_code == 400:
                 message = _parse_bad_request_error(exc.response)
@@ -237,7 +238,70 @@ def handle_errors(func):
                     response=exc.response,
                     body=exc.response.text,
                 )
-        
+
+        except httpx.RequestError as exc:
+            raise APIConnectionError(
+                message="connection error. please try again later.",
+                request=exc.request,
+            )
+
+    return wrapper
+
+
+def handle_async_errors(func):
+    @retry(
+        stop=stop_after_attempt(3),
+        wait=wait_exponential(multiplier=1, max=_DEFAULT_REQUEST_TIMEOUT),
+        retry=retry_if_exception_type(httpx.ReadTimeout),
+        reraise=True,
+    )
+    @wraps(func)
+    async def wrapper(client, *args, **kwargs):
+        try:
+            response = await func(client, *args, **kwargs)
+            response.raise_for_status()
+            return response.json()
+
+        except httpx.HTTPStatusError as exc:
+            if exc.response.status_code == 400:
+                message = _parse_bad_request_error(exc.response)
+                raise BadRequestError(
+                    message=message,
+                    response=exc.response,
+                    body=exc.response.text,
+                )
+            elif exc.response.status_code == 401:
+                raise AuthenticationError(
+                    message="unauthorized: the request requires user authentication. ensure your API key is correct.",
+                    response=exc.response,
+                    body=exc.response.text,
+                )
+            elif exc.response.status_code == 403:
+                raise PermissionDeniedError(
+                    message="forbidden: the server understood the request, but it refuses to authorize it.",
+                    response=exc.response,
+                    body=exc.response.text,
+                )
+            elif exc.response.status_code == 404:
+                raise NotFoundError(
+                    message="not found: the server can not find the requested resource.",
+                    response=exc.response,
+                    body=exc.response.text,
+                )
+            elif exc.response.status_code == 422:
+                message = _parse_unprocessable_entity_error(exc.response)
+                raise UnprocessableEntityError(
+                    message=message,
+                    response=exc.response,
+                    body=exc.response.text,
+                )
+            else:
+                raise APIStatusError(
+                    message=f"unexpected status code: {exc.response.status_code}. contact support@quotientai.co for help.",
+                    response=exc.response,
+                    body=exc.response.text,
+                )
+
         except httpx.RequestError as exc:
             raise APIConnectionError(
                 message="connection error. please try again later.",

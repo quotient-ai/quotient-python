@@ -4,7 +4,7 @@ from typing import Any, Dict, List, Optional
 import httpx
 
 from quotientai import resources
-from quotientai.exceptions import QuotientAIError, handle_errors
+from quotientai.exceptions import QuotientAIError, handle_async_errors
 from quotientai.resources.prompts import Prompt
 from quotientai.resources.models import Model
 from quotientai.resources.datasets import Dataset
@@ -14,16 +14,17 @@ from quotientai.resources.runs import Run
 class _AsyncQuotientClient(httpx.AsyncClient):
     def __init__(self, api_key: str):
         super().__init__(
-            base_url="https://api.quotientai.co/api/v1",
+            # base_url="https://api.quotientai.co/api/v1",
+            base_url="http://127.0.0.1:8082/api/v1",
             headers={"Authorization": f"Bearer {api_key}"},
         )
 
-    @handle_errors
+    @handle_async_errors
     async def _get(self, path: str, timeout: int = None) -> dict:
         response = await self.get(path, timeout=timeout)
         return response
 
-    @handle_errors
+    @handle_async_errors
     async def _post(self, path: str, data: dict = {}, timeout: int = None) -> dict:
         if isinstance(data, dict):
             data = {k: v for k, v in data.items() if v is not None}
@@ -37,7 +38,7 @@ class _AsyncQuotientClient(httpx.AsyncClient):
         )
         return response
 
-    @handle_errors
+    @handle_async_errors
     async def _patch(self, path: str, data: dict = {}, timeout: int = None) -> dict:
         data = {k: v for k, v in data.items() if v is not None}
         response = await self.patch(
@@ -47,7 +48,7 @@ class _AsyncQuotientClient(httpx.AsyncClient):
         )
         return response
 
-    @handle_errors
+    @handle_async_errors
     async def _delete(self, path: str, timeout: int = None) -> dict:
         response = await self.delete(path, timeout=timeout)
         return response
@@ -93,10 +94,11 @@ class AsyncQuotientLogger:
     async def log(
         self,
         *,
-        model_input: str,
+        user_query: str,
         model_output: str,
-        documents: List[dict],
-        contexts: Optional[List[str]] = None,
+        documents: Optional[List[str]] = None,
+        message_history: Optional[List[Dict[str, Any]]] = None,
+        instructions: Optional[List[str]] = None,
         tags: Optional[Dict[str, Any]] = {},
         hallucination_detection: Optional[bool] = None,
         inconsistency_detection: Optional[bool] = None,
@@ -127,17 +129,20 @@ class AsyncQuotientLogger:
             else self.inconsistency_detection
         )
 
-        return await self.logs_resource.create(
+        log = await self.logs_resource.create(
             app_name=self.app_name,
             environment=self.environment,
-            model_input=model_input,
+            user_query=user_query,
             model_output=model_output,
             documents=documents,
-            contexts=contexts,
+            message_history=message_history,
+            instructions=instructions,
             tags=merged_tags,
             hallucination_detection=hallucination_detection,
             inconsistency_detection=inconsistency_detection,
         )
+
+        return log
 
 
 class AsyncQuotientAI:
