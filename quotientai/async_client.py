@@ -14,8 +14,7 @@ from quotientai.resources.runs import Run
 class _AsyncQuotientClient(httpx.AsyncClient):
     def __init__(self, api_key: str):
         super().__init__(
-            # base_url="https://api.quotientai.co/api/v1",
-            base_url="http://127.0.0.1:8082/api/v1",
+            base_url="https://api.quotientai.co/api/v1",
             headers={"Authorization": f"Bearer {api_key}"},
         )
 

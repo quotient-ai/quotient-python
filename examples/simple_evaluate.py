@@ -1,18 +1,20 @@
+import uuid
 from quotientai import QuotientAI
 
 quotient = QuotientAI()
 
 # create a prompt
 prompt = quotient.prompts.create(
-    name="quotient-demo-prompt",
+    name="quotient-demo-prompt-" + str(uuid.uuid4()),
     system_prompt="I have a problem",
     user_prompt="Here is a user's inquiry {{input}}, and the context {{context}}",
 )
 
+print(f"Prompt ID: {prompt.id}")
 
 # create a dataset
 dataset = quotient.datasets.create(
-    name="customer-support-augmentation-v1",
+    name="customer-support-augmentation-v1-" + str(uuid.uuid4()),
     rows=[
         {
             "input": "I have a problem",
@@ -36,11 +38,14 @@ dataset = quotient.datasets.create(
     ],
 )
 
+print(f"Dataset ID: {dataset.id}")
 # list out the models
 models = quotient.models.list()
 
 # get gpt4o-mini model
-model = next((model for model in models if model.name == 'gpt-4o-mini-2024-07-18'))
+model = next((model for model in models if model.name == "gpt-4o-mini-2024-07-18"))
+
+print(f"Model ID: {model.id}")
 
 # create a run with all of the metrics we care about
 run = quotient.evaluate(
@@ -54,10 +59,10 @@ run = quotient.evaluate(
         "max_tokens": 100,
     },
     metrics=[
-        'bertscore',
-        'exactmatch',
-        'verbosity_ratio',
+        "bertscore",
+        "exactmatch",
+        "verbosity_ratio",
     ],
 )
 
-print("Run ID:", run.id)
+print(f"Run ID: {run.id}")
