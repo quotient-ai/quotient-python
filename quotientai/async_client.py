@@ -4,58 +4,58 @@ from typing import Any, Dict, List, Optional
 import httpx
 
 from quotientai import resources
-from quotientai.exceptions import QuotientAIError, handle_errors
+from quotientai.exceptions import QuotientAIError, handle_async_errors
 from quotientai.resources.prompts import Prompt
 from quotientai.resources.models import Model
 from quotientai.resources.datasets import Dataset
 from quotientai.resources.runs import Run
 
 
-class _BaseQuotientClient(httpx.Client):
+class _AsyncQuotientClient(httpx.AsyncClient):
     def __init__(self, api_key: str):
         super().__init__(
             base_url="https://api.quotientai.co/api/v1",
             headers={"Authorization": f"Bearer {api_key}"},
         )
 
-    @handle_errors
-    def _get(self, path: str, timeout: int = None) -> dict:
-        response = self.get(path, timeout=timeout)
+    @handle_async_errors
+    async def _get(self, path: str, timeout: int = None) -> dict:
+        response = await self.get(path, timeout=timeout)
         return response
 
-    @handle_errors
-    def _post(self, path: str, data: dict = {}, timeout: int = None) -> dict:
+    @handle_async_errors
+    async def _post(self, path: str, data: dict = {}, timeout: int = None) -> dict:
         if isinstance(data, dict):
             data = {k: v for k, v in data.items() if v is not None}
         elif isinstance(data, list):
             data = [v for v in data if v is not None]
 
-        response = self.post(
+        response = await self.post(
             url=path,
             json=data,
             timeout=timeout,
         )
         return response
 
-    @handle_errors
-    def _patch(self, path: str, data: dict = {}, timeout: int = None) -> dict:
+    @handle_async_errors
+    async def _patch(self, path: str, data: dict = {}, timeout: int = None) -> dict:
         data = {k: v for k, v in data.items() if v is not None}
-        response = self.patch(
+        response = await self.patch(
             url=path,
             json=data,
             timeout=timeout,
         )
         return response
 
-    @handle_errors
-    def _delete(self, path: str, timeout: int = None) -> dict:
-        response = self.delete(path, timeout=timeout)
+    @handle_async_errors
+    async def _delete(self, path: str, timeout: int = None) -> dict:
+        response = await self.delete(path, timeout=timeout)
         return response
 
 
-class QuotientLogger:
+class AsyncQuotientLogger:
     """
-    Logger interface that wraps the underlying logs resource.
+    Logger interface that wraps the underlying logs resource for asynchronous operations.
     This class handles both configuration (via init) and logging.
     """
 
@@ -77,7 +77,7 @@ class QuotientLogger:
         tags: Optional[Dict[str, Any]] = {},
         hallucination_detection: bool = False,
         inconsistency_detection: bool = False,
-    ) -> "QuotientLogger":
+    ) -> "AsyncQuotientLogger":
         """
         Configure the logger with the provided parameters and return self.
         This method must be called before using log().
@@ -90,7 +90,7 @@ class QuotientLogger:
         self._configured = True
         return self
 
-    def log(
+    async def log(
         self,
         *,
         user_query: str,
@@ -103,7 +103,7 @@ class QuotientLogger:
         inconsistency_detection: Optional[bool] = None,
     ):
         """
-        Log the model interaction synchronously.
+        Log the model interaction asynchronously.
 
         Merges the default tags (set via init) with any runtime-supplied tags and calls the
         underlying non_blocking_create function.
@@ -128,7 +128,7 @@ class QuotientLogger:
             else self.inconsistency_detection
         )
 
-        log = self.logs_resource.create(
+        log = await self.logs_resource.create(
             app_name=self.app_name,
             environment=self.environment,
             user_query=user_query,
@@ -144,13 +144,11 @@ class QuotientLogger:
         return log
 
 
-class QuotientAI:
+class AsyncQuotientAI:
     """
-    A client that provides access to the QuotientAI API.
+    An asynchronous client that provides access to the QuotientAI API.
 
-    The QuotientClient class provides methods to interact with the QuotientAI API, including
-    logging in, creating and managing API keys, and creating and managing models, system prompts,
-    prompt templates, recipes, datasets, and tasks.
+    The AsyncQuotientAI class provides methods to interact with the QuotientAI API asynchronously.
     """
 
     def __init__(self):
@@ -162,19 +160,19 @@ class QuotientAI:
                 "if you do not have an API key, you can create one at https://app.quotientai.co in your settings page"
             )
 
-        _client = _BaseQuotientClient(self.api_key)
+        self._client = _AsyncQuotientClient(self.api_key)
 
-        self.prompts = resources.PromptsResource(_client)
-        self.datasets = resources.DatasetsResource(_client)
-        self.models = resources.ModelsResource(_client)
-        self.runs = resources.RunsResource(_client)
-        self.metrics = resources.MetricsResource(_client)
-        self.logs = resources.LogsResource(_client)
+        self.prompts = resources.AsyncPromptsResource(self._client)
+        self.datasets = resources.AsyncDatasetsResource(self._client)
+        self.models = resources.AsyncModelsResource(self._client)
+        self.runs = resources.AsyncRunsResource(self._client)
+        self.metrics = resources.AsyncMetricsResource(self._client)
+        self.logs = resources.AsyncLogsResource(self._client)
 
         # Create an unconfigured logger instance.
-        self.logger = QuotientLogger(self.logs)
+        self.logger = AsyncQuotientLogger(self.logs)
 
-    def evaluate(
+    async def evaluate(
         self,
         *,
         prompt: Prompt,
@@ -211,7 +209,7 @@ class QuotientAI:
 
         parameters = _validate_parameters(parameters)
 
-        run = self.runs.create(
+        run = await self.runs.create(
             prompt=prompt,
             dataset=dataset,
             model=model,

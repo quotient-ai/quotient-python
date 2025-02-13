@@ -51,7 +51,45 @@ class ModelsResource:
                 model_obj = Model(**model)
 
         if model_obj is None:
-            raise Exception(f"model with name {name} not found. please check the list of available models using quotient.models.list()")
+            raise Exception(
+                f"model with name {name} not found. please check the list of available models using quotient.models.list()"
+            )
 
         return model_obj
-        
+
+
+class AsyncModelsResource:
+    """
+    An asynchronous resource for interacting with models in the QuotientAI API.
+    """
+
+    def __init__(self, client) -> None:
+        self._client = client
+
+    async def list(self) -> List[Model]:
+        response = await self._client._get("/models")
+
+        models = []
+        for model in response:
+            model["created_at"] = datetime.fromisoformat(model["created_at"])
+            model["provider"] = ModelProvider(**model["provider"])
+            models.append(Model(**model))
+
+        return models
+
+    async def get(self, name) -> Model:
+        response = await self._client._get("/models")
+
+        model_obj = None
+        for model in response:
+            model["created_at"] = datetime.fromisoformat(model["created_at"])
+            model["provider"] = ModelProvider(**model["provider"])
+            if model["name"] == name:
+                model_obj = Model(**model)
+
+        if model_obj is None:
+            raise Exception(
+                f"model with name {name} not found. please check the list of available models using quotient.models.list()"
+            )
+
+        return model_obj
