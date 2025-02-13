@@ -71,9 +71,10 @@ quotient_logger = quotient.logger.init(
     inconsistency_detection=True,
 )
 
+# Mock retrieved documents
 retrieved_documents = [{"page_content": "Sample document"}]
 
-quotient_logger.log(
+response = quotient_logger.log(
     user_query="Sample input",
     model_output="Sample output",
     # Page content from Documents from your retriever used to generate the model output
@@ -87,9 +88,13 @@ quotient_logger.log(
     # Instructions for the model to follow
     instructions=[
         "You are a helpful assistant that answers questions about the world.",
-        "Answer the question in a concise manner. If you are not sure, say 'I don't know'."
-    ]
+        "Answer the question in a concise manner. If you are not sure, say 'I don't know'.",
+    ],
+    # Tags can be overridden at log time
+    tags={"model": "gpt-4o-mini", "feature": "customer-support"},
 )
+
+print(response)
 ```
 
 You can also use the async client if you need to create logs asynchronously.
@@ -98,21 +103,24 @@ You can also use the async client if you need to create logs asynchronously.
 from quotientai import AsyncQuotientAI
 import asyncio
 
-async def main():
-    quotient = AsyncQuotientAI()
-    quotient_logger = await quotient.logger.init(
-        # Required
-        app_name="my-app",
-        environment="dev",
-        # dynamic labels for slicing/dicing analytics e.g. by customer, feature, etc
-        tags={"model": "gpt-4o", "feature": "customer-support"},
-        hallucination_detection=True,
-        inconsistency_detection=True,
-    )
+quotient = AsyncQuotientAI()
 
+quotient_logger = quotient.logger.init(
+    # Required
+    app_name="my-app",
+    environment="dev",
+    # dynamic labels for slicing/dicing analytics e.g. by customer, feature, etc
+    tags={"model": "gpt-4o", "feature": "customer-support"},
+    hallucination_detection=True,
+    inconsistency_detection=True,
+)
+
+
+async def main():
+    # Mock retrieved documents
     retrieved_documents = [{"page_content": "Sample document"}]
 
-    await quotient_logger.log(
+    response = await quotient_logger.log(
         user_query="Sample input",
         model_output="Sample output",
         # Page content from Documents from your retriever used to generate the model output
@@ -126,9 +134,14 @@ async def main():
         # Instructions for the model to follow
         instructions=[
             "You are a helpful assistant that answers questions about the world.",
-            "Answer the question in a concise manner. If you are not sure, say 'I don't know'."
-        ]
+            "Answer the question in a concise manner. If you are not sure, say 'I don't know'.",
+        ],
+        # Tags can be overridden at log time
+        tags={"model": "gpt-4o-mini", "feature": "customer-support"},
     )
+
+    print(response)
+
 
 # Run the async function
 asyncio.run(main())

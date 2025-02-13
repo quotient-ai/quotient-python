@@ -166,3 +166,5 @@ cython_debug/
 .ruff_cache
 
 .vscode/
+
+.internal_examples/
