@@ -153,14 +153,14 @@ class QuotientAI:
     prompt templates, recipes, datasets, and tasks.
     """
 
-    def __init__(self):
-        try:
-            self.api_key = os.environ["QUOTIENT_API_KEY"]
-        except KeyError:
+    def __init__(self, api_key: str = os.environ.get('QUOTIENT_API_KEY')):
+        if api_key is None:
             raise QuotientAIError(
                 "could not find QUOTIENT_API_KEY in environment variables."
                 "if you do not have an API key, you can create one at https://app.quotientai.co in your settings page"
             )
+
+        self.api_key = api_key
 
         _client = _BaseQuotientClient(self.api_key)
 
