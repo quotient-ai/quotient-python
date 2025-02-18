@@ -146,17 +146,23 @@ class AsyncQuotientLogger:
 
 class AsyncQuotientAI:
     """
-    An asynchronous client that provides access to the QuotientAI API.
+    An async client that provides access to the QuotientAI API.
 
-    The AsyncQuotientAI class provides methods to interact with the QuotientAI API asynchronously.
+    The AsyncQuotientAI class provides asynchronous methods to interact with the QuotientAI API,
+    including logging in, creating and managing API keys, and creating and managing models,
+    system prompts, prompt templates, recipes, datasets, and tasks.
+
+    Args:
+        api_key (Optional[str]): The API key to use for authentication. If not provided,
+            will attempt to read from QUOTIENT_API_KEY environment variable.
     """
 
-    def __init__(self):
-        try:
-            self.api_key = os.environ["QUOTIENT_API_KEY"]
-        except KeyError:
+    def __init__(self, api_key: Optional[str] = None):
+        self.api_key = api_key or os.environ.get("QUOTIENT_API_KEY")
+        if not self.api_key:
             raise QuotientAIError(
-                "could not find QUOTIENT_API_KEY in environment variables."
+                "could not find API key. either pass api_key to AsyncQuotientAI() or "
+                "set the QUOTIENT_API_KEY environment variable. "
                 "if you do not have an API key, you can create one at https://app.quotientai.co in your settings page"
             )
 
