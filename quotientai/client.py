@@ -19,8 +19,16 @@ class _BaseQuotientClient(httpx.Client):
         )
 
     @handle_errors
-    def _get(self, path: str, timeout: int = None) -> dict:
-        response = self.get(path, timeout=timeout)
+    def _get(self, path: str, params: Optional[Dict[str, Any]] = None, timeout: int = None) -> dict:
+        """
+        Send a GET request to the specified path.
+        
+        Args:
+            path: API endpoint path
+            params: Optional query parameters
+            timeout: Optional request timeout in seconds
+        """
+        response = self.get(path, params=params, timeout=timeout)
         return response
 
     @handle_errors

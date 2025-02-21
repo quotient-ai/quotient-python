@@ -19,8 +19,16 @@ class _AsyncQuotientClient(httpx.AsyncClient):
         )
 
     @handle_async_errors
-    async def _get(self, path: str, timeout: int = None) -> dict:
-        response = await self.get(path, timeout=timeout)
+    async def _get(self, path: str, params: Optional[Dict[str, Any]] = None, timeout: int = None) -> dict:
+        """
+        Send an async GET request to the specified path.
+        
+        Args:
+            path: API endpoint path
+            params: Optional query parameters
+            timeout: Optional request timeout in seconds
+        """
+        response = await self.get(path, params=params, timeout=timeout)
         return response
 
     @handle_async_errors
