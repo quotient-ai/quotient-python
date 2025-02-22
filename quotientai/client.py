@@ -68,6 +68,7 @@ class QuotientLogger:
         self.hallucination_detection: bool = False
         self.inconsistency_detection: bool = False
         self._configured = False
+        self.hallucination_detection_sample_rate = 0
 
     def init(
         self,
@@ -77,6 +78,7 @@ class QuotientLogger:
         tags: Optional[Dict[str, Any]] = {},
         hallucination_detection: bool = False,
         inconsistency_detection: bool = False,
+        hallucination_detection_sample_rate: float = 0,
     ) -> "QuotientLogger":
         """
         Configure the logger with the provided parameters and return self.
@@ -88,6 +90,7 @@ class QuotientLogger:
         self.hallucination_detection = hallucination_detection
         self.inconsistency_detection = inconsistency_detection
         self._configured = True
+        self.hallucination_detection_sample_rate = hallucination_detection_sample_rate
         return self
 
     def log(
@@ -139,6 +142,7 @@ class QuotientLogger:
             tags=merged_tags,
             hallucination_detection=hallucination_detection,
             inconsistency_detection=inconsistency_detection,
+            hallucination_detection_sample_rate=self.hallucination_detection_sample_rate,
         )
 
         return log
