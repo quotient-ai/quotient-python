@@ -68,6 +68,7 @@ class AsyncLogsResource:
         instructions: Optional[List[str]] = None,
         tags: Optional[Dict[str, Any]] = {},
         contexts: Optional[List[str]] = [],
+        hallucination_detection_sample_rate: Optional[float] = 0,
     ):
         """
         Create a log asynchronously
@@ -84,6 +85,7 @@ class AsyncLogsResource:
             "message_history": message_history,
             "instructions": instructions,
             "contexts": contexts,
+            "hallucination_detection_sample_rate": hallucination_detection_sample_rate,
         }
 
         try:
