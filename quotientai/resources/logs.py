@@ -22,7 +22,6 @@ class Log:
     message_history: Optional[List[Dict[str, Any]]]
     instructions: Optional[List[str]]
     tags: Dict[str, Any]
-    contexts: List[str]
     created_at: datetime
 
     def __rich_repr__(self):
@@ -71,9 +70,8 @@ class LogsResource:
         
         try:
             response = self._client._get("/logs", params=params)
-
             data = response["logs"]
-            breakpoint()
+
             logs = []
             for log in data:
                 logs.append(
@@ -89,19 +87,11 @@ class LogsResource:
                         message_history=log["message_history"],
                         instructions=log["instructions"],
                         tags=log["tags"],
-                        contexts=log["contexts"],
                         created_at=datetime.fromisoformat(log["created_at"]),
-                        updated_at=datetime.fromisoformat(log["updated_at"]),
-                        hallucination_detection_sample_rate=log["hallucination_detection_sample_rate"],
-                        has_hallucination=log["has_hallucination"],
-                        has_inconsistency=log["has_inconsistency"],
-                        hallucination_rate=log["hallucination_rate"],
-                        num_hallucinated=log["num_hallucinated"],
-                        num_total=log["num_total"],
                     )
                 )
             return logs
-        except Exception as e:
+        except Exception:
             self.logger.error("Error listing logs", exc_info=True)
             raise
 
@@ -117,7 +107,6 @@ class LogsResource:
         message_history: Optional[List[Dict[str, Any]]] = None,
         instructions: Optional[List[str]] = None,
         tags: Optional[Dict[str, Any]] = {},
-        contexts: Optional[List[str]] = [],
     ):
         """
         Create a log
@@ -133,7 +122,6 @@ class LogsResource:
             "documents": documents,
             "message_history": message_history,
             "instructions": instructions,
-            "contexts": contexts,
         }
 
         try:
@@ -183,8 +171,10 @@ class AsyncLogsResource:
         
         try:
             response = await self._client._get("/logs", params=params)
+            data = response["logs"]
+
             logs = []
-            for log in response:
+            for log in data:
                 logs.append(
                     Log(
                         id=log["id"],
@@ -198,19 +188,11 @@ class AsyncLogsResource:
                         message_history=log["message_history"],
                         instructions=log["instructions"],
                         tags=log["tags"],
-                        contexts=log["contexts"],
                         created_at=datetime.fromisoformat(log["created_at"]),
-                        updated_at=datetime.fromisoformat(log["updated_at"]),
-                        hallucination_detection_sample_rate=log["hallucination_detection_sample_rate"],
-                        has_hallucination=log["has_hallucination"],
-                        has_inconsistency=log["has_inconsistency"],
-                        hallucination_rate=log["hallucination_rate"],
-                        num_hallucinated=log["num_hallucinated"],
-                        num_total=log["num_total"],
                     )
                 )
             return logs
-        except Exception as e:
+        except Exception:
             self.logger.error("Error listing logs", exc_info=True)
             raise
 
@@ -226,7 +208,6 @@ class AsyncLogsResource:
         message_history: Optional[List[Dict[str, Any]]] = None,
         instructions: Optional[List[str]] = None,
         tags: Optional[Dict[str, Any]] = {},
-        contexts: Optional[List[str]] = [],
     ):
         """
         Create a log asynchronously
@@ -242,7 +223,6 @@ class AsyncLogsResource:
             "documents": documents,
             "message_history": message_history,
             "instructions": instructions,
-            "contexts": contexts,
         }
 
         try:
