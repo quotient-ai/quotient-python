@@ -107,6 +107,7 @@ class LogsResource:
         message_history: Optional[List[Dict[str, Any]]] = None,
         instructions: Optional[List[str]] = None,
         tags: Optional[Dict[str, Any]] = {},
+        hallucination_detection_sample_rate: Optional[float] = 0,
     ):
         """
         Create a log
@@ -122,6 +123,7 @@ class LogsResource:
             "documents": documents,
             "message_history": message_history,
             "instructions": instructions,
+            "hallucination_detection_sample_rate": hallucination_detection_sample_rate,
         }
 
         try:
@@ -208,6 +210,7 @@ class AsyncLogsResource:
         message_history: Optional[List[Dict[str, Any]]] = None,
         instructions: Optional[List[str]] = None,
         tags: Optional[Dict[str, Any]] = {},
+        hallucination_detection_sample_rate: Optional[float] = 0,
     ):
         """
         Create a log asynchronously
@@ -223,6 +226,7 @@ class AsyncLogsResource:
             "documents": documents,
             "message_history": message_history,
             "instructions": instructions,
+            "hallucination_detection_sample_rate": hallucination_detection_sample_rate,
         }
 
         try:

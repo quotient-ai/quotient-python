@@ -76,6 +76,7 @@ class QuotientLogger:
         self.hallucination_detection: bool = False
         self.inconsistency_detection: bool = False
         self._configured = False
+        self.hallucination_detection_sample_rate = 0
 
     def init(
         self,
@@ -85,6 +86,7 @@ class QuotientLogger:
         tags: Optional[Dict[str, Any]] = {},
         hallucination_detection: bool = False,
         inconsistency_detection: bool = False,
+        hallucination_detection_sample_rate: float = 0,
     ) -> "QuotientLogger":
         """
         Configure the logger with the provided parameters and return self.
@@ -96,6 +98,7 @@ class QuotientLogger:
         self.hallucination_detection = hallucination_detection
         self.inconsistency_detection = inconsistency_detection
         self._configured = True
+        self.hallucination_detection_sample_rate = hallucination_detection_sample_rate
         return self
 
     def log(
@@ -147,6 +150,7 @@ class QuotientLogger:
             tags=merged_tags,
             hallucination_detection=hallucination_detection,
             inconsistency_detection=inconsistency_detection,
+            hallucination_detection_sample_rate=self.hallucination_detection_sample_rate,
         )
 
         return log
@@ -159,14 +163,18 @@ class QuotientAI:
     The QuotientClient class provides methods to interact with the QuotientAI API, including
     logging in, creating and managing API keys, and creating and managing models, system prompts,
     prompt templates, recipes, datasets, and tasks.
+
+    Args:
+        api_key (Optional[str]): The API key to use for authentication. If not provided,
+            will attempt to read from QUOTIENT_API_KEY environment variable.
     """
 
-    def __init__(self):
-        try:
-            self.api_key = os.environ["QUOTIENT_API_KEY"]
-        except KeyError:
+    def __init__(self, api_key: Optional[str] = None):
+        self.api_key = api_key or os.environ.get("QUOTIENT_API_KEY")
+        if not self.api_key:
             raise QuotientAIError(
-                "could not find QUOTIENT_API_KEY in environment variables."
+                "could not find API key. either pass api_key to QuotientAI() or "
+                "set the QUOTIENT_API_KEY environment variable. "
                 "if you do not have an API key, you can create one at https://app.quotientai.co in your settings page"
             )
 
