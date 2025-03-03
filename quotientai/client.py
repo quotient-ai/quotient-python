@@ -120,7 +120,6 @@ class QuotientLogger:
         message_history: Optional[List[Dict[str, Any]]] = None,
         instructions: Optional[List[str]] = None,
         tags: Optional[Dict[str, Any]] = {},
-        sample_rate: Optional[float] = None,
         hallucination_detection: Optional[bool] = None,
         inconsistency_detection: Optional[bool] = None,
     ):
@@ -150,10 +149,7 @@ class QuotientLogger:
             else self.inconsistency_detection
         )
 
-        if sample_rate is None:
-            sample_rate = self.sample_rate
-
-        if self._should_sample(sample_rate):
+        if self._should_sample():
             log = self.logs_resource.create(
                 app_name=self.app_name,
                 environment=self.environment,
