@@ -1,13 +1,13 @@
 [tool.poetry]
 name = "quotientai"
-version = "0.1.10"
+version = "0.2.0"
 authors = [
     "Freddie Vargus <freddie@quotientai.co>",
     "Michael Goitia Sarmiento <mike@quotientai.co>",
 ]
 description = "CLI for evaluating large language models with Quotient"
 readme = "README.md"
-keywords = ["quotient", "evaluation", "llms", "machine learning", "ai"]
+keywords = ["quotient", "evaluation", "llms", "machine learning", "ai", "logging", "hallucinations"]
 license = "Apache-2.0"
 classifiers = [
     "Programming Language :: Python :: 3",
