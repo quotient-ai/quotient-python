@@ -74,7 +74,7 @@ class QuotientLogger:
         self.app_name: Optional[str] = None
         self.environment: Optional[str] = None
         self.tags: Dict[str, Any] = {}
-        self.sample_rate: float = 0.0
+        self.sample_rate: float = 1.0
         self.hallucination_detection: bool = False
         self.inconsistency_detection: bool = False
         self._configured = False
@@ -86,7 +86,7 @@ class QuotientLogger:
         app_name: str,
         environment: str,
         tags: Optional[Dict[str, Any]] = {},
-        sample_rate: float = 0.0,
+        sample_rate: float = 1.0,
         hallucination_detection: bool = False,
         inconsistency_detection: bool = False,
         hallucination_detection_sample_rate: float = 0.0,
@@ -99,6 +99,10 @@ class QuotientLogger:
         self.environment = environment
         self.tags = tags or {}
         self.sample_rate = sample_rate
+
+        if not (0.0 <= self.sample_rate <= 1.0):
+            raise QuotientAIError("sample_rate must be between 0.0 and 1.0")
+
         self.hallucination_detection = hallucination_detection
         self.inconsistency_detection = inconsistency_detection
         self._configured = True
