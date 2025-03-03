@@ -1,4 +1,5 @@
 import os
+import random
 from typing import Any, Dict, List, Optional
 
 import httpx
@@ -22,7 +23,7 @@ class _BaseQuotientClient(httpx.Client):
     def _get(self, path: str, params: Optional[Dict[str, Any]] = None, timeout: int = None) -> dict:
         """
         Send a GET request to the specified path.
-        
+
         Args:
             path: API endpoint path
             params: Optional query parameters
@@ -73,10 +74,11 @@ class QuotientLogger:
         self.app_name: Optional[str] = None
         self.environment: Optional[str] = None
         self.tags: Dict[str, Any] = {}
+        self.sample_rate: float = 0.0
         self.hallucination_detection: bool = False
         self.inconsistency_detection: bool = False
         self._configured = False
-        self.hallucination_detection_sample_rate = 0
+        self.hallucination_detection_sample_rate = 0.0
 
     def init(
         self,
@@ -84,9 +86,10 @@ class QuotientLogger:
         app_name: str,
         environment: str,
         tags: Optional[Dict[str, Any]] = {},
+        sample_rate: float = 0.0,
         hallucination_detection: bool = False,
         inconsistency_detection: bool = False,
-        hallucination_detection_sample_rate: float = 0,
+        hallucination_detection_sample_rate: float = 0.0,
     ) -> "QuotientLogger":
         """
         Configure the logger with the provided parameters and return self.
@@ -95,11 +98,18 @@ class QuotientLogger:
         self.app_name = app_name
         self.environment = environment
         self.tags = tags or {}
+        self.sample_rate = sample_rate
         self.hallucination_detection = hallucination_detection
         self.inconsistency_detection = inconsistency_detection
         self._configured = True
         self.hallucination_detection_sample_rate = hallucination_detection_sample_rate
         return self
+
+    def _should_sample(self) -> bool:
+        """
+        Determine if the log should be sampled based on the sample rate.
+        """
+        return random.random() < self.sample_rate
 
     def log(
         self,
@@ -110,6 +120,7 @@ class QuotientLogger:
         message_history: Optional[List[Dict[str, Any]]] = None,
         instructions: Optional[List[str]] = None,
         tags: Optional[Dict[str, Any]] = {},
+        sample_rate: Optional[float] = None,
         hallucination_detection: Optional[bool] = None,
         inconsistency_detection: Optional[bool] = None,
     ):
@@ -139,21 +150,27 @@ class QuotientLogger:
             else self.inconsistency_detection
         )
 
-        log = self.logs_resource.create(
-            app_name=self.app_name,
-            environment=self.environment,
-            user_query=user_query,
-            model_output=model_output,
-            documents=documents,
-            message_history=message_history,
-            instructions=instructions,
-            tags=merged_tags,
-            hallucination_detection=hallucination_detection,
-            inconsistency_detection=inconsistency_detection,
-            hallucination_detection_sample_rate=self.hallucination_detection_sample_rate,
-        )
+        if sample_rate is None:
+            sample_rate = self.sample_rate
 
-        return log
+        if self._should_sample(sample_rate):
+            log = self.logs_resource.create(
+                app_name=self.app_name,
+                environment=self.environment,
+                user_query=user_query,
+                model_output=model_output,
+                documents=documents,
+                message_history=message_history,
+                instructions=instructions,
+                tags=merged_tags,
+                hallucination_detection=hallucination_detection,
+                inconsistency_detection=inconsistency_detection,
+                hallucination_detection_sample_rate=self.hallucination_detection_sample_rate,
+            )
+
+            return log
+        else:
+            return None
 
 
 class QuotientAI:
