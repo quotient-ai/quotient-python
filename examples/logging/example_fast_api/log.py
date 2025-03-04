@@ -5,7 +5,13 @@ from dotenv import load_dotenv
 from openai import OpenAI, AsyncOpenAI
 from quotientai import QuotientAI, AsyncQuotientAI
 
-from constants import INSTRUCTIONS, RETRIEVED_DOCUMENTS, QUESTION, PROMPT, INSTRUCTIONS
+from constants import (
+    INSTRUCTIONS,
+    RETRIEVED_DOCUMENTS,
+    QUESTION,
+    PROMPT,
+    MESSAGE_HISTORY,
+)
 
 # Load environment variables
 load_dotenv()
@@ -19,23 +25,27 @@ router = APIRouter()
 ########################################################
 # Initialize QuotientAI and QuotientAI Logger
 ########################################################
-quotient = QuotientAI()
+quotient = QuotientAI(api_key=os.environ.get("QUOTIENT_API_KEY"))
 quotient_logger = quotient.logger.init(
     app_name="my-app",
     environment="dev",
     tags={"model": "gpt-4o", "feature": "customer-support"},
     hallucination_detection=True,
+    hallucination_detection_sample_rate=0.0,
+    sample_rate=1.0,
 )
 
 ########################################################
 # Initialize Async QuotientAI Logger
 ########################################################
-async_quotient = AsyncQuotientAI()
+async_quotient = AsyncQuotientAI(api_key=os.environ.get("QUOTIENT_API_KEY"))
 quotient_async_logger = async_quotient.logger.init(
     app_name="my-app",
     environment="dev",
     tags={"model": "gpt-4o", "feature": "customer-support"},
     hallucination_detection=True,
+    hallucination_detection_sample_rate=0.0,
+    sample_rate=1.0,
 )
 
 
@@ -45,7 +55,12 @@ def create_log():
     Create a log for the model completion using BackgroundTasks to create the log in the background
     """
     formatted_prompt = chevron.render(
-        PROMPT, {"context": RETRIEVED_DOCUMENTS, "question": QUESTION, "instructions": INSTRUCTIONS}
+        PROMPT,
+        {
+            "context": RETRIEVED_DOCUMENTS,
+            "question": QUESTION,
+            "instructions": INSTRUCTIONS,
+        },
     )
 
     response = client.chat.completions.create(
@@ -70,6 +85,7 @@ def create_log():
         model_output=model_output,
         documents=document_contents,
         instructions=INSTRUCTIONS,
+        message_history=MESSAGE_HISTORY,
     )
 
     return {"response": model_output}
@@ -78,7 +94,12 @@ def create_log():
 @router.post("/create-log-async/")
 async def create_log_async():
     formatted_prompt = chevron.render(
-        PROMPT, {"context": RETRIEVED_DOCUMENTS, "question": QUESTION, "instructions": INSTRUCTIONS}
+        PROMPT,
+        {
+            "context": RETRIEVED_DOCUMENTS,
+            "question": QUESTION,
+            "instructions": INSTRUCTIONS,
+        },
     )
 
     response = await async_client.chat.completions.create(
@@ -103,6 +124,7 @@ async def create_log_async():
         model_output=model_output,
         documents=document_contents,
         instructions=INSTRUCTIONS,
+        message_history=MESSAGE_HISTORY,
     )
 
     return {"response": model_output}

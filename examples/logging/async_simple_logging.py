@@ -11,6 +11,7 @@ quotient_logger = quotient.logger.init(
     tags={"model": "gpt-4o", "feature": "customer-support"},
     hallucination_detection=True,
     inconsistency_detection=True,
+    sample_rate=1.0,
 )
 
 
@@ -18,7 +19,7 @@ async def main():
     # Mock retrieved documents
     retrieved_documents = [{"page_content": "Sample document"}]
 
-    response = await quotient_logger.log(
+    await quotient_logger.log(
         user_query="Sample input",
         model_output="Sample output",
         # Page content from Documents from your retriever used to generate the model output
@@ -38,7 +39,14 @@ async def main():
         tags={"model": "gpt-4o-mini", "feature": "customer-support"},
     )
 
-    print(response)
+    print("Log request sent")
+    print("Press Enter to exit...")
+
+    # Use asyncio's run_in_executor to handle blocking input() call
+    loop = asyncio.get_running_loop()
+    await loop.run_in_executor(None, input)
+
+    print("Exiting...")
 
 
 # Run the async function

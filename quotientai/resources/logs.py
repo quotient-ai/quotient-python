@@ -1,7 +1,7 @@
 from typing import Any, Dict, List, Optional
 import asyncio
-import httpx
 import logging
+from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
 from datetime import datetime
 
@@ -11,6 +11,7 @@ class Log:
     """
     Represents a log entry from the QuotientAI API
     """
+
     id: str
     app_name: str
     environment: str
@@ -35,6 +36,8 @@ class LogsResource:
     def __init__(self, client) -> None:
         self._client = client
         self.logger = logging.getLogger(__name__)
+        # New thread pool for creating logs
+        self._executor = ThreadPoolExecutor(max_workers=3)
 
     def list(
         self,
@@ -48,7 +51,7 @@ class LogsResource:
     ) -> List[Log]:
         """
         List logs with optional filtering parameters.
-        
+
         Args:
             app_name: Filter logs by application name
             environment: Filter logs by environment
@@ -67,7 +70,7 @@ class LogsResource:
         }
         # Remove None values
         params = {k: v for k, v in params.items() if v is not None}
-        
+
         try:
             response = self._client._get("/logs", params=params)
             data = response["logs"]
@@ -110,7 +113,59 @@ class LogsResource:
         hallucination_detection_sample_rate: Optional[float] = 0,
     ):
         """
-        Create a log
+        Create a log in a background thread (non-blocking operation).
+
+        This method creates logs asynchronously in a background thread,
+        allowing the main thread to continue execution without waiting
+        for the log creation to complete.
+
+        Args:
+            app_name: The name of the application
+            environment: The environment (e.g., "production", "development")
+            hallucination_detection: Whether to enable hallucination detection
+            inconsistency_detection: Whether to enable inconsistency detection
+            user_query: The user's query
+            model_output: The model's response
+            documents: List of documents used for retrieval
+            message_history: Optional conversation history
+            instructions: Optional system instructions
+            tags: Optional tags to add to the log
+            hallucination_detection_sample_rate: Sample rate for hallucination detection
+        """
+        # Submit the log creation to the thread pool
+        self._executor.submit(
+            self._post_log_in_thread,
+            app_name,
+            environment,
+            hallucination_detection,
+            inconsistency_detection,
+            user_query,
+            model_output,
+            documents,
+            message_history,
+            instructions,
+            tags,
+            hallucination_detection_sample_rate,
+        )
+        # Return immediately without waiting for the result
+        return None
+
+    def _post_log_in_thread(
+        self,
+        app_name: str,
+        environment: str,
+        hallucination_detection: bool,
+        inconsistency_detection: bool,
+        user_query: str,
+        model_output: str,
+        documents: List[str],
+        message_history: Optional[List[Dict[str, Any]]] = None,
+        instructions: Optional[List[str]] = None,
+        tags: Optional[Dict[str, Any]] = {},
+        hallucination_detection_sample_rate: Optional[float] = 0,
+    ):
+        """
+        Internal method to create a log in a separate thread
         """
         data = {
             "app_name": app_name,
@@ -128,16 +183,17 @@ class LogsResource:
 
         try:
             response = self._client._post("/logs", data)
-            return response
+            self.logger.info(f"QuotientAI log created: {response}")
         except Exception as e:
-            self.logger.error("Error creating quotientai_log", exc_info=True)
-            pass
+            self.logger.error(f"Error creating quotientai_log: {str(e)}", exc_info=True)
 
 
 class AsyncLogsResource:
     def __init__(self, client) -> None:
         self._client = client
         self.logger = logging.getLogger(__name__)
+        self._loop = asyncio.get_event_loop()
+        self._executor = ThreadPoolExecutor(max_workers=5)
 
     async def list(
         self,
@@ -151,7 +207,7 @@ class AsyncLogsResource:
     ) -> List[Log]:
         """
         List logs asynchronously with optional filtering parameters.
-        
+
         Args:
             app_name: Filter logs by application name
             environment: Filter logs by environment
@@ -170,7 +226,7 @@ class AsyncLogsResource:
         }
         # Remove None values
         params = {k: v for k, v in params.items() if v is not None}
-        
+
         try:
             response = await self._client._get("/logs", params=params)
             data = response["logs"]
@@ -213,8 +269,26 @@ class AsyncLogsResource:
         hallucination_detection_sample_rate: Optional[float] = 0,
     ):
         """
-        Create a log asynchronously
+        Create a log in a background task (non-blocking operation).
+
+        This method creates logs asynchronously in a background task,
+        allowing the main task to continue execution without waiting
+        for the log creation to complete.
+
+        Args:
+            app_name: The name of the application
+            environment: The environment (e.g., "production", "development")
+            hallucination_detection: Whether to enable hallucination detection
+            inconsistency_detection: Whether to enable inconsistency detection
+            user_query: The user's query
+            model_output: The model's response
+            documents: List of documents used for retrieval
+            message_history: Optional conversation history
+            instructions: Optional system instructions
+            tags: Optional tags to add to the log
+            hallucination_detection_sample_rate: Sample rate for hallucination detection
         """
+        # Create a copy of all the data
         data = {
             "app_name": app_name,
             "environment": environment,
@@ -229,9 +303,18 @@ class AsyncLogsResource:
             "hallucination_detection_sample_rate": hallucination_detection_sample_rate,
         }
 
+        # Run the log creation in a background task
+        asyncio.create_task(self._post_log_in_background(data))
+
+        # Return immediately without waiting for the result
+        return None
+
+    async def _post_log_in_background(self, data: Dict[str, Any]):
+        """
+        Internal method to create a log in a background task
+        """
         try:
             response = await self._client._post("/logs", data)
-            return response
+            self.logger.info(f"QuotientAI log created: {response}")
         except Exception as e:
-            self.logger.error("Error creating quotientai_log", exc_info=True)
-            pass
+            self.logger.error(f"Error creating quotientai_log: {str(e)}", exc_info=True)

@@ -15,12 +15,15 @@ from quotientai.resources.runs import Run
 class _BaseQuotientClient(httpx.Client):
     def __init__(self, api_key: str):
         super().__init__(
-            base_url="https://api.quotientai.co/api/v1",
+            # base_url="https://api.quotientai.co/api/v1",
+            base_url="http://127.0.0.1:8082/api/v1",
             headers={"Authorization": f"Bearer {api_key}"},
         )
 
     @handle_errors
-    def _get(self, path: str, params: Optional[Dict[str, Any]] = None, timeout: int = None) -> dict:
+    def _get(
+        self, path: str, params: Optional[Dict[str, Any]] = None, timeout: int = None
+    ) -> dict:
         """
         Send a GET request to the specified path.
 
@@ -154,7 +157,7 @@ class QuotientLogger:
         )
 
         if self._should_sample():
-            log = self.logs_resource.create(
+            self.logs_resource.create(
                 app_name=self.app_name,
                 environment=self.environment,
                 user_query=user_query,
@@ -168,7 +171,7 @@ class QuotientLogger:
                 hallucination_detection_sample_rate=self.hallucination_detection_sample_rate,
             )
 
-            return log
+            return None
         else:
             return None
 

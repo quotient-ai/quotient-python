@@ -14,7 +14,7 @@ quotient_logger = quotient.logger.init(
 # Mock retrieved documents
 retrieved_documents = [{"page_content": "Sample document"}]
 
-response = quotient_logger.log(
+quotient_logger.log(
     user_query="Sample input",
     model_output="Sample output",
     # Page content from Documents from your retriever used to generate the model output
@@ -34,4 +34,4 @@ response = quotient_logger.log(
     tags={"model": "gpt-4o-mini", "feature": "customer-support"},
 )
 
-print(response)
+print("Log created")
