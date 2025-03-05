@@ -35,7 +35,6 @@ class Log:
 class LogsResource:
     def __init__(self, client) -> None:
         self._client = client
-        self.logger = logging.getLogger(__name__)
         # New thread pool for creating logs
         self._executor = ThreadPoolExecutor(max_workers=5)
 
@@ -95,7 +94,6 @@ class LogsResource:
                 )
             return logs
         except Exception:
-            self.logger.error("Error listing logs", exc_info=True)
             raise
 
     def create(
@@ -183,9 +181,8 @@ class LogsResource:
 
         try:
             response = self._client._post("/logs", data)
-            self.logger.info(f"quotientAI log created: {response}")
         except Exception as e:
-            self.logger.error(f"error creating quotientai_log: {str(e)}", exc_info=True)
+            pass
 
 
 class AsyncLogsResource:
@@ -314,6 +311,5 @@ class AsyncLogsResource:
         """
         try:
             response = await self._client._post("/logs", data)
-            self.logger.info(f"quotientAI log created: {response}")
         except Exception as e:
-            self.logger.error(f"error creating quotientai_log: {str(e)}", exc_info=True)
+            pass
