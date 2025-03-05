@@ -1,10 +1,11 @@
 from typing import Any, Dict, List, Optional
 import asyncio
 import logging
-from queue import Queue
+from collections import deque
 from threading import Thread
 from dataclasses import dataclass
 from datetime import datetime
+import time
 
 
 @dataclass
@@ -36,7 +37,7 @@ class Log:
 class LogsResource:
     def __init__(self, client) -> None:
         self._client = client
-        self._log_queue = Queue()
+        self._log_queue = deque()
 
         # Create a single worker thread
         self._worker_thread = Thread(
@@ -47,17 +48,19 @@ class LogsResource:
     def _process_log_queue(self):
         """Worker thread function that processes logs from the queue"""
         while True:
-            # This will block until an item is available
-            log_data = self._log_queue.get()
-            try:
-                # Process the log
-                self._post_log(log_data)
-            except Exception:
-                # Handle exceptions but keep the thread running
-                pass
-            finally:
-                # Mark this task as done
-                self._log_queue.task_done()
+            # Check if there are items in the deque
+            if self._log_queue:
+                # Get the leftmost item
+                log_data = self._log_queue.popleft()
+                try:
+                    # Process the log
+                    self._post_log(log_data)
+                except Exception:
+                    # Handle exceptions but keep the thread running
+                    pass
+            else:
+                # Prevent busy waiting
+                time.sleep(0.1)
 
     def create(
         self,
@@ -93,7 +96,6 @@ class LogsResource:
             tags: Optional tags to add to the log
             hallucination_detection_sample_rate: Sample rate for hallucination detection
         """
-        # Create a copy of all the data
         data = {
             "app_name": app_name,
             "environment": environment,
@@ -108,8 +110,8 @@ class LogsResource:
             "hallucination_detection_sample_rate": hallucination_detection_sample_rate,
         }
 
-        # Add to queue and return immediately
-        self._log_queue.put(data)
+        # Add to deque and return immediately
+        self._log_queue.append(data)
         return None
 
     def _post_log(self, data):
