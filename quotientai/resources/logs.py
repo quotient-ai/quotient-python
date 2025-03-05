@@ -1,7 +1,8 @@
 from typing import Any, Dict, List, Optional
 import asyncio
 import logging
-from concurrent.futures import ThreadPoolExecutor
+from queue import Queue
+from threading import Thread
 from dataclasses import dataclass
 from datetime import datetime
 
@@ -35,8 +36,86 @@ class Log:
 class LogsResource:
     def __init__(self, client) -> None:
         self._client = client
-        # New thread pool for creating logs
-        self._executor = ThreadPoolExecutor(max_workers=5)
+        self._log_queue = Queue()
+
+        # Create a single worker thread
+        self._worker_thread = Thread(target=self._process_log_queue, daemon=True)
+        self._worker_thread.start()
+
+    def _process_log_queue(self):
+        """Worker thread function that processes logs from the queue"""
+        while True:
+            # This will block until an item is available
+            log_data = self._log_queue.get()
+            try:
+                # Process the log
+                self._post_log(log_data)
+            except Exception:
+                # Handle exceptions but keep the thread running
+                pass
+            finally:
+                # Mark this task as done
+                self._log_queue.task_done()
+
+    def create(
+        self,
+        app_name: str,
+        environment: str,
+        hallucination_detection: bool,
+        inconsistency_detection: bool,
+        user_query: str,
+        model_output: str,
+        documents: List[str],
+        message_history: Optional[List[Dict[str, Any]]] = None,
+        instructions: Optional[List[str]] = None,
+        tags: Optional[Dict[str, Any]] = {},
+        hallucination_detection_sample_rate: Optional[float] = 0,
+    ):
+        """
+        Create a log in a background thread (non-blocking operation).
+
+        This method creates logs asynchronously in a background thread,
+        allowing the main thread to continue execution without waiting
+        for the log creation to complete.
+
+        Args:
+            app_name: The name of the application
+            environment: The environment (e.g., "production", "development")
+            hallucination_detection: Whether to enable hallucination detection
+            inconsistency_detection: Whether to enable inconsistency detection
+            user_query: The user's query
+            model_output: The model's response
+            documents: List of documents used for retrieval
+            message_history: Optional conversation history
+            instructions: Optional system instructions
+            tags: Optional tags to add to the log
+            hallucination_detection_sample_rate: Sample rate for hallucination detection
+        """
+        # Create a copy of all the data
+        data = {
+            "app_name": app_name,
+            "environment": environment,
+            "tags": tags,
+            "hallucination_detection": hallucination_detection,
+            "inconsistency_detection": inconsistency_detection,
+            "user_query": user_query,
+            "model_output": model_output,
+            "documents": documents,
+            "message_history": message_history,
+            "instructions": instructions,
+            "hallucination_detection_sample_rate": hallucination_detection_sample_rate,
+        }
+
+        # Add to queue and return immediately
+        self._log_queue.put(data)
+        return None
+
+    def _post_log(self, data):
+        """Send the log to the API"""
+        try:
+            self._client._post("/logs", data)
+        except Exception:
+            pass
 
     def list(
         self,
@@ -95,94 +174,6 @@ class LogsResource:
             return logs
         except Exception:
             raise
-
-    def create(
-        self,
-        app_name: str,
-        environment: str,
-        hallucination_detection: bool,
-        inconsistency_detection: bool,
-        user_query: str,
-        model_output: str,
-        documents: List[str],
-        message_history: Optional[List[Dict[str, Any]]] = None,
-        instructions: Optional[List[str]] = None,
-        tags: Optional[Dict[str, Any]] = {},
-        hallucination_detection_sample_rate: Optional[float] = 0,
-    ):
-        """
-        Create a log in a background thread (non-blocking operation).
-
-        This method creates logs asynchronously in a background thread,
-        allowing the main thread to continue execution without waiting
-        for the log creation to complete.
-
-        Args:
-            app_name: The name of the application
-            environment: The environment (e.g., "production", "development")
-            hallucination_detection: Whether to enable hallucination detection
-            inconsistency_detection: Whether to enable inconsistency detection
-            user_query: The user's query
-            model_output: The model's response
-            documents: List of documents used for retrieval
-            message_history: Optional conversation history
-            instructions: Optional system instructions
-            tags: Optional tags to add to the log
-            hallucination_detection_sample_rate: Sample rate for hallucination detection
-        """
-        # Submit the log creation to the thread pool
-        self._executor.submit(
-            self._post_log_in_thread,
-            app_name,
-            environment,
-            hallucination_detection,
-            inconsistency_detection,
-            user_query,
-            model_output,
-            documents,
-            message_history,
-            instructions,
-            tags,
-            hallucination_detection_sample_rate,
-        )
-        # Return immediately without waiting for the result
-        return None
-
-    def _post_log_in_thread(
-        self,
-        app_name: str,
-        environment: str,
-        hallucination_detection: bool,
-        inconsistency_detection: bool,
-        user_query: str,
-        model_output: str,
-        documents: List[str],
-        message_history: Optional[List[Dict[str, Any]]] = None,
-        instructions: Optional[List[str]] = None,
-        tags: Optional[Dict[str, Any]] = {},
-        hallucination_detection_sample_rate: Optional[float] = 0,
-    ):
-        """
-        Internal method to create a log in a separate thread
-        """
-        data = {
-            "app_name": app_name,
-            "environment": environment,
-            "tags": tags,
-            "hallucination_detection": hallucination_detection,
-            "inconsistency_detection": inconsistency_detection,
-            "user_query": user_query,
-            "model_output": model_output,
-            "documents": documents,
-            "message_history": message_history,
-            "instructions": instructions,
-            "hallucination_detection_sample_rate": hallucination_detection_sample_rate,
-        }
-
-        try:
-            response = self._client._post("/logs", data)
-        except Exception as e:
-            pass
 
 
 class AsyncLogsResource:
@@ -310,6 +301,6 @@ class AsyncLogsResource:
         Internal method to create a log in a background task
         """
         try:
-            response = await self._client._post("/logs", data)
+            await self._client._post("/logs", data)
         except Exception as e:
             pass
