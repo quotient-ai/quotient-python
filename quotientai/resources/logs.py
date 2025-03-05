@@ -37,7 +37,7 @@ class LogsResource:
         self._client = client
         self.logger = logging.getLogger(__name__)
         # New thread pool for creating logs
-        self._executor = ThreadPoolExecutor(max_workers=3)
+        self._executor = ThreadPoolExecutor(max_workers=5)
 
     def list(
         self,
@@ -183,9 +183,9 @@ class LogsResource:
 
         try:
             response = self._client._post("/logs", data)
-            self.logger.info(f"QuotientAI log created: {response}")
+            self.logger.info(f"quotientAI log created: {response}")
         except Exception as e:
-            self.logger.error(f"Error creating quotientai_log: {str(e)}", exc_info=True)
+            self.logger.error(f"error creating quotientai_log: {str(e)}", exc_info=True)
 
 
 class AsyncLogsResource:
@@ -193,7 +193,6 @@ class AsyncLogsResource:
         self._client = client
         self.logger = logging.getLogger(__name__)
         self._loop = asyncio.get_event_loop()
-        self._executor = ThreadPoolExecutor(max_workers=5)
 
     async def list(
         self,
@@ -251,7 +250,7 @@ class AsyncLogsResource:
                 )
             return logs
         except Exception:
-            self.logger.error("Error listing logs", exc_info=True)
+            self.logger.error("error listing logs", exc_info=True)
             raise
 
     async def create(
@@ -315,6 +314,6 @@ class AsyncLogsResource:
         """
         try:
             response = await self._client._post("/logs", data)
-            self.logger.info(f"QuotientAI log created: {response}")
+            self.logger.info(f"quotientAI log created: {response}")
         except Exception as e:
-            self.logger.error(f"Error creating quotientai_log: {str(e)}", exc_info=True)
+            self.logger.error(f"error creating quotientai_log: {str(e)}", exc_info=True)
