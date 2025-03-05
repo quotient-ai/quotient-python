@@ -39,7 +39,9 @@ class LogsResource:
         self._log_queue = Queue()
 
         # Create a single worker thread
-        self._worker_thread = Thread(target=self._process_log_queue, daemon=True)
+        self._worker_thread = Thread(
+            target=self._process_log_queue, daemon=True, name="QuotientLogProcessor"
+        )
         self._worker_thread.start()
 
     def _process_log_queue(self):
