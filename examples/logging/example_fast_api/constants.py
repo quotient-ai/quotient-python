@@ -13,6 +13,7 @@ You are a helpful assistant that can answer questions about the context. Follow 
 ### Instructions
 {{instructions}}
 """
+# Documents that may contain context that model output can be attributed to
 RETRIEVED_DOCUMENTS = [
     {
         "page_content": "Our company has unlimited vacation days",
@@ -20,4 +21,10 @@ RETRIEVED_DOCUMENTS = [
     }
 ]
 QUESTION = "What is the company's vacation policy?"
+# System instructions that may contain context that model output can be attributed to
 INSTRUCTIONS = ["If you do not know the answer, just say that you do not know."]
+# Historical messages that may contain context that model output can be attributed to
+MESSAGE_HISTORY = [
+    {"role": "user", "content": "What is the company's vacation policy?"},
+    {"role": "assistant", "content": "Our company has unlimited vacation days"},
+]

@@ -1,4 +1,5 @@
 import os
+import random
 from typing import Any, Dict, List, Optional
 
 import httpx
@@ -19,10 +20,12 @@ class _AsyncQuotientClient(httpx.AsyncClient):
         )
 
     @handle_async_errors
-    async def _get(self, path: str, params: Optional[Dict[str, Any]] = None, timeout: int = None) -> dict:
+    async def _get(
+        self, path: str, params: Optional[Dict[str, Any]] = None, timeout: int = None
+    ) -> dict:
         """
         Send an async GET request to the specified path.
-        
+
         Args:
             path: API endpoint path
             params: Optional query parameters
@@ -73,6 +76,7 @@ class AsyncQuotientLogger:
         self.app_name: Optional[str] = None
         self.environment: Optional[str] = None
         self.tags: Dict[str, Any] = {}
+        self.sample_rate: float = 1.0
         self.hallucination_detection: bool = False
         self.inconsistency_detection: bool = False
         self._configured = False
@@ -84,6 +88,7 @@ class AsyncQuotientLogger:
         app_name: str,
         environment: str,
         tags: Optional[Dict[str, Any]] = {},
+        sample_rate: float = 1.0,
         hallucination_detection: bool = False,
         inconsistency_detection: bool = False,
         hallucination_detection_sample_rate: float = 0,
@@ -95,11 +100,22 @@ class AsyncQuotientLogger:
         self.app_name = app_name
         self.environment = environment
         self.tags = tags or {}
+        self.sample_rate = sample_rate
+
+        if not (0.0 <= self.sample_rate <= 1.0):
+            raise QuotientAIError("sample_rate must be between 0.0 and 1.0")
+
         self.hallucination_detection = hallucination_detection
         self.inconsistency_detection = inconsistency_detection
         self._configured = True
         self.hallucination_detection_sample_rate = hallucination_detection_sample_rate
         return self
+
+    def _should_sample(self) -> bool:
+        """
+        Determine if the log should be sampled based on the sample rate.
+        """
+        return random.random() < self.sample_rate
 
     async def log(
         self,
@@ -139,21 +155,22 @@ class AsyncQuotientLogger:
             else self.inconsistency_detection
         )
 
-        log = await self.logs_resource.create(
-            app_name=self.app_name,
-            environment=self.environment,
-            user_query=user_query,
-            model_output=model_output,
-            documents=documents,
-            message_history=message_history,
-            instructions=instructions,
-            tags=merged_tags,
-            hallucination_detection=hallucination_detection,
-            inconsistency_detection=inconsistency_detection,
-            hallucination_detection_sample_rate=self.hallucination_detection_sample_rate,
-        )
+        if self._should_sample():
+            await self.logs_resource.create(
+                app_name=self.app_name,
+                environment=self.environment,
+                user_query=user_query,
+                model_output=model_output,
+                documents=documents,
+                message_history=message_history,
+                instructions=instructions,
+                tags=merged_tags,
+                hallucination_detection=hallucination_detection,
+                inconsistency_detection=inconsistency_detection,
+                hallucination_detection_sample_rate=self.hallucination_detection_sample_rate,
+            )
 
-        return log
+        return None
 
 
 class AsyncQuotientAI:

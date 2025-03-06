@@ -20,7 +20,9 @@ class _BaseQuotientClient(httpx.Client):
         )
 
     @handle_errors
-    def _get(self, path: str, params: Optional[Dict[str, Any]] = None, timeout: int = None) -> dict:
+    def _get(
+        self, path: str, params: Optional[Dict[str, Any]] = None, timeout: int = None
+    ) -> dict:
         """
         Send a GET request to the specified path.
 
@@ -154,7 +156,7 @@ class QuotientLogger:
         )
 
         if self._should_sample():
-            log = self.logs_resource.create(
+            self.logs_resource.create(
                 app_name=self.app_name,
                 environment=self.environment,
                 user_query=user_query,
@@ -168,7 +170,7 @@ class QuotientLogger:
                 hallucination_detection_sample_rate=self.hallucination_detection_sample_rate,
             )
 
-            return log
+            return None
         else:
             return None
 
