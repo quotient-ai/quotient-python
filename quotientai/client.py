@@ -57,7 +57,7 @@ class _BaseQuotientClient(httpx.Client):
         try:
             self._token_path.parent.mkdir(parents=True, exist_ok=True)
         except Exception:
-            raise QuotientAIError("could not create directory for token")
+            raise QuotientAIError("could not create directory for token. if you see this error please notify us at contact@quotientai.co")
 
         # Save to disk
         with open(self._token_path, "w") as f:
