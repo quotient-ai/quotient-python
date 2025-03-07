@@ -109,7 +109,6 @@ class _BaseQuotientClient(httpx.Client):
                 self.headers["Authorization"] = f"Bearer {jwt_token}"
             except Exception as e:
                 # If token parsing fails, continue with current auth
-                print(f"Token parsing failed: {e}")
                 pass
 
         return response
