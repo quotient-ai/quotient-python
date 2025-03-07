@@ -25,7 +25,7 @@ from quotientai import QuotientAI
 quotient = QuotientAI()
 
 new_prompt = quotient.prompts.create(
-    name="customer-support-inquiry"
+    name="customer-support-inquiry",
     system_prompt="You are a helpful assistant.",
     user_prompt="How can I assist you today?"
 )

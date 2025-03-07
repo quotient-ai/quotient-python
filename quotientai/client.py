@@ -1,6 +1,12 @@
+import json
 import os
 import random
+import time
+
+from pathlib import Path
 from typing import Any, Dict, List, Optional
+
+import jwt
 
 import httpx
 
@@ -11,31 +17,116 @@ from quotientai.resources.models import Model
 from quotientai.resources.datasets import Dataset
 from quotientai.resources.runs import Run
 
+from pathlib import Path
+
 
 class _BaseQuotientClient(httpx.Client):
     def __init__(self, api_key: str):
+        try:
+            token_dir = Path.home()
+        except Exception:
+            if Path("/root/").exists():
+                token_dir = Path("/root")
+            else:
+                token_dir = Path.cwd()
+
+        self.api_key = api_key
+        self.token = None
+        self.token_expiry = 0
+        self._token_path = token_dir / ".quotient" / "auth_token.json"
+
+        # Try to load existing token
+        self._load_token()
+
+        # Set initial authorization header (token if valid, otherwise API key)
+        auth_header = (
+            f"Bearer {self.token}" if self._is_token_valid() else f"Bearer {api_key}"
+        )
+
         super().__init__(
             base_url="https://api.quotientai.co/api/v1",
-            headers={"Authorization": f"Bearer {api_key}"},
+            headers={"Authorization": auth_header},
         )
+
+    def _save_token(self, token: str, expiry: int):
+        """Save token to memory and disk"""
+        self.token = token
+        self.token_expiry = expiry
+
+        # Create directory if it doesn't exist
+        try:
+            self._token_path.parent.mkdir(parents=True, exist_ok=True)
+        except Exception:
+            raise QuotientAIError("could not create directory for token. if you see this error please notify us at contact@quotientai.co")
+
+        # Save to disk
+        with open(self._token_path, "w") as f:
+            json.dump({"token": token, "expires_at": expiry}, f)
+
+    def _load_token(self):
+        """Load token from disk if available"""
+        if not self._token_path.exists():
+            return
+
+        try:
+            with open(self._token_path, "r") as f:
+                data = json.load(f)
+                self.token = data.get("token")
+                self.token_expiry = data.get("expires_at", 0)
+        except Exception:
+            # If loading fails, token remains None
+            pass
+
+    def _is_token_valid(self):
+        """Check if token exists and is not expired"""
+        if not self.token:
+            return False
+
+        # With 5-minute buffer
+        return time.time() < (self.token_expiry - 300)
+
+    def _update_auth_header(self):
+        """Update authorization header with token or API key"""
+        if self._is_token_valid():
+            self.headers["Authorization"] = f"Bearer {self.token}"
+        else:
+            self.headers["Authorization"] = f"Bearer {self.api_key}"
+
+    def _handle_response(self, response):
+        """Check response for JWT token and save if present"""
+        # Look for JWT token in response headers
+        jwt_token = response.headers.get("X-JWT-Token")
+        if jwt_token:
+            try:
+                # Parse token to get expiry (assuming token is a standard JWT)
+                decoded = jwt.decode(jwt_token, options={"verify_signature": False})
+                expiry = decoded.get("exp", time.time() + 3600)  # Default 1h if no exp
+
+                # Save the token
+                self._save_token(jwt_token, expiry)
+
+                # Update auth header for future requests
+                self.headers["Authorization"] = f"Bearer {jwt_token}"
+            except Exception as e:
+                # If token parsing fails, continue with current auth
+                pass
+
+        return response
 
     @handle_errors
     def _get(
         self, path: str, params: Optional[Dict[str, Any]] = None, timeout: int = None
     ) -> dict:
-        """
-        Send a GET request to the specified path.
-
-        Args:
-            path: API endpoint path
-            params: Optional query parameters
-            timeout: Optional request timeout in seconds
-        """
+        """Send a GET request to the specified path."""
+        self._update_auth_header()
         response = self.get(path, params=params, timeout=timeout)
-        return response
+        return self._handle_response(response)
 
     @handle_errors
     def _post(self, path: str, data: dict = {}, timeout: int = None) -> dict:
+        """Send a POST request to the specified path."""
+        self._update_auth_header()
+
         if isinstance(data, dict):
             data = {k: v for k, v in data.items() if v is not None}
         elif isinstance(data, list):
@@ -46,22 +137,28 @@ class _BaseQuotientClient(httpx.Client):
             json=data,
             timeout=timeout,
         )
-        return response
+        return self._handle_response(response)
 
     @handle_errors
     def _patch(self, path: str, data: dict = {}, timeout: int = None) -> dict:
+        """Send a PATCH request to the specified path."""
+        self._update_auth_header()
+
         data = {k: v for k, v in data.items() if v is not None}
         response = self.patch(
             url=path,
             json=data,
             timeout=timeout,
         )
-        return response
+        return self._handle_response(response)
 
     @handle_errors
     def _delete(self, path: str, timeout: int = None) -> dict:
+        """Send a DELETE request to the specified path."""
+        self._update_auth_header()
+
         response = self.delete(path, timeout=timeout)
-        return response
+        return self._handle_response(response)
 
 
 class QuotientLogger:
