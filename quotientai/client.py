@@ -1,12 +1,21 @@
 import os
+import random
+from typing import Any, Dict, List, Optional
+import jwt
 import json
 import time
-import jwt
-from pathlib import Path
-from typing import Any, Dict, Optional
+
 import httpx
 
-from quotientai.exceptions import handle_errors
+from quotientai import resources
+from quotientai.exceptions import QuotientAIError, handle_errors
+from quotientai.resources.prompts import Prompt
+from quotientai.resources.models import Model
+from quotientai.resources.datasets import Dataset
+from quotientai.resources.runs import Run
+
+from pathlib import Path
+
 
 class _BaseQuotientClient(httpx.Client):
     def __init__(self, api_key: str):
@@ -14,13 +23,15 @@ class _BaseQuotientClient(httpx.Client):
         self.token = None
         self.token_expiry = 0
         self._token_path = Path.home() / ".quotient" / "auth_token.json"
-        
+
         # Try to load existing token
         self._load_token()
-        
+
         # Set initial authorization header (token if valid, otherwise API key)
-        auth_header = f"Bearer {self.token}" if self._is_token_valid() else f"Bearer {api_key}"
-        
+        auth_header = (
+            f"Bearer {self.token}" if self._is_token_valid() else f"Bearer {api_key}"
+        )
+
         super().__init__(
             base_url="https://api.quotientai.co/api/v1",
             headers={"Authorization": auth_header},
@@ -30,10 +41,10 @@ class _BaseQuotientClient(httpx.Client):
         """Save token to memory and disk"""
         self.token = token
         self.token_expiry = expiry
-        
+
         # Create directory if it doesn't exist
         self._token_path.parent.mkdir(parents=True, exist_ok=True)
-        
+
         # Save to disk
         with open(self._token_path, "w") as f:
             json.dump({"token": token, "expires_at": expiry}, f)
@@ -42,7 +53,7 @@ class _BaseQuotientClient(httpx.Client):
         """Load token from disk if available"""
         if not self._token_path.exists():
             return
-            
+
         try:
             with open(self._token_path, "r") as f:
                 data = json.load(f)
@@ -56,7 +67,7 @@ class _BaseQuotientClient(httpx.Client):
         """Check if token exists and is not expired"""
         if not self.token:
             return False
-            
+
         # With 5-minute buffer
         return time.time() < (self.token_expiry - 300)
 
@@ -75,17 +86,19 @@ class _BaseQuotientClient(httpx.Client):
             try:
                 # Parse token to get expiry (assuming token is a standard JWT)
                 decoded = jwt.decode(jwt_token, options={"verify_signature": False})
-                expiry = decoded.get("exp", time.time() + 86400)  # Default 24h if no exp
-                
+                expiry = decoded.get(
+                    "exp", time.time() + 86400
+                )  # Default 24h if no exp
+
                 # Save the token
                 self._save_token(jwt_token, expiry)
-                
+
                 # Update auth header for future requests
                 self.headers["Authorization"] = f"Bearer {jwt_token}"
             except Exception:
                 # If token parsing fails, continue with current auth
                 pass
-                
+
         return response
 
     @handle_errors
@@ -101,7 +114,7 @@ class _BaseQuotientClient(httpx.Client):
     def _post(self, path: str, data: dict = {}, timeout: int = None) -> dict:
         """Send a POST request to the specified path."""
         self._update_auth_header()
-        
+
         if isinstance(data, dict):
             data = {k: v for k, v in data.items() if v is not None}
         elif isinstance(data, list):
@@ -118,7 +131,7 @@ class _BaseQuotientClient(httpx.Client):
     def _patch(self, path: str, data: dict = {}, timeout: int = None) -> dict:
         """Send a PATCH request to the specified path."""
         self._update_auth_header()
-        
+
         data = {k: v for k, v in data.items() if v is not None}
         response = self.patch(
             url=path,
@@ -131,9 +144,10 @@ class _BaseQuotientClient(httpx.Client):
     def _delete(self, path: str, timeout: int = None) -> dict:
         """Send a DELETE request to the specified path."""
         self._update_auth_header()
-        
+
         response = self.delete(path, timeout=timeout)
         return self._handle_response(response)
+
 
 class QuotientLogger:
     """
