@@ -19,10 +19,18 @@ from pathlib import Path
 
 class _BaseQuotientClient(httpx.Client):
     def __init__(self, api_key: str):
+        try:
+            token_dir = Path.home()
+        except Exception:
+            if Path("/root/").exists():
+                token_dir = Path("/root")
+            else:
+                token_dir = Path.cwd()
+
         self.api_key = api_key
         self.token = None
         self.token_expiry = 0
-        self._token_path = Path.home() / ".quotient" / "auth_token.json"
+        self._token_path = token_dir / ".quotient" / "auth_token.json"
 
         # Try to load existing token
         self._load_token()
@@ -33,7 +41,7 @@ class _BaseQuotientClient(httpx.Client):
         )
 
         super().__init__(
-            base_url="http://localhost:8082/api/v1",
+            base_url="https://api.quotientai.co/api/v1",
             headers={"Authorization": auth_header},
         )
 
@@ -43,7 +51,10 @@ class _BaseQuotientClient(httpx.Client):
         self.token_expiry = expiry
 
         # Create directory if it doesn't exist
-        self._token_path.parent.mkdir(parents=True, exist_ok=True)
+        try:
+            self._token_path.parent.mkdir(parents=True, exist_ok=True)
+        except Exception:
+            raise QuotientAIError("could not create directory for token")
 
         # Save to disk
         with open(self._token_path, "w") as f:
@@ -86,9 +97,7 @@ class _BaseQuotientClient(httpx.Client):
             try:
                 # Parse token to get expiry (assuming token is a standard JWT)
                 decoded = jwt.decode(jwt_token, options={"verify_signature": False})
-                expiry = decoded.get(
-                    "exp", time.time() + 86400
-                )  # Default 24h if no exp
+                expiry = decoded.get("exp", time.time() + 3600)  # Default 1h if no exp
 
                 # Save the token
                 self._save_token(jwt_token, expiry)
