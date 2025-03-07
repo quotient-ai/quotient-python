@@ -33,7 +33,7 @@ class _BaseQuotientClient(httpx.Client):
         )
 
         super().__init__(
-            base_url="https://api.quotientai.co/api/v1",
+            base_url="http://localhost:8082/api/v1",
             headers={"Authorization": auth_header},
         )
 
@@ -95,8 +95,9 @@ class _BaseQuotientClient(httpx.Client):
 
                 # Update auth header for future requests
                 self.headers["Authorization"] = f"Bearer {jwt_token}"
-            except Exception:
+            except Exception as e:
                 # If token parsing fails, continue with current auth
+                print(f"Token parsing failed: {e}")
                 pass
 
         return response
