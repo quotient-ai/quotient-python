@@ -16,7 +16,7 @@ from quotientai.resources.prompts import Prompt
 from quotientai.resources.models import Model
 from quotientai.resources.datasets import Dataset
 from quotientai.resources.runs import Run
-
+from quotientai.resources.auth import AuthResource
 from pathlib import Path
 
 
@@ -295,6 +295,8 @@ class QuotientAI:
             )
 
         _client = _BaseQuotientClient(self.api_key)
+        self.auth = AuthResource(_client)
+        self.auth.authenticate()
 
         self.prompts = resources.PromptsResource(_client)
         self.datasets = resources.DatasetsResource(_client)
