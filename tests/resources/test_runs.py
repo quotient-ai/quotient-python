@@ -330,6 +330,38 @@ class TestRunsResource:
         assert "avg" in comparison["accuracy"]
         assert comparison["accuracy"]["avg"] == pytest.approx(0.1)
 
+    def test_compare_runs_different_datasets():
+        # Create runs with different datasets
+        run1 = Run(dataset="dataset1", prompt="prompt1", model="model1")
+        run2 = Run(dataset="dataset2", prompt="prompt1", model="model1")
+        
+        with pytest.raises(ValueError, match="all runs must be on the same dataset"):
+            Run.compare_runs([run1, run2])  # Adjust method name based on your actual implementation
+    
+    def test_compare_runs_different_prompts_and_models():
+        # Create runs with different prompts AND models
+        run1 = Run(dataset="dataset1", prompt="prompt1", model="model1")
+        run2 = Run(dataset="dataset1", prompt="prompt2", model="model2")
+        
+        with pytest.raises(ValueError, match="all runs must be on the same prompt or model"):
+            Run.compare_runs([run1, run2])
+    
+    def test_compare_runs_different_prompts_same_model():
+        # This should work - only prompts are different
+        run1 = Run(dataset="dataset1", prompt="prompt1", model="model1")
+        run2 = Run(dataset="dataset1", prompt="prompt2", model="model1")
+        
+        result = Run.compare_runs([run1, run2])  # This should not raise an error
+        assert result is not None  # Adjust based on expected return value
+    
+    def test_compare_runs_same_prompt_different_models():
+        # This should work - only models are different
+        run1 = Run(dataset="dataset1", prompt="prompt1", model="model1")
+        run2 = Run(dataset="dataset1", prompt="prompt1", model="model2")
+        
+        result = Run.compare_runs([run1, run2])  # This should not raise an error
+        assert result is not None  # Adjust based on expected return value
+
 class TestAsyncRunsResource:
     @pytest.mark.asyncio
     async def test_list(self, mock_async_client, sample_run_data):
