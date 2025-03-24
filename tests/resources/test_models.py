@@ -2,6 +2,7 @@ import pytest
 from datetime import datetime
 from quotientai.resources.models import Model, ModelsResource, AsyncModelsResource
 
+# Fixtures
 @pytest.fixture
 def mock_model_response():
     return [
@@ -37,7 +38,10 @@ def mock_async_client(mocker, mock_model_response):
     client._get.return_value = mocker.AsyncMock(return_value=mock_model_response)()
     return client
 
+# Synchronous Resource Tests
 class TestModelsResource:
+    """Tests for the synchronous ModelsResource class"""
+    
     def test_list_models(self, mock_client):
         models_resource = ModelsResource(mock_client)
         models = models_resource.list()
@@ -64,7 +68,10 @@ class TestModelsResource:
         
         assert "model with name nonexistent-model not found" in str(exc_info.value)
 
+# Asynchronous Resource Tests
 class TestAsyncModelsResource:
+    """Tests for the asynchronous AsyncModelsResource class"""
+    
     @pytest.mark.asyncio
     async def test_list_models(self, mock_async_client):
         models_resource = AsyncModelsResource(mock_async_client)

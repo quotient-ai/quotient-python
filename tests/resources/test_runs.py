@@ -492,7 +492,6 @@ class TestRunsResource:
         )
         
         result = self.runs.compare([run1, run2])
-        # For two runs, result should be {metric: {avg: diff, stddev: value}}
         assert "accuracy" in result
         assert "f1_score" in result
         assert result["accuracy"]["avg"] == pytest.approx(0.2)  # 0.8 - 0.6
@@ -527,7 +526,6 @@ class TestRunsResource:
         ]
         
         result = self.runs.compare(runs)
-        # For 3+ runs, result should be {run_id: {metric: {avg: diff, stddev: value}}}
         assert all(run.id in result for run in runs)
         for run_id in result:
             assert "accuracy" in result[run_id]
@@ -559,7 +557,6 @@ class TestRunsResource:
         )
         
         result = self.runs.compare([run])
-        # For single run, result should be None
         assert result is None
 
 class TestAsyncRunsResource:
@@ -599,7 +596,7 @@ class TestAsyncRunsResource:
         assert run.id == "run_123"
 
     @pytest.mark.asyncio
-    async def test_async_compare_two_runs(self, mock_async_client):
+    async def test_compare_two_runs(self, mock_async_client):
         run1 = Run(
             id="1",
             dataset="dataset1",
@@ -641,11 +638,11 @@ class TestAsyncRunsResource:
         
         result = await AsyncRunsResource(mock_async_client).compare([run1, run2])
         assert "accuracy" in result
-        assert result["accuracy"]["avg"] == pytest.approx(0.2)  # Using pytest.approx for floating point comparison
+        assert result["accuracy"]["avg"] == pytest.approx(0.2)
         assert "stddev" in result["accuracy"]
 
     @pytest.mark.asyncio
-    async def test_async_compare_three_runs(self, mock_async_client):
+    async def test_compare_three_runs(self, mock_async_client):
         runs = [
             Run(
                 id=str(i),
@@ -676,7 +673,7 @@ class TestAsyncRunsResource:
             assert "stddev" in result[run_id]["accuracy"]
 
     @pytest.mark.asyncio
-    async def test_async_compare_single_run(self, mock_async_client):
+    async def test_compare_single_run(self, mock_async_client):
         run = Run(
             id="1",
             dataset="dataset1",
@@ -701,7 +698,7 @@ class TestAsyncRunsResource:
         assert result is None
 
     @pytest.mark.asyncio
-    async def test_async_compare_runs_different_datasets(self, mock_async_client):
+    async def test_compare_runs_different_datasets(self, mock_async_client):
         run1 = Run(
             id="1",
             dataset="dataset1",
@@ -745,7 +742,7 @@ class TestAsyncRunsResource:
             await AsyncRunsResource(mock_async_client).compare([run1, run2])
 
     @pytest.mark.asyncio
-    async def test_async_compare_runs_different_prompts_and_models(self, mock_async_client):
+    async def test_compare_runs_different_prompts_and_models(self, mock_async_client):
         run1 = Run(
             id="1",
             dataset="dataset1",

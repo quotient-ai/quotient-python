@@ -22,7 +22,6 @@ MOCK_PROMPT_RESPONSE = {
 @pytest.fixture
 def mock_client(mocker):
     client = mocker.Mock()
-    # Configure response with datetime strings
     response = {**MOCK_PROMPT_RESPONSE}
     client._get.return_value = [response]
     client._post.return_value = response
@@ -34,7 +33,6 @@ def mock_async_client(mocker):
     client = mocker.Mock()
     response = {**MOCK_PROMPT_RESPONSE}
     
-    # Create async mock responses
     async def async_get(*args, **kwargs):
         return [response]
     
@@ -57,7 +55,47 @@ def prompts_resource(mock_client):
 def async_prompts_resource(mock_async_client):
     return AsyncPromptsResource(mock_async_client)
 
+# Model Tests
+class TestPrompt:
+    """Tests for the Prompt model class"""
+    
+    def test_messages_with_system_prompt(self):
+        prompt = Prompt(
+            id="test-id",
+            name="Test Prompt",
+            version=1,
+            system_prompt="You are a helpful assistant",
+            user_prompt="Hello, how are you?",
+            created_at=datetime.now(),
+            updated_at=datetime.now()
+        )
+        
+        expected_messages = [
+            {"role": "system", "content": "You are a helpful assistant"},
+            {"role": "user", "content": "Hello, how are you?"}
+        ]
+        assert prompt.messages == expected_messages
+
+    def test_messages_without_system_prompt(self):
+        prompt = Prompt(
+            id="test-id",
+            name="Test Prompt",
+            version=1,
+            system_prompt=None,
+            user_prompt="Hello, how are you?",
+            created_at=datetime.now(),
+            updated_at=datetime.now()
+        )
+        
+        expected_messages = [
+            {"role": "user", "content": "Hello, how are you?"}
+        ]
+        assert prompt.messages == expected_messages
+
+# Synchronous Resource Tests
 class TestPromptsResource:
+    """Tests for the synchronous PromptsResource class"""
+    
     def test_list_prompts(self, prompts_resource, mock_client):
         prompts = prompts_resource.list()
         
@@ -79,6 +117,13 @@ class TestPromptsResource:
         assert isinstance(prompt, Prompt)
         assert prompt.id == "test-id"
         mock_client._get.assert_called_once_with("/prompts/test-id/versions/1")
+
+    def test_get_prompt_not_found(self, mock_client):
+        mock_client._get.return_value = None  # Simulate prompt not found
+        prompts = PromptsResource(mock_client)
+        
+        with pytest.raises(ValueError, match="Prompt with id test-id not found"):
+            prompts.get("test-id")
 
     def test_create_prompt(self, prompts_resource, mock_client):
         prompt = prompts_resource.create(
@@ -122,14 +167,10 @@ class TestPromptsResource:
         assert result is None
         mock_client._patch.assert_called_once()
 
-    def test_get_prompt_not_found(self, mock_client):
-        mock_client._get.return_value = None  # Simulate prompt not found
-        prompts = PromptsResource(mock_client)
-        
-        with pytest.raises(ValueError, match="Prompt with id test-id not found"):
-            prompts.get("test-id")
-
+# Asynchronous Resource Tests
 class TestAsyncPromptsResource:
+    """Tests for the asynchronous AsyncPromptsResource class"""
+    
     @pytest.mark.asyncio
     async def test_list_prompts(self, async_prompts_resource, mock_async_client):
         prompts = await async_prompts_resource.list()
@@ -154,6 +195,14 @@ class TestAsyncPromptsResource:
         assert isinstance(prompt, Prompt)
         assert prompt.id == "test-id"
         mock_async_client._get.assert_called_once_with("/prompts/test-id/versions/1")
+
+    @pytest.mark.asyncio
+    async def test_get_prompt_not_found(self, mock_async_client):
+        mock_async_client._get = AsyncMock(return_value=None)  # Simulate prompt not found
+        prompts = AsyncPromptsResource(mock_async_client)
+        
+        with pytest.raises(ValueError, match="Prompt with id test-id not found"):
+            await prompts.get("test-id")
 
     @pytest.mark.asyncio
     async def test_create_prompt(self, async_prompts_resource, mock_async_client):
@@ -198,47 +247,4 @@ class TestAsyncPromptsResource:
         
         result = await async_prompts_resource.delete(original_prompt)
         assert result is None
-        mock_async_client._patch.assert_called_once()
-
-    @pytest.mark.asyncio
-    async def test_async_get_prompt_not_found(self, mock_async_client):
-        # Use AsyncMock for the _get method
-        mock_async_client._get = AsyncMock(return_value=None)  # Simulate prompt not found
-        prompts = AsyncPromptsResource(mock_async_client)
-        
-        with pytest.raises(ValueError, match="Prompt with id test-id not found"):
-            await prompts.get("test-id")
-
-class TestPrompt:
-    def test_messages_with_system_prompt(self):
-        prompt = Prompt(
-            id="test-id",
-            name="Test Prompt",
-            version=1,
-            system_prompt="You are a helpful assistant",
-            user_prompt="Hello, how are you?",
-            created_at=datetime.now(),
-            updated_at=datetime.now()
-        )
-        
-        expected_messages = [
-            {"role": "system", "content": "You are a helpful assistant"},
-            {"role": "user", "content": "Hello, how are you?"}
-        ]
-        assert prompt.messages == expected_messages
-
-    def test_messages_without_system_prompt(self):
-        prompt = Prompt(
-            id="test-id",
-            name="Test Prompt",
-            version=1,
-            system_prompt=None,
-            user_prompt="Hello, how are you?",
-            created_at=datetime.now(),
-            updated_at=datetime.now()
-        )
-        
-        expected_messages = [
-            {"role": "user", "content": "Hello, how are you?"}
-        ]
-        assert prompt.messages == expected_messages 
+        mock_async_client._patch.assert_called_once() 
