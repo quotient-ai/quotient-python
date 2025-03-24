@@ -1,7 +1,6 @@
 import pytest
 from datetime import datetime
 from unittest.mock import Mock
-import asyncio
 
 from quotientai.resources.runs import Run, RunResult, RunsResource, AsyncRunsResource
 from quotientai.resources.prompts import Prompt

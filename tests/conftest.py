@@ -1,5 +1,4 @@
 import pytest
-from pathlib import Path
 from tests.helpers import PROJECT_ROOT, get_test_data_path, ensure_test_data_dir
 
 @pytest.fixture(scope="session", autouse=True)

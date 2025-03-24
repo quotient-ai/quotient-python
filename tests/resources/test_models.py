@@ -1,6 +1,6 @@
 import pytest
 from datetime import datetime
-from quotientai.resources.models import Model, ModelProvider, ModelsResource, AsyncModelsResource
+from quotientai.resources.models import Model, ModelsResource, AsyncModelsResource
 
 @pytest.fixture
 def mock_model_response():

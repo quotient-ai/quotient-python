@@ -1,20 +1,9 @@
 import pytest
-import jwt
 import time
 import json
-from pathlib import Path
-from unittest.mock import Mock, patch, MagicMock, AsyncMock
+from unittest.mock import Mock, patch, AsyncMock
 from datetime import datetime
-import random
-
-# Import our helper first to ensure paths are set up correctly
-from tests.helpers import PROJECT_ROOT, get_test_data_path
 from quotientai.async_client import AsyncQuotientAI, AsyncQuotientLogger, QuotientAIError, _AsyncQuotientClient
-
-# Add a fixture for test data directory
-@pytest.fixture
-def test_data_dir():
-    return get_test_data_path()
 
 # Modify existing fixtures to use proper paths
 @pytest.fixture

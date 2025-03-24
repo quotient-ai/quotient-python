@@ -1,16 +1,13 @@
 import pytest
 import httpx
-from unittest.mock import Mock, AsyncMock, patch
+from unittest.mock import Mock, patch
 
 from quotientai.exceptions import (
     handle_errors,
     handle_async_errors,
     BadRequestError,
     AuthenticationError,
-    PermissionDeniedError,
-    NotFoundError,
     UnprocessableEntityError,
-    APIStatusError,
     APIConnectionError,
 )
 
