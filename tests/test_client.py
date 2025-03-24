@@ -3,6 +3,8 @@ import time
 import json
 from unittest.mock import Mock, patch
 from datetime import datetime
+from pathlib import Path
+import jwt
 
 from quotientai.client import QuotientAI, QuotientLogger, QuotientAIError, _BaseQuotientClient
 
@@ -182,6 +184,154 @@ class TestBaseQuotientClient:
             client.token_expiry = int(time.time()) - 3600
             client._update_auth_header()
             assert client.headers["Authorization"] == f"Bearer {client.api_key}"
+
+    def test_token_path_uses_home(self):
+        with patch('pathlib.Path.home') as mock_home:
+            mock_home.return_value = Path('/home/user')
+            client = _BaseQuotientClient('test-key')
+            assert client._token_path == Path('/home/user/.quotient/auth_token.json')
+
+    def test_token_path_fallback_to_root(self):
+        with patch('pathlib.Path.home') as mock_home, \
+             patch('pathlib.Path.exists') as mock_exists:
+            # Simulate home directory access failing
+            mock_home.side_effect = Exception("Can't access home")
+            # Simulate /root existing
+            mock_exists.return_value = True
+            
+            client = _BaseQuotientClient('test-key')
+            assert client._token_path == Path('/root/.quotient/auth_token.json')
+
+    def test_token_path_fallback_to_cwd(self):
+        with patch('pathlib.Path.home') as mock_home, \
+             patch('pathlib.Path.exists') as mock_exists, \
+             patch('pathlib.Path.cwd') as mock_cwd:
+            # Simulate home directory access failing
+            mock_home.side_effect = Exception("Can't access home")
+            # Simulate /root not existing
+            mock_exists.return_value = False
+            # Set current working directory
+            mock_cwd.return_value = Path('/current/dir')
+            
+            client = _BaseQuotientClient('test-key')
+            assert client._token_path == Path('/current/dir/.quotient/auth_token.json')
+
+    def test_handle_jwt_token_success(self):
+        client = _BaseQuotientClient('test-key')
+        mock_response = Mock()
+        test_token = "test.jwt.token"
+        test_expiry = int(time.time()) + 3600
+        
+        # Create a real JWT token with an expiry
+        mock_response.headers = {"X-JWT-Token": test_token}
+        
+        with patch('jwt.decode') as mock_decode:
+            mock_decode.return_value = {"exp": test_expiry}
+            client._handle_response(mock_response)
+            
+            assert client.headers["Authorization"] == f"Bearer {test_token}"
+            assert client.token == test_token
+            assert client.token_expiry == test_expiry
+
+    def test_handle_jwt_token_decode_error(self):
+        client = _BaseQuotientClient('test-key')
+        mock_response = Mock()
+        original_auth = client.headers["Authorization"]
+        test_token = "test.jwt.token"
+        test_expiry = int(time.time()) + 3600
+        mock_response.headers = {"X-JWT-Token": test_token}
+        
+        with patch('jwt.decode') as mock_decode:
+            mock_decode.side_effect = jwt.InvalidTokenError("Invalid token")
+            client._handle_response(mock_response)
+            
+            # Should keep original authorization header on error
+            assert client.headers["Authorization"] == original_auth
+            # Token is still saved even if decoding fails
+            assert client.token == test_token
+            assert client.token_expiry == test_expiry
+
+    def test_token_dir_creation_error(self, tmp_path):
+        """Test handling of directory creation errors"""
+        with patch('pathlib.Path.home', return_value=tmp_path), \
+             patch('pathlib.Path.mkdir', side_effect=Exception("Permission denied")):
+            client = _BaseQuotientClient("test-api-key")
+            with pytest.raises(QuotientAIError) as exc:
+                client._save_token("test-token", int(time.time()) + 3600)
+            
+            assert "could not create directory for token" in str(exc.value)
+            assert "contact@quotientai.co" in str(exc.value)
+
+    def test_get_wrapper(self, tmp_path):
+        """Test _get wrapper method"""
+        with patch('pathlib.Path.home', return_value=tmp_path):
+            client = _BaseQuotientClient("test-api-key")
+            with patch.object(client, 'get') as mock_get:
+                mock_response = Mock()
+                mock_get.return_value = mock_response
+                
+                # Test with params
+                client._get("/test", params={"key": "value"}, timeout=30)
+                mock_get.assert_called_with("/test", params={"key": "value"}, timeout=30)
+                
+                # Test without params
+                client._get("/test")
+                mock_get.assert_called_with("/test", params=None, timeout=None)
+
+    def test_post_wrapper(self, tmp_path):
+        """Test _post wrapper method"""
+        with patch('pathlib.Path.home', return_value=tmp_path):
+            client = _BaseQuotientClient("test-api-key")
+            with patch.object(client, 'post') as mock_post:
+                mock_response = Mock()
+                mock_post.return_value = mock_response
+                
+                # Test with data
+                data = {"key": "value", "null_key": None}
+                client._post("/test", data=data, timeout=30)
+                mock_post.assert_called_with(url="/test", json={"key": "value"}, timeout=30)
+                
+                # Test with list data
+                list_data = ["value", None, "value2"]
+                client._post("/test", data=list_data)
+                mock_post.assert_called_with(url="/test", json=["value", "value2"], timeout=None)
+                
+                # Test without data
+                client._post("/test")
+                mock_post.assert_called_with(url="/test", json={}, timeout=None)
+
+    def test_patch_wrapper(self, tmp_path):
+        """Test _patch wrapper method"""
+        with patch('pathlib.Path.home', return_value=tmp_path):
+            client = _BaseQuotientClient("test-api-key")
+            with patch.object(client, 'patch') as mock_patch:
+                mock_response = Mock()
+                mock_patch.return_value = mock_response
+                
+                # Test with data
+                data = {"key": "value", "null_key": None}
+                client._patch("/test", data=data, timeout=30)
+                mock_patch.assert_called_with(url="/test", json={"key": "value"}, timeout=30)
+                
+                # Test without data
+                client._patch("/test")
+                mock_patch.assert_called_with(url="/test", json={}, timeout=None)
+
+    def test_delete_wrapper(self, tmp_path):
+        """Test _delete wrapper method"""
+        with patch('pathlib.Path.home', return_value=tmp_path):
+            client = _BaseQuotientClient("test-api-key")
+            with patch.object(client, 'delete') as mock_delete:
+                mock_response = Mock()
+                mock_delete.return_value = mock_response
+                
+                # Test with timeout
+                client._delete("/test", timeout=30)
+                mock_delete.assert_called_with("/test", timeout=30)
+                
+                # Test without timeout
+                client._delete("/test")
+                mock_delete.assert_called_with("/test", timeout=None)
 
 class TestQuotientAI:
     """Tests for the QuotientAI class"""

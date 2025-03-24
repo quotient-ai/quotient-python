@@ -1,8 +1,9 @@
 import pytest
 from datetime import datetime
-from unittest.mock import Mock, patch, AsyncMock
+from unittest.mock import Mock, AsyncMock
 from quotientai.resources.logs import Log, LogsResource, AsyncLogsResource
 
+# Fixtures
 @pytest.fixture
 def mock_client():
     return Mock()
@@ -24,6 +25,7 @@ def sample_log_data():
         "created_at": "2024-01-01T00:00:00"
     }
 
+# Model Tests
 class TestLog:
     """Tests for the Log dataclass"""
     
@@ -64,6 +66,7 @@ class TestLog:
         assert ("id", "test-id") in repr_items
         assert ("app_name", "test-app") in repr_items
 
+# Synchronous Resource Tests
 class TestLogsResource:
     """Tests for the synchronous LogsResource class"""
     
@@ -117,18 +120,36 @@ class TestLogsResource:
         with pytest.raises(Exception):
             logs_resource.list()
 
+    def test_post_log(self, logs_resource):
+        test_data = {"message": "test log", "level": "info"}
+
+        # Test successful post
+        def mock_successful_post(path, data):
+            assert path == "/logs"
+            assert data == test_data
+            return {}
+
+        logs_resource._client._post = mock_successful_post
+        logs_resource._post_log(test_data)
+
+        # Test failed post
+        def mock_failed_post(path, data):
+            raise Exception("Network error")
+
+        logs_resource._client._post = mock_failed_post
+        logs_resource._post_log(test_data)  # Should complete without error
+
+# Asynchronous Resource Tests
 class TestAsyncLogsResource:
     """Tests for the asynchronous AsyncLogsResource class"""
     
     @pytest.fixture
     def async_logs_resource(self, mock_client):
-        # Set up the async mock for _get method
         mock_client._get = AsyncMock()
         return AsyncLogsResource(mock_client)
 
     @pytest.mark.asyncio
     async def test_create_log(self, async_logs_resource):
-        # Set up the async mock for _post method
         async_logs_resource._client._post = AsyncMock()
         
         result = await async_logs_resource.create(
@@ -177,4 +198,24 @@ class TestAsyncLogsResource:
         mock_client._get.side_effect = Exception("API Error")
         
         with pytest.raises(Exception):
-            await async_logs_resource.list() 
+            await async_logs_resource.list()
+
+    @pytest.mark.asyncio
+    async def test_post_log_in_background(self, async_logs_resource):
+        test_data = {"message": "test log", "level": "info"}
+
+        # Test successful post
+        async def mock_successful_post(path, data):
+            assert path == "/logs"
+            assert data == test_data
+            return {}
+
+        async_logs_resource._client._post = mock_successful_post
+        await async_logs_resource._post_log_in_background(test_data)
+
+        # Test failed post
+        async def mock_failed_post(path, data):
+            raise Exception("Network error")
+
+        async_logs_resource._client._post = mock_failed_post
+        await async_logs_resource._post_log_in_background(test_data)  # Should complete without error 

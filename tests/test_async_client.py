@@ -4,6 +4,7 @@ import json
 from unittest.mock import Mock, patch, AsyncMock
 from datetime import datetime
 from quotientai.async_client import AsyncQuotientAI, AsyncQuotientLogger, QuotientAIError, _AsyncQuotientClient
+from pathlib import Path
 
 # Modify existing fixtures to use proper paths
 @pytest.fixture
@@ -61,13 +62,26 @@ class TestAsyncBaseQuotientClient:
         # Use a clean temporary directory for token storage
         token_dir = tmp_path / ".quotient"
         
+        # Test successful home directory case
         with patch('pathlib.Path.home', return_value=tmp_path):
             client = _AsyncQuotientClient(api_key)
-            
             assert client.api_key == api_key
             assert client.token is None
             assert client.token_expiry == 0
             assert client.headers["Authorization"] == f"Bearer {api_key}"
+            assert client._token_path == tmp_path / ".quotient" / "auth_token.json"
+        
+        # Test fallback to /root when home fails
+        with patch('pathlib.Path.home', side_effect=Exception("Test error")), \
+             patch('pathlib.Path.exists', return_value=True):
+            client = _AsyncQuotientClient(api_key)
+            assert client._token_path == Path("/root/.quotient/auth_token.json")
+        
+        # Test fallback to cwd when home fails and /root doesn't exist
+        with patch('pathlib.Path.home', side_effect=Exception("Test error")), \
+             patch('pathlib.Path.exists', return_value=False):
+            client = _AsyncQuotientClient(api_key)
+            assert client._token_path == Path.cwd() / ".quotient" / "auth_token.json"
 
     def test_handle_jwt_response(self):
         """Test that _handle_response properly processes JWT tokens"""
@@ -178,6 +192,154 @@ class TestAsyncBaseQuotientClient:
             client.token_expiry = int(time.time()) - 3600
             client._update_auth_header()
             assert client.headers["Authorization"] == f"Bearer {client.api_key}"
+
+    def test_token_directory_creation_failure(self, tmp_path):
+        """Test that appropriate error is raised when token directory creation fails"""
+        api_key = "test-api-key"
+        
+        # Mock Path.home() to return our test path
+        with patch('pathlib.Path.home', return_value=tmp_path), \
+             patch.object(Path, 'mkdir', side_effect=Exception("Test error")):
+            client = _AsyncQuotientClient(api_key)
+            # Try to save a token to trigger the directory creation
+            with pytest.raises(QuotientAIError, match="could not create directory for token"):
+                client._save_token("test-token", 1234567890)
+
+    def test_token_parse_failure(self, tmp_path):
+        """Test that client continues with current auth when token parsing fails"""
+        api_key = "test-api-key"
+        
+        # Create a token file with invalid JSON
+        token_dir = tmp_path / ".quotient"
+        token_dir.mkdir(parents=True, exist_ok=True)
+        token_file = token_dir / "auth_token.json"
+        token_file.write_text("invalid json content")
+        
+        # Initialize client with home directory set to our test path
+        with patch('pathlib.Path.home', return_value=tmp_path):
+            client = _AsyncQuotientClient(api_key)
+            
+            # Verify that client falls back to API key auth
+            assert client.token is None
+            assert client.token_expiry == 0
+            assert client.headers["Authorization"] == f"Bearer {api_key}"
+
+    def test_jwt_token_parse_failure(self, tmp_path):
+        """Test that client continues when JWT token parsing fails"""
+        api_key = "test-api-key"
+        
+        with patch('pathlib.Path.home', return_value=tmp_path):
+            client = _AsyncQuotientClient(api_key)
+            
+            # Set up a token
+            client.token = "test.jwt.token"
+            client.token_expiry = int(time.time()) + 3600
+            
+            # Mock jwt.decode to fail
+            with patch('jwt.decode', side_effect=Exception("Test error")):
+                # This should trigger the token validation failure
+                client._is_token_valid()
+                # Should fall back to API key auth
+                assert client.headers["Authorization"] == f"Bearer {api_key}"
+
+    @pytest.mark.asyncio
+    async def test_get_wrapper(self, tmp_path):
+        """Test the _get wrapper method"""
+        api_key = "test-api-key"
+        test_response = {"data": "test"}
+        
+        with patch('pathlib.Path.home', return_value=tmp_path):
+            client = _AsyncQuotientClient(api_key)
+            
+            # Mock the underlying get method
+            client.get = AsyncMock(return_value=Mock(
+                json=Mock(return_value=test_response)
+            ))
+            
+            # Test basic GET
+            result = await client._get("/test")
+            assert result == test_response
+            client.get.assert_called_once_with("/test", params=None, timeout=None)
+            
+            # Test with params and timeout
+            await client._get("/test", params={"key": "value"}, timeout=30)
+            client.get.assert_called_with("/test", params={"key": "value"}, timeout=30)
+
+    @pytest.mark.asyncio
+    async def test_post_wrapper(self, tmp_path):
+        """Test the _post wrapper method"""
+        api_key = "test-api-key"
+        test_response = {"data": "test"}
+        test_data = {"key": "value", "null_key": None}
+        
+        with patch('pathlib.Path.home', return_value=tmp_path):
+            client = _AsyncQuotientClient(api_key)
+            
+            # Mock the underlying post method
+            client.post = AsyncMock(return_value=Mock(
+                json=Mock(return_value=test_response)
+            ))
+            
+            # Test basic POST
+            result = await client._post("/test", test_data)
+            assert result == test_response
+            client.post.assert_called_once_with(
+                url="/test",
+                json={"key": "value"},  # None values should be filtered
+                timeout=None
+            )
+            
+            # Test with list data
+            list_data = ["value1", None, "value2"]
+            await client._post("/test", list_data)
+            client.post.assert_called_with(
+                url="/test",
+                json=["value1", "value2"],  # None values should be filtered
+                timeout=None
+            )
+
+    @pytest.mark.asyncio
+    async def test_patch_wrapper(self, tmp_path):
+        """Test the _patch wrapper method"""
+        api_key = "test-api-key"
+        test_response = {"data": "test"}
+        test_data = {"key": "value", "null_key": None}
+        
+        with patch('pathlib.Path.home', return_value=tmp_path):
+            client = _AsyncQuotientClient(api_key)
+            
+            # Mock the underlying patch method
+            client.patch = AsyncMock(return_value=Mock(
+                json=Mock(return_value=test_response)
+            ))
+            
+            # Test PATCH
+            result = await client._patch("/test", test_data)
+            assert result == test_response
+            client.patch.assert_called_once_with(
+                url="/test",
+                json={"key": "value"},  # None values should be filtered
+                timeout=None
+            )
+
+    @pytest.mark.asyncio
+    async def test_delete_wrapper(self, tmp_path):
+        """Test the _delete wrapper method"""
+        api_key = "test-api-key"
+        test_response = {"data": "test"}
+        
+        with patch('pathlib.Path.home', return_value=tmp_path):
+            client = _AsyncQuotientClient(api_key)
+            
+            # Mock the underlying delete method
+            client.delete = AsyncMock(return_value=Mock(
+                json=Mock(return_value=test_response)
+            ))
+            
+            # Test DELETE
+            result = await client._delete("/test")
+            assert result == test_response
+            client.delete.assert_called_once_with("/test", timeout=None)
 
 class TestAsyncQuotientAI:
     """Tests for the AsyncQuotientAI class"""

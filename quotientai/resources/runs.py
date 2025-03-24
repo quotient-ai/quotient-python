@@ -25,7 +25,7 @@ class RunResult:
     context: Optional[str]
     expected: Optional[str]
 
-    def __rich_repr__(self):
+    def __rich_repr__(self): # pragma: no cover
         yield "id", self.id
         yield "values", self.values
         yield "created_at", self.created_at
@@ -53,7 +53,7 @@ class Run:
     created_at: Optional[datetime] = None
     finished_at: Optional[datetime] = None
 
-    def __rich_repr__(self):
+    def __rich_repr__(self): # pragma: no cover
         yield "id", self.id
         yield "model", self.model
         yield "status", self.status

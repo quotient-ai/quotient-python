@@ -1,9 +1,9 @@
 import pytest
-from unittest.mock import Mock
-from unittest.mock import AsyncMock
+from unittest.mock import Mock, AsyncMock
 
 from quotientai.resources.metrics import MetricsResource, AsyncMetricsResource
 
+# Test Data
 SAMPLE_METRICS = [
     "bertscore",
     "exactmatch",
@@ -23,33 +23,31 @@ SAMPLE_METRICS = [
     "verbosity_ratio",
 ]
 
-def test_metrics_list():
-    # Create a mock client
-    mock_client = Mock()
-    mock_client._get.return_value = {"data": SAMPLE_METRICS}
+# Synchronous Resource Tests
+class TestMetricsResource:
+    """Tests for the synchronous MetricsResource class"""
     
-    # Initialize the metrics resource with mock client
-    metrics = MetricsResource(mock_client)
-    
-    # Call the list method
-    result = metrics.list()
-    
-    # Verify the result
-    assert result == SAMPLE_METRICS
-    mock_client._get.assert_called_once_with("/runs/metrics")
+    def test_list_metrics(self):
+        mock_client = Mock()
+        mock_client._get.return_value = {"data": SAMPLE_METRICS}
+        
+        metrics = MetricsResource(mock_client)
+        result = metrics.list()
+        
+        assert result == SAMPLE_METRICS
+        mock_client._get.assert_called_once_with("/runs/metrics")
 
-@pytest.mark.asyncio
-async def test_async_metrics_list():
-    # Create a mock client with AsyncMock
-    mock_client = Mock()
-    mock_client._get = AsyncMock(return_value={"data": SAMPLE_METRICS})
+# Asynchronous Resource Tests
+class TestAsyncMetricsResource:
+    """Tests for the asynchronous AsyncMetricsResource class"""
     
-    # Initialize the async metrics resource with mock client
-    metrics = AsyncMetricsResource(mock_client)
-    
-    # Call the list method
-    result = await metrics.list()
-    
-    # Verify the result
-    assert result == SAMPLE_METRICS
-    mock_client._get.assert_called_once_with("/runs/metrics") 
+    @pytest.mark.asyncio
+    async def test_list_metrics(self):
+        mock_client = Mock()
+        mock_client._get = AsyncMock(return_value={"data": SAMPLE_METRICS})
+        
+        metrics = AsyncMetricsResource(mock_client)
+        result = await metrics.list()
+        
+        assert result == SAMPLE_METRICS
+        mock_client._get.assert_called_once_with("/runs/metrics") 

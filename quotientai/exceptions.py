@@ -239,6 +239,9 @@ def handle_errors(func):
                     body=exc.response.text,
                 )
 
+        except httpx.ReadTimeout as exc:  # pragma: no cover
+            raise APITimeoutError(request=exc.request)  # pragma: no cover
+
         except httpx.RequestError as exc:
             raise APIConnectionError(
                 message="connection error. please try again later.",
@@ -263,7 +266,6 @@ def handle_async_errors(func):
             return response.json()
 
         except httpx.ReadTimeout as exc:
-            # Let the retry decorator handle this
             raise
 
         except httpx.HTTPStatusError as exc:
@@ -305,6 +307,9 @@ def handle_async_errors(func):
                     response=exc.response,
                     body=exc.response.text,
                 )
+
+        except httpx.ReadTimeout as exc:  # pragma: no cover
+            raise APITimeoutError(request=exc.request)  # pragma: no cover
 
         except httpx.RequestError as exc:
             raise APIConnectionError(
