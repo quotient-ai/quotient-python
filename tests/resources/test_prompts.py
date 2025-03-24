@@ -1,6 +1,7 @@
 import pytest
 from datetime import datetime
-from quotientai.resources.prompts import Prompt
+from quotientai.resources.prompts import Prompt, PromptsResource, AsyncPromptsResource
+from unittest.mock import AsyncMock
 
 @pytest.fixture
 def pytest_configure(config):
@@ -50,12 +51,10 @@ def mock_async_client(mocker):
 
 @pytest.fixture
 def prompts_resource(mock_client):
-    from quotientai.resources.prompts import PromptsResource
     return PromptsResource(mock_client)
 
 @pytest.fixture
 def async_prompts_resource(mock_async_client):
-    from quotientai.resources.prompts import AsyncPromptsResource
     return AsyncPromptsResource(mock_async_client)
 
 class TestPromptsResource:
@@ -122,6 +121,13 @@ class TestPromptsResource:
         result = prompts_resource.delete(original_prompt)
         assert result is None
         mock_client._patch.assert_called_once()
+
+    def test_get_prompt_not_found(self, mock_client):
+        mock_client._get.return_value = None  # Simulate prompt not found
+        prompts = PromptsResource(mock_client)
+        
+        with pytest.raises(ValueError, match="Prompt with id test-id not found"):
+            prompts.get("test-id")
 
 class TestAsyncPromptsResource:
     @pytest.mark.asyncio
@@ -192,4 +198,47 @@ class TestAsyncPromptsResource:
         
         result = await async_prompts_resource.delete(original_prompt)
         assert result is None
-        mock_async_client._patch.assert_called_once() 
+        mock_async_client._patch.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_async_get_prompt_not_found(self, mock_async_client):
+        # Use AsyncMock for the _get method
+        mock_async_client._get = AsyncMock(return_value=None)  # Simulate prompt not found
+        prompts = AsyncPromptsResource(mock_async_client)
+        
+        with pytest.raises(ValueError, match="Prompt with id test-id not found"):
+            await prompts.get("test-id")
+
+class TestPrompt:
+    def test_messages_with_system_prompt(self):
+        prompt = Prompt(
+            id="test-id",
+            name="Test Prompt",
+            version=1,
+            system_prompt="You are a helpful assistant",
+            user_prompt="Hello, how are you?",
+            created_at=datetime.now(),
+            updated_at=datetime.now()
+        )
+        
+        expected_messages = [
+            {"role": "system", "content": "You are a helpful assistant"},
+            {"role": "user", "content": "Hello, how are you?"}
+        ]
+        assert prompt.messages == expected_messages
+
+    def test_messages_without_system_prompt(self):
+        prompt = Prompt(
+            id="test-id",
+            name="Test Prompt",
+            version=1,
+            system_prompt=None,
+            user_prompt="Hello, how are you?",
+            created_at=datetime.now(),
+            updated_at=datetime.now()
+        )
+        
+        expected_messages = [
+            {"role": "user", "content": "Hello, how are you?"}
+        ]
+        assert prompt.messages == expected_messages 

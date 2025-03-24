@@ -117,6 +117,27 @@ class TestLogsResource:
         with pytest.raises(Exception):
             logs_resource.list()
 
+    def test_post_log(self, logs_resource):
+        test_data = {"message": "test log", "level": "info"}
+
+        # Test successful post
+        def mock_successful_post(path, data):
+            assert path == "/logs"
+            assert data == test_data
+            return {}
+
+        logs_resource._client._post = mock_successful_post
+        # Should complete without error
+        logs_resource._post_log(test_data)
+
+        # Test failed post
+        def mock_failed_post(path, data):
+            raise Exception("Network error")
+
+        logs_resource._client._post = mock_failed_post
+        # Should complete without error, silently handling the exception
+        logs_resource._post_log(test_data)
+
 class TestAsyncLogsResource:
     """Tests for the asynchronous AsyncLogsResource class"""
     
@@ -177,4 +198,26 @@ class TestAsyncLogsResource:
         mock_client._get.side_effect = Exception("API Error")
         
         with pytest.raises(Exception):
-            await async_logs_resource.list() 
+            await async_logs_resource.list()
+
+    @pytest.mark.asyncio
+    async def test_post_log_in_background(self, async_logs_resource):
+        test_data = {"message": "test log", "level": "info"}
+
+        # Test successful post
+        async def mock_successful_post(path, data):
+            assert path == "/logs"
+            assert data == test_data
+            return {}
+
+        async_logs_resource._client._post = mock_successful_post
+        # Should complete without error
+        await async_logs_resource._post_log_in_background(test_data)
+
+        # Test failed post
+        async def mock_failed_post(path, data):
+            raise Exception("Network error")
+
+        async_logs_resource._client._post = mock_failed_post
+        # Should complete without error, silently handling the exception
+        await async_logs_resource._post_log_in_background(test_data) 
