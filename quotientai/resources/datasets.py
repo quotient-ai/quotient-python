@@ -256,23 +256,26 @@ class DatasetsResource:
         # TODO: update the dataset_rows API to take in a list of rows
         # rather than one row at a time. This should be the expected behavior.
         row_responses = []
-        self.batch_create_rows(id, rows, row_responses)
-        dataset_rows = [
-            DatasetRow(
-                id=row_response["dataset_row_id"],
-                input=row_response["input"],
-                context=row_response["context"],
-                expected=row_response["expected"],
-                metadata=DatasetRowMetadata(
-                    annotation=row_response["annotation"],
-                    annotation_note=row_response["annotation_note"],
-                ),
-                created_at=row_response["created_at"],
-                created_by=row_response["created_by"],
-                updated_at=row_response["updated_at"],
-            )
-            for row_response in row_responses
-        ]
+        if rows:
+            self.batch_create_rows(id, rows, row_responses)
+            dataset_rows = [
+                DatasetRow(
+                    id=row_response["dataset_row_id"],
+                    input=row_response["input"],
+                    context=row_response["context"],
+                    expected=row_response["expected"],
+                    metadata=DatasetRowMetadata(
+                        annotation=row_response["annotation"],
+                        annotation_note=row_response["annotation_note"],
+                    ),
+                    created_at=row_response["created_at"],
+                    created_by=row_response["created_by"],
+                    updated_at=row_response["updated_at"],
+                )
+                for row_response in row_responses
+            ]
+        else:
+            dataset_rows = []
 
         dataset = Dataset(
             id=id,
@@ -620,23 +623,26 @@ class AsyncDatasetsResource:
         # TODO: update the dataset_rows API to take in a list of rows
         # rather than one row at a time. This should be the expected behavior.
         row_responses = []
-        await self.batch_create_rows(id, rows, row_responses)
-        dataset_rows = [
-            DatasetRow(
-                id=row_response["dataset_row_id"],
-                input=row_response["input"],
-                context=row_response["context"],
-                expected=row_response["expected"],
-                metadata=DatasetRowMetadata(
-                    annotation=row_response["annotation"],
-                    annotation_note=row_response["annotation_note"],
-                ),
-                created_at=row_response["created_at"],
-                created_by=row_response["created_by"],
-                updated_at=row_response["updated_at"],
-            )
-            for row_response in row_responses
-        ]
+        if rows:
+            await self.batch_create_rows(id, rows, row_responses)
+            dataset_rows = [
+                DatasetRow(
+                    id=row_response["dataset_row_id"],
+                    input=row_response["input"],
+                    context=row_response["context"],
+                    expected=row_response["expected"],
+                    metadata=DatasetRowMetadata(
+                        annotation=row_response["annotation"],
+                        annotation_note=row_response["annotation_note"],
+                    ),
+                    created_at=row_response["created_at"],
+                    created_by=row_response["created_by"],
+                    updated_at=row_response["updated_at"],
+                )
+                for row_response in row_responses
+            ]
+        else:
+            dataset_rows = []
 
         dataset = Dataset(
             id=id,
