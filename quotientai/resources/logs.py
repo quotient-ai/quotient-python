@@ -55,8 +55,9 @@ class LogsResource:
                 try:
                     # Process the log
                     self._post_log(log_data)
-                except Exception:
+                except Exception: # pragma: no cover
                     # Handle exceptions but keep the thread running
+                    # hard to test due to threading
                     pass
             else:
                 # Prevent busy waiting
