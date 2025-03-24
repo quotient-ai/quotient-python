@@ -253,8 +253,8 @@ class RunsResource:
         if len(runs) == 2:
             comparison = {
                 metric: {
-                    "value": summaries[0]["metrics"][metric]["value"]
-                    - summaries[1]["metrics"][metric]["value"],
+                    "avg": summaries[0]["metrics"][metric]["avg"]
+                    - summaries[1]["metrics"][metric]["avg"],
                     "stddev": summaries[0]["metrics"][metric]["stddev"],
                 }
                 for metric in runs[0].metrics
