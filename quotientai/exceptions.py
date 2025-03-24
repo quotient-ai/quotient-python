@@ -262,6 +262,10 @@ def handle_async_errors(func):
             response.raise_for_status()
             return response.json()
 
+        except httpx.ReadTimeout as exc:
+            # Let the retry decorator handle this
+            raise
+
         except httpx.HTTPStatusError as exc:
             if exc.response.status_code == 400:
                 message = _parse_bad_request_error(exc.response)
