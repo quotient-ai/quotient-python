@@ -55,7 +55,7 @@ class DatasetRow:
     created_at: datetime
     updated_at: datetime
 
-    def __rich_repr__(self):
+    def __rich_repr__(self): # pragma: no cover
         yield "id", self.id
         yield "context", self.context
         yield "input", self.input
@@ -97,7 +97,7 @@ class Dataset:
 
     rows: Optional[List[DatasetRow]] = field(default_factory=lambda: [])
 
-    def __rich_repr__(self):
+    def __rich_repr__(self): # pragma: no cover
         yield "id", self.id
         yield "name", self.name
         yield "description", self.description

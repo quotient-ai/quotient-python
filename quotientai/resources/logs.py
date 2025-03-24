@@ -27,7 +27,7 @@ class Log:
     tags: Dict[str, Any]
     created_at: datetime
 
-    def __rich_repr__(self):
+    def __rich_repr__(self): # pragma: no cover
         yield "id", self.id
         yield "app_name", self.app_name
         yield "environment", self.environment

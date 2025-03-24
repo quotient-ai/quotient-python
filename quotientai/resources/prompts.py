@@ -15,7 +15,7 @@ class Prompt:
 
     system_prompt: Optional[str] = None
 
-    def __rich_repr__(self):
+    def __rich_repr__(self): # pragma: no cover
         yield "id", self.id
         yield "name", self.name
         yield "system_prompt", self.system_prompt

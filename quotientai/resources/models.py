@@ -16,7 +16,7 @@ class Model:
     provider: ModelProvider
     created_at: str
 
-    def __rich_repr__(self):
+    def __rich_repr__(self): # pragma: no cover
         yield "provider", self.provider.name
         yield "name", self.name
 
