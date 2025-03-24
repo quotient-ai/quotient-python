@@ -24,8 +24,10 @@ tenacity = "<=9.0.0"
 pyjwt = "^2.10.1"
 
 
+
 [tool.poetry.group.dev.dependencies]
 pytest = "^8.0.0"
+pytest-asyncio = "^0.25.3"
 pytest-cov = "^5.0.0"
 pytest-mock = "^3.14.0"
 pre-commit = "^3.7.0"
