@@ -239,6 +239,10 @@ class TestRun:
         assert actual_order_worst == expected_order_worst
 
 class TestRunsResource:
+    def setup_method(self, method):
+        from quotientai.resources.runs import RunsResource
+        self.runs = RunsResource(None)
+
     def test_list(self, mock_client, sample_run_data):
         mock_client._get.return_value = [sample_run_data]
         runs = RunsResource(mock_client).list()
@@ -275,92 +279,288 @@ class TestRunsResource:
         assert isinstance(run, Run)
         assert run.id == "run_123"
 
-    def test_compare(self, mock_client):
+    def test_compare_runs_different_datasets(self):
         run1 = Run(
-            id="run_1",
-            prompt="prompt_1",
-            dataset="dataset_1",
-            model="model_1",
+            id="1",
+            dataset="dataset1",
+            prompt="prompt1",
+            model="model1",
             parameters={},
             metrics=["accuracy"],
             status="completed",
-            created_at=datetime.fromisoformat("2024-01-01T00:00:00"),
-            results=[
-                {
-                    "id": "result_1",
-                    "input": "test input",
-                    "output": "test output",
-                    "values": {"accuracy": 0.9},
-                    "created_at": "2024-01-01T00:00:00",
-                    "created_by": "user_123",
-                    "context": None,
-                    "expected": None
-                }
-            ]
+            results=[{
+                "id": "result1",
+                "input": "test input",
+                "output": "test output",
+                "values": {"accuracy": 0.8},
+                "created_at": datetime.now(),
+                "created_by": "test",
+                "context": None,
+                "expected": None
+            }]
         )
-        
         run2 = Run(
-            id="run_2",
-            prompt="prompt_1",
-            dataset="dataset_1",
-            model="model_2",
+            id="2",
+            dataset="dataset2",  # Different dataset
+            prompt="prompt1",
+            model="model1",
             parameters={},
             metrics=["accuracy"],
             status="completed",
-            created_at=datetime.fromisoformat("2024-01-01T00:00:00"),
-            results=[
-                {
-                    "id": "result_2",
-                    "input": "test input",
-                    "output": "test output",
-                    "values": {"accuracy": 0.8},
-                    "created_at": "2024-01-01T00:00:00",
-                    "created_by": "user_123",
-                    "context": None,
-                    "expected": None
-                }
-            ]
+            results=[{
+                "id": "result2",
+                "input": "test input",
+                "output": "test output",
+                "values": {"accuracy": 0.7},
+                "created_at": datetime.now(),
+                "created_by": "test",
+                "context": None,
+                "expected": None
+            }]
         )
-        
-        runs_resource = RunsResource(mock_client)
-        comparison = runs_resource.compare([run1, run2])
-        
-        assert comparison is not None
-        assert "accuracy" in comparison
-        assert "avg" in comparison["accuracy"]
-        assert comparison["accuracy"]["avg"] == pytest.approx(0.1)
-
-    def test_compare_runs_different_datasets():
-        # Create runs with different datasets
-        run1 = Run(dataset="dataset1", prompt="prompt1", model="model1")
-        run2 = Run(dataset="dataset2", prompt="prompt1", model="model1")
         
         with pytest.raises(ValueError, match="all runs must be on the same dataset"):
-            Run.compare_runs([run1, run2])  # Adjust method name based on your actual implementation
-    
-    def test_compare_runs_different_prompts_and_models():
-        # Create runs with different prompts AND models
-        run1 = Run(dataset="dataset1", prompt="prompt1", model="model1")
-        run2 = Run(dataset="dataset1", prompt="prompt2", model="model2")
+            self.runs.compare([run1, run2])
+
+    def test_compare_runs_different_prompts_and_models(self):
+        run1 = Run(
+            id="1",
+            dataset="dataset1",
+            prompt="prompt1",
+            model="model1",
+            parameters={},
+            metrics=["accuracy"],
+            status="completed",
+            results=[{
+                "id": "result1",
+                "input": "test input",
+                "output": "test output",
+                "values": {"accuracy": 0.8},
+                "created_at": datetime.now(),
+                "created_by": "test",
+                "context": None,
+                "expected": None
+            }]
+        )
+        run2 = Run(
+            id="2",
+            dataset="dataset1",
+            prompt="prompt2",  # Different prompt
+            model="model2",    # Different model
+            parameters={},
+            metrics=["accuracy"],
+            status="completed",
+            results=[{
+                "id": "result2",
+                "input": "test input",
+                "output": "test output",
+                "values": {"accuracy": 0.7},
+                "created_at": datetime.now(),
+                "created_by": "test",
+                "context": None,
+                "expected": None
+            }]
+        )
         
         with pytest.raises(ValueError, match="all runs must be on the same prompt or model"):
-            Run.compare_runs([run1, run2])
-    
-    def test_compare_runs_different_prompts_same_model():
-        # This should work - only prompts are different
-        run1 = Run(dataset="dataset1", prompt="prompt1", model="model1")
-        run2 = Run(dataset="dataset1", prompt="prompt2", model="model1")
+            self.runs.compare([run1, run2])
+
+    def test_compare_runs_different_prompts_same_model(self):
+        run1 = Run(
+            id="1",
+            dataset="dataset1",
+            prompt="prompt1",
+            model="model1",
+            parameters={},
+            metrics=["accuracy"],
+            status="completed",
+            results=[{
+                "id": "result1",
+                "input": "test input",
+                "output": "test output",
+                "values": {"accuracy": 0.8},
+                "created_at": datetime.now(),
+                "created_by": "test",
+                "context": None,
+                "expected": None
+            }]
+        )
+        run2 = Run(
+            id="2",
+            dataset="dataset1",
+            prompt="prompt2",  # Different prompt
+            model="model1",    # Same model
+            parameters={},
+            metrics=["accuracy"],
+            status="completed",
+            results=[{
+                "id": "result2",
+                "input": "test input",
+                "output": "test output",
+                "values": {"accuracy": 0.7},
+                "created_at": datetime.now(),
+                "created_by": "test",
+                "context": None,
+                "expected": None
+            }]
+        )
         
-        result = Run.compare_runs([run1, run2])  # This should not raise an error
-        assert result is not None  # Adjust based on expected return value
-    
-    def test_compare_runs_same_prompt_different_models():
-        # This should work - only models are different
-        run1 = Run(dataset="dataset1", prompt="prompt1", model="model1")
-        run2 = Run(dataset="dataset1", prompt="prompt1", model="model2")
+        result = self.runs.compare([run1, run2])
+        assert result is not None
+
+    def test_compare_runs_same_prompt_different_models(self):
+        run1 = Run(
+            id="1",
+            dataset="dataset1",
+            prompt="prompt1",
+            model="model1",
+            parameters={},
+            metrics=["accuracy"],
+            status="completed",
+            results=[{
+                "id": "result1",
+                "input": "test input",
+                "output": "test output",
+                "values": {"accuracy": 0.8},
+                "created_at": datetime.now(),
+                "created_by": "test",
+                "context": None,
+                "expected": None
+            }]
+        )
+        run2 = Run(
+            id="2",
+            dataset="dataset1",
+            prompt="prompt1",  # Same prompt
+            model="model2",    # Different model
+            parameters={},
+            metrics=["accuracy"],
+            status="completed",
+            results=[{
+                "id": "result2",
+                "input": "test input",
+                "output": "test output",
+                "values": {"accuracy": 0.7},
+                "created_at": datetime.now(),
+                "created_by": "test",
+                "context": None,
+                "expected": None
+            }]
+        )
         
-        result = Run.compare_runs([run1, run2])  # This should not raise an error
-        assert result is not None  # Adjust based on expected return value
+        result = self.runs.compare([run1, run2])
+        assert result is not None
+
+    def test_compare_two_runs_result_structure(self):
+        run1 = Run(
+            id="1",
+            dataset="dataset1",
+            prompt="prompt1",
+            model="model1",
+            parameters={},
+            metrics=["accuracy", "f1_score"],
+            status="completed",
+            results=[{
+                "id": "result1",
+                "input": "test input",
+                "output": "test output",
+                "values": {"accuracy": 0.8, "f1_score": 0.9},
+                "created_at": datetime.now(),
+                "created_by": "test",
+                "context": None,
+                "expected": None
+            }]
+        )
+        run2 = Run(
+            id="2",
+            dataset="dataset1",
+            prompt="prompt1",
+            model="model2",
+            parameters={},
+            metrics=["accuracy", "f1_score"],
+            status="completed",
+            results=[{
+                "id": "result2",
+                "input": "test input",
+                "output": "test output",
+                "values": {"accuracy": 0.6, "f1_score": 0.7},
+                "created_at": datetime.now(),
+                "created_by": "test",
+                "context": None,
+                "expected": None
+            }]
+        )
+        
+        result = self.runs.compare([run1, run2])
+        # For two runs, result should be {metric: {avg: diff, stddev: value}}
+        assert "accuracy" in result
+        assert "f1_score" in result
+        assert result["accuracy"]["avg"] == pytest.approx(0.2)  # 0.8 - 0.6
+        assert result["f1_score"]["avg"] == pytest.approx(0.2)  # 0.9 - 0.7
+        assert "stddev" in result["accuracy"]
+        assert "stddev" in result["f1_score"]
+
+    def test_compare_multiple_runs_result_structure(self):
+        runs = [
+            Run(
+                id=str(i),
+                dataset="dataset1",
+                prompt="prompt1",
+                model=f"model{i}",
+                parameters={},
+                metrics=["accuracy", "f1_score"],
+                status="completed",
+                results=[{
+                    "id": f"result{i}",
+                    "input": "test input",
+                    "output": "test output",
+                    "values": {
+                        "accuracy": 0.8 - (i * 0.1),
+                        "f1_score": 0.9 - (i * 0.1)
+                    },
+                    "created_at": datetime.now(),
+                    "created_by": "test",
+                    "context": None,
+                    "expected": None
+                }]
+            ) for i in range(3)
+        ]
+        
+        result = self.runs.compare(runs)
+        # For 3+ runs, result should be {run_id: {metric: {avg: diff, stddev: value}}}
+        assert all(run.id in result for run in runs)
+        for run_id in result:
+            assert "accuracy" in result[run_id]
+            assert "f1_score" in result[run_id]
+            assert "avg" in result[run_id]["accuracy"]
+            assert "avg" in result[run_id]["f1_score"]
+            assert "stddev" in result[run_id]["accuracy"]
+            assert "stddev" in result[run_id]["f1_score"]
+
+    def test_compare_single_run_result_structure(self):
+        run = Run(
+            id="1",
+            dataset="dataset1",
+            prompt="prompt1",
+            model="model1",
+            parameters={},
+            metrics=["accuracy"],
+            status="completed",
+            results=[{
+                "id": "result1",
+                "input": "test input",
+                "output": "test output",
+                "values": {"accuracy": 0.8},
+                "created_at": datetime.now(),
+                "created_by": "test",
+                "context": None,
+                "expected": None
+            }]
+        )
+        
+        result = self.runs.compare([run])
+        # For single run, result should be None
+        assert result is None
 
 class TestAsyncRunsResource:
     @pytest.mark.asyncio
@@ -396,4 +596,194 @@ class TestAsyncRunsResource:
         )
         
         assert isinstance(run, Run)
-        assert run.id == "run_123" 
+        assert run.id == "run_123"
+
+    @pytest.mark.asyncio
+    async def test_async_compare_two_runs(self, mock_async_client):
+        run1 = Run(
+            id="1",
+            dataset="dataset1",
+            prompt="prompt1",
+            model="model1",
+            parameters={},
+            metrics=["accuracy"],
+            status="completed",
+            results=[{
+                "id": "result1",
+                "input": "test input",
+                "output": "test output",
+                "values": {"accuracy": 0.8},
+                "created_at": datetime.now(),
+                "created_by": "test",
+                "context": None,
+                "expected": None
+            }]
+        )
+        run2 = Run(
+            id="2",
+            dataset="dataset1",
+            prompt="prompt1",
+            model="model2",
+            parameters={},
+            metrics=["accuracy"],
+            status="completed",
+            results=[{
+                "id": "result2",
+                "input": "test input",
+                "output": "test output",
+                "values": {"accuracy": 0.6},
+                "created_at": datetime.now(),
+                "created_by": "test",
+                "context": None,
+                "expected": None
+            }]
+        )
+        
+        result = await AsyncRunsResource(mock_async_client).compare([run1, run2])
+        assert "accuracy" in result
+        assert result["accuracy"]["avg"] == pytest.approx(0.2)  # Using pytest.approx for floating point comparison
+        assert "stddev" in result["accuracy"]
+
+    @pytest.mark.asyncio
+    async def test_async_compare_three_runs(self, mock_async_client):
+        runs = [
+            Run(
+                id=str(i),
+                dataset="dataset1",
+                prompt="prompt1",
+                model=f"model{i}",
+                parameters={},
+                metrics=["accuracy"],
+                status="completed",
+                results=[{
+                    "id": f"result{i}",
+                    "input": "test input",
+                    "output": "test output",
+                    "values": {"accuracy": 0.8 - (i * 0.1)},  # 0.8, 0.7, 0.6
+                    "created_at": datetime.now(),
+                    "created_by": "test",
+                    "context": None,
+                    "expected": None
+                }]
+            ) for i in range(3)
+        ]
+        
+        result = await AsyncRunsResource(mock_async_client).compare(runs)
+        assert all(run.id in result for run in runs)
+        for run_id in result:
+            assert "accuracy" in result[run_id]
+            assert "avg" in result[run_id]["accuracy"]
+            assert "stddev" in result[run_id]["accuracy"]
+
+    @pytest.mark.asyncio
+    async def test_async_compare_single_run(self, mock_async_client):
+        run = Run(
+            id="1",
+            dataset="dataset1",
+            prompt="prompt1",
+            model="model1",
+            parameters={},
+            metrics=["accuracy"],
+            status="completed",
+            results=[{
+                "id": "result1",
+                "input": "test input",
+                "output": "test output",
+                "values": {"accuracy": 0.8},
+                "created_at": datetime.now(),
+                "created_by": "test",
+                "context": None,
+                "expected": None
+            }]
+        )
+        
+        result = await AsyncRunsResource(mock_async_client).compare([run])
+        assert result is None
+
+    @pytest.mark.asyncio
+    async def test_async_compare_runs_different_datasets(self, mock_async_client):
+        run1 = Run(
+            id="1",
+            dataset="dataset1",
+            prompt="prompt1",
+            model="model1",
+            parameters={},
+            metrics=["accuracy"],
+            status="completed",
+            results=[{
+                "id": "result1",
+                "input": "test input",
+                "output": "test output",
+                "values": {"accuracy": 0.8},
+                "created_at": datetime.now(),
+                "created_by": "test",
+                "context": None,
+                "expected": None
+            }]
+        )
+        run2 = Run(
+            id="2",
+            dataset="dataset2",  # Different dataset
+            prompt="prompt1",
+            model="model1",
+            parameters={},
+            metrics=["accuracy"],
+            status="completed",
+            results=[{
+                "id": "result2",
+                "input": "test input",
+                "output": "test output",
+                "values": {"accuracy": 0.7},
+                "created_at": datetime.now(),
+                "created_by": "test",
+                "context": None,
+                "expected": None
+            }]
+        )
+        
+        with pytest.raises(ValueError, match="all runs must be on the same dataset"):
+            await AsyncRunsResource(mock_async_client).compare([run1, run2])
+
+    @pytest.mark.asyncio
+    async def test_async_compare_runs_different_prompts_and_models(self, mock_async_client):
+        run1 = Run(
+            id="1",
+            dataset="dataset1",
+            prompt="prompt1",
+            model="model1",
+            parameters={},
+            metrics=["accuracy"],
+            status="completed",
+            results=[{
+                "id": "result1",
+                "input": "test input",
+                "output": "test output",
+                "values": {"accuracy": 0.8},
+                "created_at": datetime.now(),
+                "created_by": "test",
+                "context": None,
+                "expected": None
+            }]
+        )
+        run2 = Run(
+            id="2",
+            dataset="dataset1",
+            prompt="prompt2",  # Different prompt
+            model="model2",    # Different model
+            parameters={},
+            metrics=["accuracy"],
+            status="completed",
+            results=[{
+                "id": "result2",
+                "input": "test input",
+                "output": "test output",
+                "values": {"accuracy": 0.7},
+                "created_at": datetime.now(),
+                "created_by": "test",
+                "context": None,
+                "expected": None
+            }]
+        )
+        
+        with pytest.raises(ValueError, match="all runs must be on the same prompt or model"):
+            await AsyncRunsResource(mock_async_client).compare([run1, run2]) 
