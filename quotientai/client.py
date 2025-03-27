@@ -45,8 +45,8 @@ class _BaseQuotientClient(httpx.Client):
         )
 
         super().__init__(
-            base_url="https://api.quotientai.co/api/v1",
-            headers={"Authorization": auth_header},
+            base_url="http://localhost:8082/api/v1",
+            headers={"Authorization": "Bearer sk-quo-hMlFNMbD2jHJwjg6Paxjl"},
         )
 
     def _save_token(self, token: str, expiry: int):
@@ -254,19 +254,21 @@ class QuotientLogger:
         )
 
         # Validate documents format
-        validated_documents = []
         if documents:
             for doc in documents:
                 if isinstance(doc, str):
-                    validated_documents.append(doc)
-                else:
+                    continue
+                elif isinstance(doc, dict):
                     try:
                         LogDocument(**doc)
-                        validated_documents.append(doc)
                     except Exception as _:
                         raise QuotientAIError(
-                            f"Documents must be a list of strings or dictionaries with 'page_content' and optional 'metadata' keys"
+                            f"Documents must be a list of strings or dictionaries with 'page_content' and optional 'metadata' keys. Metadata must be a dictionary of strings"
                         )
+                else:
+                    raise QuotientAIError(
+                        f"Documents must be a list of strings or dictionaries with 'page_content' and optional 'metadata' keys, got {type(doc)}"
+                    )
 
         if self._should_sample():
             self.logs_resource.create(
@@ -274,7 +276,7 @@ class QuotientLogger:
                 environment=self.environment,
                 user_query=user_query,
                 model_output=model_output,
-                documents=validated_documents if documents else [],
+                documents=documents,
                 message_history=message_history,
                 instructions=instructions,
                 tags=merged_tags,

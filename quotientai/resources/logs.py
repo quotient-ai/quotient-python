@@ -6,10 +6,10 @@ from threading import Thread
 from dataclasses import dataclass
 from datetime import datetime
 import time
+from pydantic import BaseModel
 
 
-@dataclass
-class LogDocument:
+class LogDocument(BaseModel):
     """
     Represents a log document from the QuotientAI API
     """
