@@ -263,7 +263,7 @@ class QuotientLogger:
                     try:
                         LogDocument(**doc)
                     except Exception as _:
-                        self.logger.error(f"Documents must be a list of strings or dictionaries with 'page_content' and optional 'metadata' keys. Metadata must be a dictionary of strings")
+                        self.logger.error(f"Documents must be a list of strings or dictionaries with 'page_content' and optional 'metadata' keys. Metadata must keys must be strings")
                         return None
                 else:
                     self.logger.error(f"Documents must be a list of strings or dictionaries with 'page_content' and optional 'metadata' keys, got {type(doc)}")
