@@ -179,7 +179,7 @@ class QuotientLogger:
         self.inconsistency_detection: bool = False
         self._configured = False
         self.hallucination_detection_sample_rate = 0.0
-        self.logger = logging.getLogger(__name__)
+        self._logger = logging.getLogger('quotient-sync-client')
 
     def init(
         self,
@@ -263,10 +263,10 @@ class QuotientLogger:
                     try:
                         LogDocument(**doc)
                     except Exception as _:
-                        self.logger.error(f"Documents must be a list of strings or dictionaries with 'page_content' and optional 'metadata' keys. Metadata keys must be strings")
+                        self._logger.error(f"Documents must be a list of strings or dictionaries with 'page_content' and optional 'metadata' keys. Metadata keys must be strings")
                         return None
                 else:
-                    self.logger.error(f"Documents must be a list of strings or dictionaries with 'page_content' and optional 'metadata' keys, got {type(doc)}")
+                    self._logger.error(f"Documents must be a list of strings or dictionaries with 'page_content' and optional 'metadata' keys, got {type(doc)}")
                     return None
 
         if self._should_sample():
