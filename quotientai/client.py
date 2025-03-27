@@ -45,8 +45,8 @@ class _BaseQuotientClient(httpx.Client):
         )
 
         super().__init__(
-            base_url="http://localhost:8082/api/v1",
-            headers={"Authorization": "Bearer sk-quo-hMlFNMbD2jHJwjg6Paxjl"},
+            base_url="https://api.quotientai.co/api/v1",
+            headers={"Authorization": auth_header},
         )
 
     def _save_token(self, token: str, expiry: int):
