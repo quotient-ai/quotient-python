@@ -4,7 +4,7 @@ import random
 import time
 
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Union
 
 import jwt
 
@@ -219,7 +219,7 @@ class QuotientLogger:
         *,
         user_query: str,
         model_output: str,
-        documents: Optional[List[str]] = None,
+        documents: Optional[List[Union[str, Dict[str, Any]]]] = None,
         message_history: Optional[List[Dict[str, Any]]] = None,
         instructions: Optional[List[str]] = None,
         tags: Optional[Dict[str, Any]] = {},

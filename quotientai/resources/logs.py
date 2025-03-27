@@ -1,4 +1,4 @@
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Union
 import asyncio
 import logging
 from collections import deque
@@ -21,7 +21,7 @@ class Log:
     inconsistency_detection: bool
     user_query: str
     model_output: str
-    documents: List[str]
+    documents: List[Union[str, Dict[str, Any]]]
     message_history: Optional[List[Dict[str, Any]]]
     instructions: Optional[List[str]]
     tags: Dict[str, Any]
@@ -71,7 +71,7 @@ class LogsResource:
         inconsistency_detection: bool,
         user_query: str,
         model_output: str,
-        documents: List[str],
+        documents: List[Union[str, Dict[str, Any]]],
         message_history: Optional[List[Dict[str, Any]]] = None,
         instructions: Optional[List[str]] = None,
         tags: Optional[Dict[str, Any]] = {},
