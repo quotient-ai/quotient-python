@@ -12,6 +12,7 @@ import httpx
 
 from quotientai import resources
 from quotientai.exceptions import QuotientAIError, handle_errors
+from quotientai.resources.logs import LogDocument
 from quotientai.resources.prompts import Prompt
 from quotientai.resources.models import Model
 from quotientai.resources.datasets import Dataset
@@ -219,7 +220,7 @@ class QuotientLogger:
         *,
         user_query: str,
         model_output: str,
-        documents: Optional[List[Union[str, Dict[str, Any]]]] = None,
+        documents: List[Union[str, LogDocument]] = None,
         message_history: Optional[List[Dict[str, Any]]] = None,
         instructions: Optional[List[str]] = None,
         tags: Optional[Dict[str, Any]] = {},
@@ -252,13 +253,28 @@ class QuotientLogger:
             else self.inconsistency_detection
         )
 
+        # Validate documents format
+        validated_documents = []
+        if documents:
+            for doc in documents:
+                if isinstance(doc, str):
+                    validated_documents.append(doc)
+                else:
+                    try:
+                        LogDocument(**doc)
+                        validated_documents.append(doc)
+                    except Exception as _:
+                        raise QuotientAIError(
+                            f"Documents must be a list of strings or dictionaries with 'page_content' and optional 'metadata' keys"
+                        )
+
         if self._should_sample():
             self.logs_resource.create(
                 app_name=self.app_name,
                 environment=self.environment,
                 user_query=user_query,
                 model_output=model_output,
-                documents=documents,
+                documents=validated_documents if documents else [],
                 message_history=message_history,
                 instructions=instructions,
                 tags=merged_tags,

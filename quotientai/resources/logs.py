@@ -9,6 +9,14 @@ import time
 
 
 @dataclass
+class LogDocument:
+    """
+    Represents a log document from the QuotientAI API
+    """
+    page_content: str
+    metadata: Optional[Dict[str, Any]] = None
+
+@dataclass
 class Log:
     """
     Represents a log entry from the QuotientAI API
@@ -21,7 +29,7 @@ class Log:
     inconsistency_detection: bool
     user_query: str
     model_output: str
-    documents: List[Union[str, Dict[str, Any]]]
+    documents: List[Union[str, LogDocument]]
     message_history: Optional[List[Dict[str, Any]]]
     instructions: Optional[List[str]]
     tags: Dict[str, Any]
@@ -71,7 +79,7 @@ class LogsResource:
         inconsistency_detection: bool,
         user_query: str,
         model_output: str,
-        documents: List[Union[str, Dict[str, Any]]],
+        documents: List[Union[str, LogDocument]],
         message_history: Optional[List[Dict[str, Any]]] = None,
         instructions: Optional[List[str]] = None,
         tags: Optional[Dict[str, Any]] = {},
