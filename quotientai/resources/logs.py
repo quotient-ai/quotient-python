@@ -11,7 +11,7 @@ from pydantic import BaseModel
 
 class LogDocument(BaseModel):
     """
-    Represents a log document from the QuotientAI API
+    Represents a log document
     """
     page_content: str
     metadata: Optional[Dict[str, Any]] = None
