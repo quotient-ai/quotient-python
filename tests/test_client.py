@@ -505,17 +505,17 @@ class TestQuotientLogger:
         mock_logs_resource = Mock()
         logger = QuotientLogger(mock_logs_resource)
         logger.init(app_name="test-app", environment="test")
-        logger._logger = Mock()  # Mock the logger to capture error messages
         
         # Test with a document missing 'page_content'
-        logger.log(
-            user_query="test query",
-            model_output="test output",
-            documents=[{"metadata": {"key": "value"}}]  # Missing page_content
-        )
+        with pytest.raises(QuotientAIError) as excinfo:
+            logger.log(
+                user_query="test query",
+                model_output="test output",
+                documents=[{"metadata": {"key": "value"}}]  # Missing page_content
+            )
         
-        # Should log the error and return None
-        assert logger._logger.error.call_count == 1
+        # Verify the error message contains expected information
+        assert "page_content" in str(excinfo.value)
         assert mock_logs_resource.create.call_count == 0
     
     def test_log_with_invalid_document_type(self):
@@ -523,16 +523,16 @@ class TestQuotientLogger:
         mock_logs_resource = Mock()
         logger = QuotientLogger(mock_logs_resource)
         logger.init(app_name="test-app", environment="test")
-        logger._logger = Mock()  # Mock the logger to capture error messages
         
         # Test with a mix of valid string and invalid non-string/non-dict document
         # The string document will hit the 'continue' branch
-        logger.log(
-            user_query="test query",
-            model_output="test output",
-            documents=["valid string document", 123]  # String and invalid type
-        )
+        with pytest.raises(QuotientAIError) as excinfo:
+            logger.log(
+                user_query="test query",
+                model_output="test output",
+                documents=["valid string document", 123]  # String and invalid type
+            )
         
-        # Should log the error and return None
-        assert logger._logger.error.call_count == 1
+        # Verify the error message contains expected information
+        assert "123" in str(excinfo.value) or "int" in str(excinfo.value)
         assert mock_logs_resource.create.call_count == 0
