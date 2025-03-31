@@ -1,4 +1,4 @@
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Union
 import asyncio
 import logging
 from collections import deque
@@ -6,7 +6,15 @@ from threading import Thread
 from dataclasses import dataclass
 from datetime import datetime
 import time
+from pydantic import BaseModel
 
+
+class LogDocument(BaseModel):
+    """
+    Represents a log document
+    """
+    page_content: str
+    metadata: Optional[Dict[str, Any]] = None
 
 @dataclass
 class Log:
@@ -21,7 +29,7 @@ class Log:
     inconsistency_detection: bool
     user_query: str
     model_output: str
-    documents: List[str]
+    documents: List[Union[str, LogDocument]]
     message_history: Optional[List[Dict[str, Any]]]
     instructions: Optional[List[str]]
     tags: Dict[str, Any]
@@ -71,7 +79,7 @@ class LogsResource:
         inconsistency_detection: bool,
         user_query: str,
         model_output: str,
-        documents: List[str],
+        documents: List[Union[str, LogDocument]],
         message_history: Optional[List[Dict[str, Any]]] = None,
         instructions: Optional[List[str]] = None,
         tags: Optional[Dict[str, Any]] = {},

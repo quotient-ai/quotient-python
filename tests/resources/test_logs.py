@@ -1,7 +1,7 @@
 import pytest
 from datetime import datetime
 from unittest.mock import Mock, AsyncMock
-from quotientai.resources.logs import Log, LogsResource, AsyncLogsResource
+from quotientai.resources.logs import Log, LogsResource, AsyncLogsResource, LogDocument
 
 # Fixtures
 @pytest.fixture
@@ -24,6 +24,36 @@ def sample_log_data():
         "tags": {"test": "tag"},
         "created_at": "2024-01-01T00:00:00"
     }
+
+# LogDocument Tests
+class TestLogDocument:
+    """Tests for the LogDocument class"""
+    
+    def test_log_document_creation(self):
+        """Test basic creation of LogDocument"""
+        doc = LogDocument(
+            page_content="This is test content",
+            metadata={"source": "test_source", "author": "test_author"}
+        )
+        assert doc.page_content == "This is test content"
+        assert doc.metadata["source"] == "test_source"
+        assert doc.metadata["author"] == "test_author"
+    
+    def test_log_document_with_no_metadata(self):
+        """Test LogDocument creation without metadata"""
+        doc = LogDocument(page_content="Test content only")
+        assert doc.page_content == "Test content only"
+        assert doc.metadata is None
+    
+    def test_log_document_from_dict(self):
+        """Test creating LogDocument from dictionary"""
+        doc_dict = {
+            "page_content": "Content from dict",
+            "metadata": {"source": "dictionary"}
+        }
+        doc = LogDocument(**doc_dict)
+        assert doc.page_content == "Content from dict"
+        assert doc.metadata["source"] == "dictionary"
 
 # Model Tests
 class TestLog:

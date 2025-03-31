@@ -4,13 +4,14 @@ import json
 import time
 from pathlib import Path
 import jwt
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Union
 
 import httpx
 
 from quotientai import resources
 from quotientai.exceptions import QuotientAIError, handle_async_errors
 from quotientai.resources.prompts import Prompt
+from quotientai.resources.logs import LogDocument
 from quotientai.resources.models import Model
 from quotientai.resources.datasets import Dataset
 from quotientai.resources.runs import Run
@@ -218,7 +219,7 @@ class AsyncQuotientLogger:
         *,
         user_query: str,
         model_output: str,
-        documents: Optional[List[str]] = None,
+        documents: Optional[List[Union[str, LogDocument]]] = None,
         message_history: Optional[List[Dict[str, Any]]] = None,
         instructions: Optional[List[str]] = None,
         tags: Optional[Dict[str, Any]] = {},
@@ -250,6 +251,29 @@ class AsyncQuotientLogger:
             if inconsistency_detection is not None
             else self.inconsistency_detection
         )
+
+        # Validate documents format
+        if documents:
+            for doc in documents:
+                if isinstance(doc, str):
+                    continue
+                elif isinstance(doc, dict):
+                    try:
+                        LogDocument(**doc)
+                    except Exception as e:
+                        raise QuotientAIError(
+                            f"Invalid document format: Documents must include 'page_content' field and optional 'metadata' object with string keys. "
+                            f"Error details: {str(e)}. "
+                            f"Example of valid document: {{'page_content': 'Your content here', 'metadata': {{'source': 'document.pdf', 'page': 5}}}}"
+                        )
+                else:
+                    actual_type = type(doc).__name__
+                    raise QuotientAIError(
+                        f"Invalid document type: Received {actual_type}, but documents must be strings or dictionaries. "
+                        f"Example of valid document formats:\n"
+                        f"  - String: 'Your content here'\n"
+                        f"  - Dictionary: {{'page_content': 'Your content here', 'metadata': {{'source': 'document.pdf', 'page': 5}}}}"
+                    )
 
         if self._should_sample():
             await self.logs_resource.create(
