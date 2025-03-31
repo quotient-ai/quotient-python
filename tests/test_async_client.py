@@ -521,7 +521,8 @@ class TestAsyncQuotientLogger:
         result = await logger.log(
             user_query="test query",
             model_output="test output",
-            documents=[{"metadata": {"key": "value"}}]  # Missing page_content
+            # Missing page_content
+            documents=[{"metadata": {"key": "value"}}]
         )
         # Should log the error and return None
         assert logger._logger.error.call_count == 1
