@@ -2,7 +2,6 @@ import json
 import os
 import random
 import time
-import logging
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Union
 
@@ -45,7 +44,7 @@ class _BaseQuotientClient(httpx.Client):
         )
 
         super().__init__(
-            base_url="http://localhost:8082/api/v1",
+            base_url="https://api.quotientai.co/api/v1",
             headers={"Authorization": auth_header},
         )
 

@@ -2,7 +2,6 @@ import os
 import random
 import json
 import time
-import logging
 from pathlib import Path
 import jwt
 from typing import Any, Dict, List, Optional, Union
