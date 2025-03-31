@@ -2,15 +2,17 @@ import os
 import random
 import json
 import time
+import logging
 from pathlib import Path
 import jwt
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Union
 
 import httpx
 
 from quotientai import resources
 from quotientai.exceptions import QuotientAIError, handle_async_errors
 from quotientai.resources.prompts import Prompt
+from quotientai.resources.logs import LogDocument
 from quotientai.resources.models import Model
 from quotientai.resources.datasets import Dataset
 from quotientai.resources.runs import Run
@@ -177,6 +179,7 @@ class AsyncQuotientLogger:
         self.inconsistency_detection: bool = False
         self._configured = False
         self.hallucination_detection_sample_rate = 0
+        self._logger = logging.getLogger('quotient-async-client')
 
     def init(
         self,
@@ -218,7 +221,7 @@ class AsyncQuotientLogger:
         *,
         user_query: str,
         model_output: str,
-        documents: Optional[List[str]] = None,
+        documents: Optional[List[Union[str, LogDocument]]] = None,
         message_history: Optional[List[Dict[str, Any]]] = None,
         instructions: Optional[List[str]] = None,
         tags: Optional[Dict[str, Any]] = {},
@@ -250,6 +253,21 @@ class AsyncQuotientLogger:
             if inconsistency_detection is not None
             else self.inconsistency_detection
         )
+
+        # Validate documents format
+        if documents:
+            for doc in documents:
+                if isinstance(doc, str):
+                    continue
+                elif isinstance(doc, dict):
+                    try:
+                        LogDocument(**doc)
+                    except Exception as _:
+                        self._logger.error(f"Documents must be a list of strings or dictionaries with 'page_content' and optional 'metadata' keys. Metadata keys must be strings")
+                        return None
+                else:
+                    self._logger.error(f"Documents must be a list of strings or dictionaries with 'page_content' and optional 'metadata' keys, got {type(doc)}")
+                    return None
 
         if self._should_sample():
             await self.logs_resource.create(
