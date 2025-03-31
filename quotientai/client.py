@@ -45,7 +45,7 @@ class _BaseQuotientClient(httpx.Client):
         )
 
         super().__init__(
-            base_url="https://api.quotientai.co/api/v1",
+            base_url="http://localhost:8082/api/v1",
             headers={"Authorization": auth_header},
         )
 
@@ -261,10 +261,20 @@ class QuotientLogger:
                 elif isinstance(doc, dict):
                     try:
                         LogDocument(**doc)
-                    except Exception as _:
-                        raise QuotientAIError(f"Documents must be a list of strings or dictionaries with 'page_content' and optional 'metadata' keys. Metadata keys must be strings")
+                    except Exception as e:
+                        raise QuotientAIError(
+                            f"Invalid document format: Documents must include 'page_content' field and optional 'metadata' object with string keys. "
+                            f"Error details: {str(e)}. "
+                            f"Example of valid document: {{'page_content': 'Your content here', 'metadata': {{'source': 'document.pdf', 'page': 5}}}}"
+                        )
                 else:
-                    raise QuotientAIError(f"Documents must be a list of strings or dictionaries with 'page_content' and optional 'metadata' keys, got {type(doc)}")
+                    actual_type = type(doc).__name__
+                    raise QuotientAIError(
+                        f"Invalid document type: Received {actual_type}, but documents must be strings or dictionaries. "
+                        f"Example of valid document formats:\n"
+                        f"  - String: 'Your content here'\n"
+                        f"  - Dictionary: {{'page_content': 'Your content here', 'metadata': {{'source': 'document.pdf', 'page': 5}}}}"
+                    )
 
         if self._should_sample():
             self.logs_resource.create(
