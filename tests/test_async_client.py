@@ -547,3 +547,31 @@ class TestAsyncQuotientLogger:
         # Verify the error message contains expected information
         assert "123" in str(excinfo.value) or "int" in str(excinfo.value)
         assert mock_logs_resource.create.call_count == 0
+
+    @pytest.mark.asyncio
+    async def test_log_with_valid_documents(self):
+        """Test logging with valid document formats"""
+
+        mock_logs_resource = Mock()
+        mock_logs_resource.create = AsyncMock()
+        logger = AsyncQuotientLogger(mock_logs_resource)
+        logger.init(app_name="test-app", environment="test")
+
+        # Force sampling to True for testing
+        with patch.object(logger, '_should_sample', return_value=True):
+            await logger.log(
+                user_query="test query 4",
+                model_output="test output 4",
+                documents=[
+                    "string document",
+                    {"page_content": "dict document", "metadata": {"key": "value"}},
+                ]
+            )
+
+        assert mock_logs_resource.create.call_count == 1
+
+        # Verify correct documents were passed to create
+        calls = mock_logs_resource.create.call_args_list
+        assert calls[0][1]["documents"][0] == "string document"
+        assert calls[0][1]["documents"][1] == {"page_content": "dict document", "metadata": {"key": "value"}}
+        assert len(calls[0][1]["documents"]) == 2
