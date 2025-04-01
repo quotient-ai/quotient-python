@@ -7,7 +7,9 @@ from dataclasses import dataclass
 from datetime import datetime
 import time
 from pydantic import BaseModel
+import traceback
 
+from quotientai.exceptions import logger
 
 class LogDocument(BaseModel):
     """
@@ -186,7 +188,7 @@ class LogsResource:
                 )
             return logs
         except Exception:
-            raise
+            logger.error(f"error listing logs\n{traceback.format_exc()}")
 
 
 class AsyncLogsResource:
@@ -251,8 +253,7 @@ class AsyncLogsResource:
                 )
             return logs
         except Exception:
-            self.logger.error("error listing logs", exc_info=True)
-            raise
+            logger.error(f"error listing logs\n{traceback.format_exc()}")
 
     async def create(
         self,

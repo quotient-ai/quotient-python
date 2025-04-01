@@ -1,7 +1,9 @@
 from dataclasses import dataclass, field
 from datetime import datetime
 from typing import List, Optional
+import traceback
 
+from quotientai.exceptions import logger
 
 @dataclass
 class DatasetRowMetadata:
@@ -462,7 +464,7 @@ class DatasetsResource:
             except Exception as e:
                 # If the batch create fails, divide batch size by two and recursively try
                 if batch_size == 1:
-                    raise e
+                    logger.error(f"Batch create rows failed. \n{traceback.format_exc()}")
                 else:
                     self.batch_create_rows(
                         dataset_id, batch, row_responses, batch_size // 2
@@ -831,7 +833,7 @@ class AsyncDatasetsResource:
             except Exception as e:
                 # If the batch create fails, divide batch size by two and recursively try
                 if batch_size == 1:
-                    raise e
+                    logger.error(f"Batch create rows failed. \n{traceback.format_exc()}")
                 else:
                     await self.batch_create_rows(
                         dataset_id, batch, row_responses, batch_size // 2

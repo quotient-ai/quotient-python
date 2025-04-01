@@ -118,12 +118,13 @@ class TestPromptsResource:
         assert prompt.id == "test-id"
         mock_client._get.assert_called_once_with("/prompts/test-id/versions/1")
 
-    def test_get_prompt_not_found(self, mock_client):
+    def test_get_prompt_not_found(self, mock_client, caplog):
         mock_client._get.return_value = None  # Simulate prompt not found
         prompts = PromptsResource(mock_client)
-        
-        with pytest.raises(ValueError, match="Prompt with id test-id not found"):
-            prompts.get("test-id")
+
+        result = prompts.get("test-id")
+        assert result is None
+        assert "Prompt with id test-id not found" in caplog.text
 
     def test_create_prompt(self, prompts_resource, mock_client):
         prompt = prompts_resource.create(
@@ -197,12 +198,13 @@ class TestAsyncPromptsResource:
         mock_async_client._get.assert_called_once_with("/prompts/test-id/versions/1")
 
     @pytest.mark.asyncio
-    async def test_get_prompt_not_found(self, mock_async_client):
+    async def test_get_prompt_not_found(self, mock_async_client, caplog):
         mock_async_client._get = AsyncMock(return_value=None)  # Simulate prompt not found
         prompts = AsyncPromptsResource(mock_async_client)
-        
-        with pytest.raises(ValueError, match="Prompt with id test-id not found"):
-            await prompts.get("test-id")
+
+        result = await prompts.get("test-id")
+        assert result is None
+        assert "Prompt with id test-id not found" in caplog.text
 
     @pytest.mark.asyncio
     async def test_create_prompt(self, async_prompts_resource, mock_async_client):

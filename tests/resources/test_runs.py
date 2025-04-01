@@ -279,7 +279,7 @@ class TestRunsResource:
         assert isinstance(run, Run)
         assert run.id == "run_123"
 
-    def test_compare_runs_different_datasets(self):
+    def test_compare_runs_different_datasets(self, caplog):
         run1 = Run(
             id="1",
             dataset="dataset1",
@@ -318,11 +318,12 @@ class TestRunsResource:
                 "expected": None
             }]
         )
-        
-        with pytest.raises(ValueError, match="all runs must be on the same dataset"):
-            self.runs.compare([run1, run2])
 
-    def test_compare_runs_different_prompts_and_models(self):
+        result = self.runs.compare([run1, run2])
+        assert result is None
+        assert "all runs must be on the same dataset in order to compare them" in caplog.text
+
+    def test_compare_runs_different_prompts_and_models(self, caplog):
         run1 = Run(
             id="1",
             dataset="dataset1",
@@ -361,9 +362,10 @@ class TestRunsResource:
                 "expected": None
             }]
         )
-        
-        with pytest.raises(ValueError, match="all runs must be on the same prompt or model"):
-            self.runs.compare([run1, run2])
+
+        result = self.runs.compare([run1, run2])
+        assert result is None
+        assert "all runs must be on the same prompt or model in order to compare them" in caplog.text
 
     def test_compare_runs_different_prompts_same_model(self):
         run1 = Run(
@@ -698,7 +700,7 @@ class TestAsyncRunsResource:
         assert result is None
 
     @pytest.mark.asyncio
-    async def test_compare_runs_different_datasets(self, mock_async_client):
+    async def test_compare_runs_different_datasets(self, mock_async_client, caplog):
         run1 = Run(
             id="1",
             dataset="dataset1",
@@ -737,12 +739,13 @@ class TestAsyncRunsResource:
                 "expected": None
             }]
         )
-        
-        with pytest.raises(ValueError, match="all runs must be on the same dataset"):
-            await AsyncRunsResource(mock_async_client).compare([run1, run2])
+
+        result = await AsyncRunsResource(mock_async_client).compare([run1, run2])
+        assert result is None
+        assert "all runs must be on the same dataset in order to compare them" in caplog.text
 
     @pytest.mark.asyncio
-    async def test_compare_runs_different_prompts_and_models(self, mock_async_client):
+    async def test_compare_runs_different_prompts_and_models(self, mock_async_client, caplog):
         run1 = Run(
             id="1",
             dataset="dataset1",
@@ -781,6 +784,7 @@ class TestAsyncRunsResource:
                 "expected": None
             }]
         )
-        
-        with pytest.raises(ValueError, match="all runs must be on the same prompt or model"):
-            await AsyncRunsResource(mock_async_client).compare([run1, run2]) 
+
+        result = await AsyncRunsResource(mock_async_client).compare([run1, run2])
+        assert result is None
+        assert "all runs must be on the same prompt or model in order to compare them" in caplog.text 

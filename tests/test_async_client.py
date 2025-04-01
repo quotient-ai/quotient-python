@@ -3,7 +3,7 @@ import time
 import json
 from unittest.mock import Mock, patch, AsyncMock
 from datetime import datetime
-from quotientai.async_client import AsyncQuotientAI, AsyncQuotientLogger, QuotientAIError, _AsyncQuotientClient
+from quotientai.async_client import AsyncQuotientAI, AsyncQuotientLogger, _AsyncQuotientClient
 from pathlib import Path
 
 # Modify existing fixtures to use proper paths
@@ -193,7 +193,7 @@ class TestAsyncBaseQuotientClient:
             client._update_auth_header()
             assert client.headers["Authorization"] == f"Bearer {client.api_key}"
 
-    def test_token_directory_creation_failure(self, tmp_path):
+    def test_token_directory_creation_failure(self, tmp_path, caplog):
         """Test that appropriate error is raised when token directory creation fails"""
         api_key = "test-api-key"
         
@@ -202,8 +202,10 @@ class TestAsyncBaseQuotientClient:
              patch.object(Path, 'mkdir', side_effect=Exception("Test error")):
             client = _AsyncQuotientClient(api_key)
             # Try to save a token to trigger the directory creation
-            with pytest.raises(QuotientAIError, match="could not create directory for token"):
-                client._save_token("test-token", 1234567890)
+            result = client._save_token("test-token", int(time.time()) + 3600)
+            assert result is None
+            assert "could not create directory for token" in caplog.text
+            assert "contact@quotientai.co" in caplog.text
 
     def test_token_parse_failure(self, tmp_path):
         """Test that client continues with current auth when token parsing fails"""
@@ -355,10 +357,12 @@ class TestAsyncQuotientAI:
             client = AsyncQuotientAI()
             assert client.api_key == api_key
 
-    def test_init_no_api_key(self):
+    def test_init_no_api_key(self, caplog):
         with patch.dict('os.environ', clear=True):
-            with pytest.raises(QuotientAIError):
-                AsyncQuotientAI()
+            client = AsyncQuotientAI()
+            assert client.api_key is None
+            assert "could not find API key" in caplog.text
+            assert "https://app.quotientai.co" in caplog.text
 
     @pytest.mark.asyncio
     async def test_evaluate_valid_parameters(self, async_quotient_client):
@@ -392,7 +396,7 @@ class TestAsyncQuotientAI:
         assert run.metrics == ["accuracy"]
 
     @pytest.mark.asyncio
-    async def test_evaluate_invalid_parameters(self, async_quotient_client):
+    async def test_evaluate_invalid_parameters(self, async_quotient_client, caplog):
         mock_prompt = Mock()
         mock_dataset = Mock()
         mock_model = Mock()
@@ -401,14 +405,18 @@ class TestAsyncQuotientAI:
             "invalid_param": 123
         }
         
-        with pytest.raises(QuotientAIError):
-            await async_quotient_client.evaluate(
-                prompt=mock_prompt,
-                dataset=mock_dataset,
-                model=mock_model,
-                parameters=invalid_params,
-                metrics=["accuracy"]
-            )
+        result = await async_quotient_client.evaluate(
+            prompt=mock_prompt,
+            dataset=mock_dataset,
+            model=mock_model,
+            parameters=invalid_params,
+            metrics=["accuracy"]
+        )
+        
+        assert result is None
+        assert "invalid parameters" in caplog.text
+        assert "invalid_param" in caplog.text
+        assert "valid parameters are" in caplog.text
 
 class TestAsyncQuotientLogger:
     """Tests for the AsyncQuotientLogger class"""
@@ -438,31 +446,38 @@ class TestAsyncQuotientLogger:
         assert logger.sample_rate == 0.5
         assert logger.hallucination_detection == True
 
-    def test_invalid_sample_rate(self):
+    def test_invalid_sample_rate(self, caplog):
         mock_logs_resource = Mock()
         logger = AsyncQuotientLogger(mock_logs_resource)
         
-        with pytest.raises(QuotientAIError):
-            logger.init(
-                app_name="test-app",
-                environment="test",
-                sample_rate=2.0
-            )
+        result = logger.init(
+            app_name="test-app",
+            environment="test",
+            sample_rate=2.0
+        )
+        
+        assert result is None
+        assert "sample_rate must be between 0.0 and 1.0" in caplog.text
+        assert mock_logs_resource.create.call_count == 0
 
     @pytest.mark.asyncio
-    async def test_log_without_init(self):
-        mock_logs_resource = Mock()
+    async def test_log_without_init(self, caplog):
+        mock_logs_resource = AsyncMock()
+        mock_logs_resource.create = AsyncMock(return_value=None)
         logger = AsyncQuotientLogger(mock_logs_resource)
         
-        with pytest.raises(RuntimeError):
-            await logger.log(
-                user_query="test query",
-                model_output="test output"
-            )
+        result = await logger.log(
+            user_query="test query",
+            model_output="test output"
+        )
+        
+        assert result is None
+        assert "Logger is not configured" in caplog.text
+        assert mock_logs_resource.create.call_count == 0
 
     @pytest.mark.asyncio
     async def test_log_with_init(self):
-        mock_logs_resource = Mock()
+        mock_logs_resource = AsyncMock()
         mock_logs_resource.create = AsyncMock(return_value=None)
         
         logger = AsyncQuotientLogger(mock_logs_resource)
@@ -510,43 +525,42 @@ class TestAsyncQuotientLogger:
             assert logger._should_sample() is False
 
     @pytest.mark.asyncio
-    async def test_log_with_invalid_document_dict(self):
+    async def test_log_with_invalid_document_dict(self, caplog):
         """Test logging with an invalid document dictionary"""
         mock_logs_resource = Mock()
         logger = AsyncQuotientLogger(mock_logs_resource)
         logger.init(app_name="test-app", environment="test")
         
-        # Test with a document missing 'page_content'
-        with pytest.raises(QuotientAIError) as excinfo:
-            await logger.log(
-                user_query="test query",
-                model_output="test output",
-                documents=[{"metadata": {"key": "value"}}]
-            )
+        result = await logger.log(
+            user_query="test query",
+            model_output="test output",
+            documents=[{"metadata": {"key": "value"}}]
+        )
         
-        # Verify the error message contains expected information
-        assert "page_content" in str(excinfo.value)
+        assert result is None
+        assert "Invalid document format" in caplog.text
+        assert "page_content" in caplog.text
         assert mock_logs_resource.create.call_count == 0
+        assert "Documents must include 'page_content' field" in caplog.text
     
     @pytest.mark.asyncio
-    async def test_log_with_invalid_document_type(self):
+    async def test_log_with_invalid_document_type(self, caplog):
         """Test logging with a document of invalid type"""
         mock_logs_resource = Mock()
         logger = AsyncQuotientLogger(mock_logs_resource)
         logger.init(app_name="test-app", environment="test")
         
-        # Test with a mix of valid string and invalid non-string/non-dict document
-        # The string document will hit the 'continue' branch
-        with pytest.raises(QuotientAIError) as excinfo:
-            await logger.log(
-                user_query="test query",
-                model_output="test output",
-                documents=["valid string document", 123]
-            )
+        result = await logger.log(
+            user_query="test query",
+            model_output="test output",
+            documents=["valid string document", 123]
+        )
         
-        # Verify the error message contains expected information
-        assert "123" in str(excinfo.value) or "int" in str(excinfo.value)
+        assert result is None
+        assert "Invalid document type" in caplog.text
+        assert "int" in caplog.text
         assert mock_logs_resource.create.call_count == 0
+        assert "documents must be strings or dictionaries" in caplog.text
 
     @pytest.mark.asyncio
     async def test_log_with_valid_documents(self):

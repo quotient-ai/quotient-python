@@ -1,6 +1,8 @@
 from dataclasses import dataclass
 from datetime import datetime
 from typing import List, Optional
+import traceback
+from quotientai.exceptions import logger
 
 from quotientai.resources.prompts import Prompt
 from quotientai.resources.models import Model
@@ -227,10 +229,8 @@ class RunsResource:
     ):
         # ensure the datasets are the same, and then compare the runs.
         if len(set(run.dataset for run in runs)) > 1:
-            raise ValueError(
-                "all runs must be on the same dataset in order to compare them"
-            )
-
+            logger.error(f"all runs must be on the same dataset in order to compare them\n{traceback.format_exc()}")
+            return None
         # prompts can be the different or models can be the different, but not both
         # inference parameteres can be different, but not metrics, in order to compare
         # evenly across the runs
@@ -238,10 +238,8 @@ class RunsResource:
             len(set(run.prompt for run in runs)) > 1
             and len(set(run.model for run in runs)) > 1
         ):
-            raise ValueError(
-                "all runs must be on the same prompt or model in order to compare them"
-            )
-
+            logger.error(f"all runs must be on the same prompt or model in order to compare them\n{traceback.format_exc()}")
+            return None
         # compare the runs. a comparison will show the average scores for each metric
         # across all runs, and the standard deviation for each metric, using their summaries.
         #
@@ -378,10 +376,8 @@ class AsyncRunsResource:
     ):
         # ensure the datasets are the same, and then compare the runs.
         if len(set(run.dataset for run in runs)) > 1:
-            raise ValueError(
-                "all runs must be on the same dataset in order to compare them"
-            )
-
+            logger.error(f"all runs must be on the same dataset in order to compare them\n{traceback.format_exc()}")
+            return None
         # prompts can be the different or models can be the different, but not both
         # inference parameteres can be different, but not metrics, in order to compare
         # evenly across the runs
@@ -389,9 +385,8 @@ class AsyncRunsResource:
             len(set(run.prompt for run in runs)) > 1
             and len(set(run.model for run in runs)) > 1
         ):
-            raise ValueError(
-                "all runs must be on the same prompt or model in order to compare them"
-            )
+            logger.error(f"all runs must be on the same prompt or model in order to compare them\n{traceback.format_exc()}")
+            return None
 
         # compare the runs. a comparison will show the average scores for each metric
         # across all runs, and the standard deviation for each metric, using their summaries.

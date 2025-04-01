@@ -1,6 +1,9 @@
 from dataclasses import dataclass
 from datetime import datetime
 from typing import List, Optional
+import traceback
+
+from quotientai.exceptions import logger
 
 
 @dataclass
@@ -66,8 +69,8 @@ class PromptsResource:
 
         prompts = self._client._get(path)
         if not prompts:
-            raise ValueError(f"Prompt with id {id} not found.")
-
+            logger.error(f"Prompt with id {id} not found.\n{traceback.format_exc()}")
+            return None
         response = prompts[0]
         response["created_at"] = datetime.fromisoformat(response["created_at"])
         response["updated_at"] = datetime.fromisoformat(response["updated_at"])
@@ -177,7 +180,8 @@ class AsyncPromptsResource:
 
         prompts = await self._client._get(path)
         if not prompts:
-            raise ValueError(f"Prompt with id {id} not found.")
+            logger.error(f"Prompt with id {id} not found.\n{traceback.format_exc()}")
+            return None
 
         response = prompts[0]
         response["created_at"] = datetime.fromisoformat(response["created_at"])

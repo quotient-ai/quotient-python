@@ -4,13 +4,13 @@ import random
 import time
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Union
-
+import traceback
 import jwt
 
 import httpx
 
 from quotientai import resources
-from quotientai.exceptions import QuotientAIError, handle_errors
+from quotientai.exceptions import handle_errors, logger
 from quotientai.resources.logs import LogDocument
 from quotientai.resources.prompts import Prompt
 from quotientai.resources.models import Model
@@ -57,7 +57,8 @@ class _BaseQuotientClient(httpx.Client):
         try:
             self._token_path.parent.mkdir(parents=True, exist_ok=True)
         except Exception:
-            raise QuotientAIError("could not create directory for token. if you see this error please notify us at contact@quotientai.co")
+            logger.error(f"could not create directory for token. if you see this error please notify us at contact@quotientai.co" )
+            return None
 
         # Save to disk
         with open(self._token_path, "w") as f:
@@ -200,8 +201,8 @@ class QuotientLogger:
         self.sample_rate = sample_rate
 
         if not (0.0 <= self.sample_rate <= 1.0):
-            raise QuotientAIError("sample_rate must be between 0.0 and 1.0")
-
+            logger.error(f"sample_rate must be between 0.0 and 1.0")
+            return None
         self.hallucination_detection = hallucination_detection
         self.inconsistency_detection = inconsistency_detection
         self._configured = True
@@ -233,9 +234,8 @@ class QuotientLogger:
         underlying non_blocking_create function.
         """
         if not self._configured:
-            raise RuntimeError(
-                "Logger is not configured. Please call init() before logging."
-            )
+            logger.error(f"Logger is not configured. Please call init() before logging.")
+            return None
 
         # Merge default tags with any tags provided at log time.
         merged_tags = {**self.tags, **(tags or {})}
@@ -261,20 +261,13 @@ class QuotientLogger:
                     try:
                         LogDocument(**doc)
                     except Exception as e:
-                        raise QuotientAIError(
-                            f"Invalid document format: Documents must include 'page_content' field and optional 'metadata' object with string keys. "
-                            f"Error details: {str(e)}. "
-                            f"Example of valid document: {{'page_content': 'Your content here', 'metadata': {{'source': 'document.pdf', 'page': 5}}}}"
-                        )
+                        logger.error(f"Invalid document format: Documents must include 'page_content' field and optional 'metadata' object with string keys.")
+                        return None
                 else:
                     actual_type = type(doc).__name__
-                    raise QuotientAIError(
-                        f"Invalid document type: Received {actual_type}, but documents must be strings or dictionaries. "
-                        f"Example of valid document formats:\n"
-                        f"  - String: 'Your content here'\n"
-                        f"  - Dictionary: {{'page_content': 'Your content here', 'metadata': {{'source': 'document.pdf', 'page': 5}}}}"
-                    )
-
+                    logger.error(f"Invalid document type: Received {actual_type}, but documents must be strings or dictionaries.")
+                    return None
+                
         if self._should_sample():
             self.logs_resource.create(
                 app_name=self.app_name,
@@ -308,14 +301,12 @@ class QuotientAI:
             will attempt to read from QUOTIENT_API_KEY environment variable.
     """
 
-    def __init__(self, api_key: Optional[str] = None):
+    def __init__(self, api_key: Optional[str] = None):  
         self.api_key = api_key or os.environ.get("QUOTIENT_API_KEY")
         if not self.api_key:
-            raise QuotientAIError(
-                "could not find API key. either pass api_key to QuotientAI() or "
+            logger.error("could not find API key. either pass api_key to QuotientAI() or "
                 "set the QUOTIENT_API_KEY environment variable. "
-                "if you do not have an API key, you can create one at https://app.quotientai.co in your settings page"
-            )
+                f"if you do not have an API key, you can create one at https://app.quotientai.co in your settings page")
 
         _client = _BaseQuotientClient(self.api_key)
         self.auth = AuthResource(_client)
@@ -359,20 +350,21 @@ class QuotientAI:
 
             invalid_parameters = set(parameters.keys()) - set(valid_parameters)
             if invalid_parameters:
-                raise QuotientAIError(
-                    f"invalid parameters: {', '.join(invalid_parameters)}. "
-                    f"valid parameters are: {', '.join(valid_parameters)}"
-                )
+                logger.error(f"invalid parameters: {', '.join(invalid_parameters)}. \nvalid parameters are: {', '.join(valid_parameters)}")
+                return None
 
             return parameters
 
-        parameters = _validate_parameters(parameters)
+        v_parameters = _validate_parameters(parameters)
+
+        if v_parameters is None:
+            return None
 
         run = self.runs.create(
             prompt=prompt,
             dataset=dataset,
             model=model,
-            parameters=parameters,
+            parameters=v_parameters,
             metrics=metrics,
         )
         return run

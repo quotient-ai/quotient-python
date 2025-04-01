@@ -1,7 +1,9 @@
 from dataclasses import dataclass
 from datetime import datetime
 from typing import List
+import traceback
 
+from quotientai.exceptions import logger
 
 @dataclass
 class ModelProvider:
@@ -51,10 +53,9 @@ class ModelsResource:
                 model_obj = Model(**model)
 
         if model_obj is None:
-            raise Exception(
-                f"model with name {name} not found. please check the list of available models using quotient.models.list()"
-            )
-
+            logger.error(f"model with name {name} not found. please check the list of available models using quotient.models.list()\n{traceback.format_exc()}")
+            return None
+        
         return model_obj
 
 
@@ -88,8 +89,7 @@ class AsyncModelsResource:
                 model_obj = Model(**model)
 
         if model_obj is None:
-            raise Exception(
-                f"model with name {name} not found. please check the list of available models using quotient.models.list()"
-            )
+            logger.error(f"model with name {name} not found. please check the list of available models using quotient.models.list()\n{traceback.format_exc()}")
+            return None
 
         return model_obj
