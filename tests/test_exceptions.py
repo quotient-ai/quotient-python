@@ -60,7 +60,7 @@ class TestHandleErrors:
 
         result = test_func(None)
         assert result is None
-        assert "Authentication error: Unauthorized" in caplog.text
+        assert "unauthorized: the request requires user authentication. ensure your API key is correct. Unauthorized" in caplog.text
         assert "401 error" in caplog.text
 
     def test_unprocessable_entity_error(self, caplog):
@@ -94,7 +94,7 @@ class TestHandleErrors:
 
         result = test_func(None)
         assert result is None
-        assert "Connection error: Connection failed" in caplog.text
+        assert "connection error. please try again later. Connection failed" in caplog.text
         assert "httpx.RequestError: Connection failed" in caplog.text
 
     def test_timeout_error(self, caplog):
@@ -122,7 +122,7 @@ class TestHandleErrors:
 
         result = test_func(None)
         assert result is None
-        assert "Permission denied error: Forbidden" in caplog.text
+        assert "forbidden: the server understood the request, but it refuses to authorize it. Forbidden" in caplog.text
         assert "403 error" in caplog.text
 
     def test_not_found_error(self, caplog):
@@ -138,7 +138,7 @@ class TestHandleErrors:
 
         result = test_func(None)
         assert result is None
-        assert "Not found error: Not Found" in caplog.text
+        assert "not found: the server can not find the requested resource. Not Found" in caplog.text
         assert "404 error" in caplog.text
 
     def test_unexpected_status_code(self, caplog):
@@ -154,7 +154,7 @@ class TestHandleErrors:
 
         result = test_func(None)
         assert result is None
-        assert "Unexpected status code 418: I'm a teapot" in caplog.text
+        assert "Unexpected status code 418. contact support@quotientai.co for help. I'm a teapot" in caplog.text
         assert "418 error" in caplog.text
 
 # Test asynchronous error handler
@@ -205,7 +205,7 @@ class TestHandleAsyncErrors:
 
         result = await test_func(None)
         assert result is None
-        assert "Authentication error: Unauthorized" in caplog.text
+        assert "unauthorized: the request requires user authentication. ensure your API key is correct. Unauthorized" in caplog.text
         assert "401 error" in caplog.text
 
     @pytest.mark.asyncio
@@ -241,7 +241,7 @@ class TestHandleAsyncErrors:
 
         result = await test_func(None)
         assert result is None
-        assert "Connection error: Connection failed" in caplog.text
+        assert "connection error. please try again later. Connection failed" in caplog.text
         assert "httpx.RequestError: Connection failed" in caplog.text
 
     @pytest.mark.asyncio
@@ -281,7 +281,7 @@ class TestHandleAsyncErrors:
 
         result = await test_func(None)
         assert result is None
-        assert "Permission denied error: Forbidden" in caplog.text
+        assert "forbidden: the server understood the request, but it refuses to authorize it. Forbidden" in caplog.text
         assert "403 error" in caplog.text
 
     @pytest.mark.asyncio
@@ -298,7 +298,7 @@ class TestHandleAsyncErrors:
 
         result = await test_func(None)
         assert result is None
-        assert "Not found error: Not Found" in caplog.text
+        assert "not found: the server can not find the requested resource. Not Found" in caplog.text
         assert "404 error" in caplog.text
 
     @pytest.mark.asyncio
@@ -315,7 +315,7 @@ class TestHandleAsyncErrors:
 
         result = await test_func(None)
         assert result is None
-        assert "Unexpected status code 418: I'm a teapot" in caplog.text
+        assert "Unexpected status code 418. contact support@quotientai.co for help. I'm a teapot" in caplog.text
         assert "418 error" in caplog.text
 
     @pytest.mark.asyncio

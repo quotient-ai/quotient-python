@@ -54,7 +54,7 @@ class _AsyncQuotientClient(httpx.AsyncClient):
         try:
             self._token_path.parent.mkdir(parents=True, exist_ok=True)
         except Exception:
-            logger.error(f"could not create directory for token. if you see this error please notify us at contact@quotientai.co\n{traceback.format_exc()}")
+            logger.error(f"could not create directory for token. if you see this error please notify us at contact@quotientai.co")
             return None
         # Save to disk
         with open(self._token_path, "w") as f:
@@ -200,7 +200,7 @@ class AsyncQuotientLogger:
         self.sample_rate = sample_rate
 
         if not (0.0 <= self.sample_rate <= 1.0):
-            logger.error(f"sample_rate must be between 0.0 and 1.0\n{traceback.format_exc()}")
+            logger.error(f"sample_rate must be between 0.0 and 1.0")
             return None
         
         self.hallucination_detection = hallucination_detection
@@ -234,7 +234,7 @@ class AsyncQuotientLogger:
         underlying non_blocking_create function.
         """
         if not self._configured:
-            logger.error(f"Logger is not configured. Please call init() before logging.\n{traceback.format_exc()}")
+            logger.error(f"Logger is not configured. Please call init() before logging.")
             return None
 
         # Merge default tags with any tags provided at log time.
@@ -261,11 +261,11 @@ class AsyncQuotientLogger:
                     try:
                         LogDocument(**doc)
                     except Exception as e:
-                        logger.error(f"Invalid document format: Documents must include 'page_content' field and optional 'metadata' object with string keys. \n{traceback.format_exc()}")
+                        logger.error(f"Invalid document format: Documents must include 'page_content' field and optional 'metadata' object with string keys.")
                         return None
                 else:
                     actual_type = type(doc).__name__
-                    logger.error(f"Invalid document type: Received {actual_type}, but documents must be strings or dictionaries. \n{traceback.format_exc()}")
+                    logger.error(f"Invalid document type: Received {actual_type}, but documents must be strings or dictionaries.")
                     return None
                 
         if self._should_sample():
@@ -304,7 +304,7 @@ class AsyncQuotientAI:
         if not self.api_key:
             logger.error("could not find API key. either pass api_key to AsyncQuotientAI() or "
                 "set the QUOTIENT_API_KEY environment variable. "
-                f"if you do not have an API key, you can create one at https://app.quotientai.co in your settings page\n{traceback.format_exc()}")
+                f"if you do not have an API key, you can create one at https://app.quotientai.co in your settings page")
 
         self._client = _AsyncQuotientClient(self.api_key)
 
@@ -346,7 +346,7 @@ class AsyncQuotientAI:
 
             invalid_parameters = set(parameters.keys()) - set(valid_parameters)
             if invalid_parameters:
-                logger.error(f"invalid parameters: {', '.join(invalid_parameters)}. \nvalid parameters are: {', '.join(valid_parameters)}\n{traceback.format_exc()}")
+                logger.error(f"invalid parameters: {', '.join(invalid_parameters)}. \nvalid parameters are: {', '.join(valid_parameters)}")
                 return None
             
             return parameters

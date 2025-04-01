@@ -218,20 +218,20 @@ def handle_errors(func):
                 logger.error(f"Bad request error: {message}\n{traceback.format_exc()}")
                 return None
             elif exc.response.status_code == 401:
-                logger.error(f"Authentication error: {exc.response.text}\n{traceback.format_exc()}")
+                logger.error(f"unauthorized: the request requires user authentication. ensure your API key is correct. {exc.response.text}\n{traceback.format_exc()}")
                 return None
             elif exc.response.status_code == 403:
-                logger.error(f"Permission denied error: {exc.response.text}\n{traceback.format_exc()}")
+                logger.error(f"forbidden: the server understood the request, but it refuses to authorize it. {exc.response.text}\n{traceback.format_exc()}")
                 return None
             elif exc.response.status_code == 404:
-                logger.error(f"Not found error: {exc.response.text}\n{traceback.format_exc()}")
+                logger.error(f"not found: the server can not find the requested resource. {exc.response.text}\n{traceback.format_exc()}")
                 return None
             elif exc.response.status_code == 422:
                 message = _parse_unprocessable_entity_error(exc.response)
                 logger.error(f"Unprocessable entity error: {message}\n{traceback.format_exc()}")
                 return None
             else:
-                logger.error(f"Unexpected status code {exc.response.status_code}: {exc.response.text}\n{traceback.format_exc()}")
+                logger.error(f"Unexpected status code {exc.response.status_code}. contact support@quotientai.co for help. {exc.response.text}\n{traceback.format_exc()}")
                 return None
 
         except httpx.ReadTimeout as exc:  # pragma: no cover
@@ -239,7 +239,7 @@ def handle_errors(func):
             return None  # pragma: no cover
 
         except httpx.RequestError as exc:
-            logger.error(f"Connection error: {exc}\n{traceback.format_exc()}")
+            logger.error(f"connection error. please try again later. {exc}\n{traceback.format_exc()}")
             return None
 
     return wrapper
@@ -269,20 +269,20 @@ def handle_async_errors(func):
                 logger.error(f"Bad request error: {message}\n{traceback.format_exc()}")
                 return None
             elif exc.response.status_code == 401:
-                logger.error(f"Authentication error: {exc.response.text}\n{traceback.format_exc()}")
+                logger.error(f"unauthorized: the request requires user authentication. ensure your API key is correct. {exc.response.text}\n{traceback.format_exc()}")
                 return None
             elif exc.response.status_code == 403:
-                logger.error(f"Permission denied error: {exc.response.text}\n{traceback.format_exc()}")
+                logger.error(f"forbidden: the server understood the request, but it refuses to authorize it. {exc.response.text}\n{traceback.format_exc()}")
                 return None
             elif exc.response.status_code == 404:
-                logger.error(f"Not found error: {exc.response.text}\n{traceback.format_exc()}")
+                logger.error(f"not found: the server can not find the requested resource. {exc.response.text}\n{traceback.format_exc()}")
                 return None
             elif exc.response.status_code == 422:
                 message = _parse_unprocessable_entity_error(exc.response)
                 logger.error(f"Unprocessable entity error: {message}\n{traceback.format_exc()}")
                 return None
             else:
-                logger.error(f"Unexpected status code {exc.response.status_code}: {exc.response.text}\n{traceback.format_exc()}")
+                logger.error(f"Unexpected status code {exc.response.status_code}. contact support@quotientai.co for help. {exc.response.text}\n{traceback.format_exc()}")
                 return None
 
         except httpx.ReadTimeout as exc:  # pragma: no cover
@@ -290,7 +290,7 @@ def handle_async_errors(func):
             return None  # pragma: no cover
 
         except httpx.RequestError as exc:
-            logger.error(f"Connection error: {exc}\n{traceback.format_exc()}")
+            logger.error(f"connection error. please try again later. {exc}\n{traceback.format_exc()}")
             return None
 
     return wrapper
