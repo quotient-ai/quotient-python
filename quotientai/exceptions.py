@@ -11,7 +11,7 @@ import traceback
 # Configure logger to print to stdout
 logger = logging.getLogger(__name__)
 handler = logging.StreamHandler()
-handler.setFormatter(logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s'))
+handler.setFormatter(logging.Formatter('%(asctime)s %(levelname)s:%(name)s: %(message)s'))
 logger.addHandler(handler)
 logger.setLevel(logging.ERROR)  # Only log errors since we're using error level in our code
 
