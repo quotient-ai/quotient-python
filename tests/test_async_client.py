@@ -477,7 +477,7 @@ class TestAsyncQuotientLogger:
 
     @pytest.mark.asyncio
     async def test_log_with_init(self):
-        mock_logs_resource = Mock()
+        mock_logs_resource = AsyncMock()
         mock_logs_resource.create = AsyncMock(return_value=None)
         
         logger = AsyncQuotientLogger(mock_logs_resource)

@@ -37,7 +37,7 @@ def mock_client(mocker, mock_model_response):
 @pytest.fixture
 def mock_async_client(mocker, mock_model_response):
     client = mocker.Mock()
-    client._get.return_value = mocker.AsyncMock(return_value=mock_model_response)()
+    client._get = mocker.AsyncMock(return_value=mock_model_response)
     return client
 
 # Synchronous Resource Tests
@@ -100,10 +100,10 @@ class TestAsyncModelsResource:
         assert model.provider.name == "OpenAI"
 
     @pytest.mark.asyncio
-    async def test_get_model_not_found(self, mock_async_client, caplog, mocker):
+    async def test_get_model_not_found(self, mock_async_client, caplog):
         models_resource = AsyncModelsResource(mock_async_client)
         # Mock a valid async response with no matching model
-        mock_async_client._get.return_value = mocker.AsyncMock(return_value=[])()
+        mock_async_client._get.return_value = []
 
         result = await models_resource.get("nonexistent-model")
         assert result is None

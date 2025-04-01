@@ -8,6 +8,11 @@ from quotientai.exceptions import (
     handle_async_errors,
     _parse_unprocessable_entity_error,
     _parse_bad_request_error,
+    APIError,
+    APIResponseValidationError,
+    APIStatusError,
+    APIConnectionError,
+    APITimeoutError,
 )
 
 # Test synchronous error handler
@@ -394,4 +399,233 @@ class TestErrorParsing:
         
         result = _parse_bad_request_error(mock_response)
         assert result is None
-        assert "API Response Validation Error: Missing detail in response" in caplog.text 
+        assert "API Response Validation Error: Missing detail in response" in caplog.text
+
+class TestAPIError:
+    """Tests for the APIError class initialization"""
+
+    def test_api_error_init_with_dict_body(self):
+        """Test APIError initialization with a dictionary body"""
+        mock_request = Mock(spec=httpx.Request)
+        body = {
+            "code": "test_code",
+            "param": "test_param",
+            "type": "test_type"
+        }
+        
+        error = APIError("Test message", mock_request, body=body)
+        
+        assert error.message == "Test message"
+        assert error.request == mock_request
+        assert error.body == body
+        assert error.code == "test_code"
+        assert error.param == "test_param"
+        assert error.type == "test_type"
+
+    def test_api_error_init_with_non_dict_body(self):
+        """Test APIError initialization with a non-dictionary body"""
+        mock_request = Mock(spec=httpx.Request)
+        body = "test body"
+        
+        error = APIError("Test message", mock_request, body=body)
+        
+        assert error.message == "Test message"
+        assert error.request == mock_request
+        assert error.body == body
+        assert error.code is None
+        assert error.param is None
+        assert error.type is None
+
+    def test_api_error_init_with_none_body(self):
+        """Test APIError initialization with None body"""
+        mock_request = Mock(spec=httpx.Request)
+        
+        error = APIError("Test message", mock_request, body=None)
+        
+        assert error.message == "Test message"
+        assert error.request == mock_request
+        assert error.body is None
+        assert error.code is None
+        assert error.param is None
+        assert error.type is None
+
+    def test_api_error_init_with_partial_dict_body(self):
+        """Test APIError initialization with a dictionary body containing only some fields"""
+        mock_request = Mock(spec=httpx.Request)
+        body = {
+            "code": "test_code",
+            "type": "test_type"
+        }
+        
+        error = APIError("Test message", mock_request, body=body)
+        
+        assert error.message == "Test message"
+        assert error.request == mock_request
+        assert error.body == body
+        assert error.code == "test_code"
+        assert error.param is None
+        assert error.type == "test_type"
+
+class TestAPIResponseValidationError:
+    """Tests for the APIResponseValidationError class initialization"""
+
+    def test_api_response_validation_error_init_with_message(self):
+        """Test APIResponseValidationError initialization with custom message"""
+        mock_response = Mock(spec=httpx.Response)
+        mock_response.request = Mock(spec=httpx.Request)
+        mock_response.status_code = 400
+        body = {"detail": "Invalid data"}
+        
+        error = APIResponseValidationError(
+            response=mock_response,
+            body=body,
+            message="Custom validation error"
+        )
+        
+        assert error.message == "Custom validation error"
+        assert error.request == mock_response.request
+        assert error.body == body
+        assert error.response == mock_response
+        assert error.status_code == 400
+
+    def test_api_response_validation_error_init_without_message(self):
+        """Test APIResponseValidationError initialization with default message"""
+        mock_response = Mock(spec=httpx.Response)
+        mock_response.request = Mock(spec=httpx.Request)
+        mock_response.status_code = 422
+        body = {"detail": "Invalid schema"}
+        
+        error = APIResponseValidationError(
+            response=mock_response,
+            body=body
+        )
+        
+        assert error.message == "Data returned by API invalid for expected schema."
+        assert error.request == mock_response.request
+        assert error.body == body
+        assert error.response == mock_response
+        assert error.status_code == 422
+
+    def test_api_response_validation_error_init_with_none_body(self):
+        """Test APIResponseValidationError initialization with None body"""
+        mock_response = Mock(spec=httpx.Response)
+        mock_response.request = Mock(spec=httpx.Request)
+        mock_response.status_code = 500
+        
+        error = APIResponseValidationError(
+            response=mock_response,
+            body=None
+        )
+        
+        assert error.message == "Data returned by API invalid for expected schema."
+        assert error.request == mock_response.request
+        assert error.body is None
+        assert error.response == mock_response
+        assert error.status_code == 500
+
+class TestAPIStatusError:
+    """Tests for the APIStatusError class initialization"""
+
+    def test_api_status_error_init_with_dict_body(self):
+        """Test APIStatusError initialization with a dictionary body"""
+        mock_response = Mock(spec=httpx.Response)
+        mock_response.request = Mock(spec=httpx.Request)
+        mock_response.status_code = 400
+        body = {"detail": "Bad request"}
+        
+        error = APIStatusError(
+            message="Custom error message",
+            response=mock_response,
+            body=body
+        )
+        
+        assert error.message == "Custom error message"
+        assert error.request == mock_response.request
+        assert error.body == body
+        assert error.response == mock_response
+        assert error.status_code == 400
+
+    def test_api_status_error_init_with_non_dict_body(self):
+        """Test APIStatusError initialization with a non-dictionary body"""
+        mock_response = Mock(spec=httpx.Response)
+        mock_response.request = Mock(spec=httpx.Request)
+        mock_response.status_code = 500
+        body = "Server error"
+        
+        error = APIStatusError(
+            message="Server error message",
+            response=mock_response,
+            body=body
+        )
+        
+        assert error.message == "Server error message"
+        assert error.request == mock_response.request
+        assert error.body == body
+        assert error.response == mock_response
+        assert error.status_code == 500
+
+    def test_api_status_error_init_with_none_body(self):
+        """Test APIStatusError initialization with None body"""
+        mock_response = Mock(spec=httpx.Response)
+        mock_response.request = Mock(spec=httpx.Request)
+        mock_response.status_code = 404
+        
+        error = APIStatusError(
+            message="Not found message",
+            response=mock_response,
+            body=None
+        )
+        
+        assert error.message == "Not found message"
+        assert error.request == mock_response.request
+        assert error.body is None
+        assert error.response == mock_response
+        assert error.status_code == 404
+
+class TestAPIConnectionError:
+    """Tests for the APIConnectionError class initialization"""
+
+    def test_api_connection_error_init_with_default_message(self):
+        """Test APIConnectionError initialization with default message"""
+        mock_request = Mock(spec=httpx.Request)
+        
+        error = APIConnectionError(request=mock_request)
+        
+        assert error.message == "Connection error."
+        assert error.request == mock_request
+        assert error.body is None
+        assert error.code is None
+        assert error.param is None
+        assert error.type is None
+
+    def test_api_connection_error_init_with_custom_message(self):
+        """Test APIConnectionError initialization with custom message"""
+        mock_request = Mock(spec=httpx.Request)
+        
+        error = APIConnectionError(
+            message="Custom connection error",
+            request=mock_request
+        )
+        
+        assert error.message == "Custom connection error"
+        assert error.request == mock_request
+        assert error.body is None
+        assert error.code is None
+        assert error.param is None
+        assert error.type is None
+
+class TestAPITimeoutError:
+    """Tests for the APITimeoutError class initialization"""
+
+    def test_api_timeout_error_init(self):
+        """Test APITimeoutError initialization"""
+        mock_request = Mock(spec=httpx.Request)
+        
+        error = APITimeoutError(request=mock_request)
+        
+        assert error.message == "Request timed out."
+        assert error.request == mock_request
+        assert error.body is None
+        assert error.code is None
+        assert error.param is None
+        assert error.type is None 
