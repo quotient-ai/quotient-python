@@ -591,7 +591,7 @@ class TestDatasetsResource:
         assert attempts == [4, 2, 2]
         assert len(row_responses) == 4
 
-    def test_batch_create_rows_fails_at_size_one(self, mock_client):
+    def test_batch_create_rows_fails_at_size_one(self, mock_client, caplog):
         def mock_post(path, data):
             if "dataset_rows/batch" in path:
                 raise Exception("Batch creation failed")
@@ -599,18 +599,18 @@ class TestDatasetsResource:
 
         mock_client._post = mock_post
         datasets = DatasetsResource(mock_client)
-        
+
         rows = [{
             "input": "test input",
             "context": "test context",
             "expected": "test expected"
         }]
-        
+
         row_responses = []
-        with pytest.raises(Exception) as exc_info:
-            datasets.batch_create_rows("test-dataset-id", rows, row_responses, batch_size=1)
-        
-        assert str(exc_info.value) == "Batch creation failed"
+        result = datasets.batch_create_rows("test-dataset-id",rows, row_responses, batch_size=1)
+        assert result == []
+        assert "Batch create rows failed" in caplog.text
+        assert "Batch creation failed" in caplog.text
 
     def test_append_rows_to_dataset(self, mock_client):
         def mock_post(path, data):
@@ -994,7 +994,7 @@ class TestAsyncDatasetsResource:
         assert len(row_responses) == 4
 
     @pytest.mark.asyncio
-    async def test_batch_create_rows_fails_at_size_one(self, mock_async_client):
+    async def test_batch_create_rows_fails_at_size_one(self, mock_async_client, caplog):
         async def mock_post(path, data):
             if "dataset_rows/batch" in path:
                 raise Exception("Batch creation failed")
@@ -1002,18 +1002,18 @@ class TestAsyncDatasetsResource:
 
         mock_async_client._post = mock_post
         datasets = AsyncDatasetsResource(mock_async_client)
-        
+
         rows = [{
             "input": "test input",
             "context": "test context",
             "expected": "test expected"
         }]
-        
+
         row_responses = []
-        with pytest.raises(Exception) as exc_info:
-            await datasets.batch_create_rows("test-dataset-id", rows, row_responses, batch_size=1)
-        
-        assert str(exc_info.value) == "Batch creation failed"
+        result = await datasets.batch_create_rows("test-dataset-id", rows, row_responses, batch_size=1)
+        assert result == []
+        assert "Batch create rows failed" in caplog.text
+        assert "Batch creation failed" in caplog.text
 
     @pytest.mark.asyncio
     async def test_append_rows_to_dataset(self, mock_async_client):

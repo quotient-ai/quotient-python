@@ -1,4 +1,6 @@
 import pytest
+import pytest_mock
+
 from datetime import datetime
 from quotientai.resources.models import Model, ModelsResource, AsyncModelsResource
 
@@ -60,13 +62,18 @@ class TestModelsResource:
         assert model.name == "gpt-4"
         assert model.provider.name == "OpenAI"
 
-    def test_get_model_not_found(self, mock_client):
+    def test_get_model_not_found(self, mock_client, caplog):
         models_resource = ModelsResource(mock_client)
-        
-        with pytest.raises(Exception) as exc_info:
-            models_resource.get("nonexistent-model")
-        
-        assert "model with name nonexistent-model not found" in str(exc_info.value)
+        # Mock a valid response with no matching model
+        mock_client._get.return_value = [
+            
+        ]
+
+        result = models_resource.get("nonexistent-model")
+        assert result is None
+        assert "model with name nonexistent-model not found" in caplog.text
+        assert "check the list of available models" in caplog.text
+        mock_client._get.assert_called_once_with("/models")
 
 # Asynchronous Resource Tests
 class TestAsyncModelsResource:
@@ -93,10 +100,13 @@ class TestAsyncModelsResource:
         assert model.provider.name == "OpenAI"
 
     @pytest.mark.asyncio
-    async def test_get_model_not_found(self, mock_async_client):
+    async def test_get_model_not_found(self, mock_async_client, caplog, mocker):
         models_resource = AsyncModelsResource(mock_async_client)
-        
-        with pytest.raises(Exception) as exc_info:
-            await models_resource.get("nonexistent-model")
-        
-        assert "model with name nonexistent-model not found" in str(exc_info.value) 
+        # Mock a valid async response with no matching model
+        mock_async_client._get.return_value = mocker.AsyncMock(return_value=[])()
+
+        result = await models_resource.get("nonexistent-model")
+        assert result is None
+        assert "model with name nonexistent-model not found" in caplog.text
+        assert "check the list of available models" in caplog.text
+        mock_async_client._get.assert_called_once_with("/models") 

@@ -144,11 +144,13 @@ class TestLogsResource:
         assert called_params['start_date'] == start_date.isoformat()
         assert called_params['end_date'] == end_date.isoformat()
 
-    def test_list_logs_error_handling(self, logs_resource, mock_client):
+    def test_list_logs_error_handling(self, logs_resource, mock_client, caplog):
         mock_client._get.side_effect = Exception("API Error")
-        
-        with pytest.raises(Exception):
-            logs_resource.list()
+
+        result = logs_resource.list()
+        assert result is None
+        assert "error listing logs" in caplog.text
+        assert "API Error" in caplog.text
 
     def test_post_log(self, logs_resource):
         test_data = {"message": "test log", "level": "info"}
@@ -224,11 +226,13 @@ class TestAsyncLogsResource:
         assert called_params['end_date'] == end_date.isoformat()
 
     @pytest.mark.asyncio
-    async def test_list_logs_error_handling(self, async_logs_resource, mock_client):
+    async def test_list_logs_error_handling(self, async_logs_resource, mock_client, caplog):
         mock_client._get.side_effect = Exception("API Error")
-        
-        with pytest.raises(Exception):
-            await async_logs_resource.list()
+
+        result = await async_logs_resource.list()
+        assert result is None
+        assert "error listing logs" in caplog.text
+        assert "API Error" in caplog.text
 
     @pytest.mark.asyncio
     async def test_post_log_in_background(self, async_logs_resource):

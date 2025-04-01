@@ -6,7 +6,7 @@ from datetime import datetime
 from pathlib import Path
 import jwt
 
-from quotientai.client import QuotientAI, QuotientLogger, QuotientAIError, _BaseQuotientClient
+from quotientai.client import QuotientAI, QuotientLogger, _BaseQuotientClient
 
 # Modify existing fixtures to use proper paths
 @pytest.fixture
@@ -251,16 +251,15 @@ class TestBaseQuotientClient:
             assert client.token == test_token
             assert client.token_expiry == test_expiry
 
-    def test_token_dir_creation_error(self, tmp_path):
+    def test_token_dir_creation_error(self, tmp_path, caplog):
         """Test handling of directory creation errors"""
         with patch('pathlib.Path.home', return_value=tmp_path), \
              patch('pathlib.Path.mkdir', side_effect=Exception("Permission denied")):
             client = _BaseQuotientClient("test-api-key")
-            with pytest.raises(QuotientAIError) as exc:
-                client._save_token("test-token", int(time.time()) + 3600)
-            
-            assert "could not create directory for token" in str(exc.value)
-            assert "contact@quotientai.co" in str(exc.value)
+            result = client._save_token("test-token", int(time.time()) + 3600)
+            assert result is None
+            assert "could not create directory for token" in caplog.text
+            assert "contact@quotientai.co" in caplog.text
 
     def test_get_wrapper(self, tmp_path):
         """Test _get wrapper method"""
@@ -347,10 +346,12 @@ class TestQuotientAI:
             client = QuotientAI()
             assert client.api_key == api_key
 
-    def test_init_no_api_key(self):
+    def test_init_no_api_key(self, caplog):
         with patch.dict('os.environ', clear=True):
-            with pytest.raises(QuotientAIError):
-                QuotientAI()
+            client = QuotientAI()
+            assert client.api_key is None
+            assert "could not find API key" in caplog.text
+            assert "https://app.quotientai.co" in caplog.text
 
     def test_init_calls_auth_resource(self, mock_client):
         with patch('quotientai.client.AuthResource') as MockAuthResource:
@@ -388,23 +389,27 @@ class TestQuotientAI:
         assert run.parameters == valid_params
         assert run.metrics == ["accuracy"]
 
-    def test_evaluate_invalid_parameters(self, quotient_client):
+    def test_evaluate_invalid_parameters(self, quotient_client, caplog):
         mock_prompt = Mock()
         mock_dataset = Mock()
         mock_model = Mock()
-        
+
         invalid_params = {
             "invalid_param": 123
         }
-        
-        with pytest.raises(QuotientAIError):
-            quotient_client.evaluate(
-                prompt=mock_prompt,
-                dataset=mock_dataset,
-                model=mock_model,
-                parameters=invalid_params,
-                metrics=["accuracy"]
-            )
+
+        result = quotient_client.evaluate(
+            prompt=mock_prompt,
+            dataset=mock_dataset,
+            model=mock_model,
+            parameters=invalid_params,
+            metrics=["accuracy"]
+        )
+
+        assert result is None
+        assert "invalid parameters" in caplog.text
+        assert "invalid_param" in caplog.text
+        assert "valid parameters are" in caplog.text
 
 class TestQuotientLogger:
     """Tests for the QuotientLogger class"""
@@ -434,26 +439,31 @@ class TestQuotientLogger:
         assert logger.sample_rate == 0.5
         assert logger.hallucination_detection == True
 
-    def test_invalid_sample_rate(self):
+    def test_invalid_sample_rate(self, caplog):
         mock_logs_resource = Mock()
         logger = QuotientLogger(mock_logs_resource)
-        
-        with pytest.raises(QuotientAIError):
-            logger.init(
-                app_name="test-app",
-                environment="test",
-                sample_rate=2.0
-            )
 
-    def test_log_without_init(self):
+        result = logger.init(
+            app_name="test-app",
+            environment="test",
+            sample_rate=2.0
+        )
+
+        assert result is None
+        assert "sample_rate must be between 0.0 and 1.0" in caplog.text
+        assert mock_logs_resource.create.call_count == 0
+
+    def test_log_without_init(self, caplog):
         mock_logs_resource = Mock()
         logger = QuotientLogger(mock_logs_resource)
         
-        with pytest.raises(RuntimeError):
-            logger.log(
-                user_query="test query",
-                model_output="test output"
-            )
+        result = logger.log(
+            user_query="test query",
+            model_output="test output"
+        )
+        
+        assert result is None
+        assert "Logger is not configured" in caplog.text
 
     def test_log_with_init(self):
         mock_logs_resource = Mock()
@@ -500,42 +510,41 @@ class TestQuotientLogger:
             mock_random.return_value = 0.6
             assert logger._should_sample() is False
     
-    def test_log_with_invalid_document_dict(self):
+    def test_log_with_invalid_document_dict(self, caplog):
         """Test logging with an invalid document dictionary"""
         mock_logs_resource = Mock()
         logger = QuotientLogger(mock_logs_resource)
         logger.init(app_name="test-app", environment="test")
-        
-        # Test with a document missing 'page_content'
-        with pytest.raises(QuotientAIError) as excinfo:
-            logger.log(
-                user_query="test query",
-                model_output="test output",
-                documents=[{"metadata": {"key": "value"}}]
-            )
-        
-        # Verify the error message contains expected information
-        assert "page_content" in str(excinfo.value)
+
+        result = logger.log(
+            user_query="test query",
+            model_output="test output",
+            documents=[{"metadata": {"key": "value"}}]
+        )
+
+        assert result is None
+        assert "Invalid document format" in caplog.text
+        assert "page_content" in caplog.text
         assert mock_logs_resource.create.call_count == 0
+        assert "Documents must include 'page_content' field" in caplog.text
     
-    def test_log_with_invalid_document_type(self):
+    def test_log_with_invalid_document_type(self, caplog):
         """Test logging with a document of invalid type"""
         mock_logs_resource = Mock()
         logger = QuotientLogger(mock_logs_resource)
         logger.init(app_name="test-app", environment="test")
-        
-        # Test with a mix of valid string and invalid non-string/non-dict document
-        # The string document will hit the 'continue' branch
-        with pytest.raises(QuotientAIError) as excinfo:
-            logger.log(
-                user_query="test query",
-                model_output="test output",
-                documents=["valid string document", 123]
-            )
 
-        # Verify the error message contains expected information
-        assert "123" in str(excinfo.value) or "int" in str(excinfo.value)
+        result = logger.log(
+            user_query="test query",
+            model_output="test output",
+            documents=["valid string document", 123]
+        )
+
+        assert result is None
+        assert "Invalid document type" in caplog.text
+        assert "int" in caplog.text
         assert mock_logs_resource.create.call_count == 0
+        assert "documents must be strings or dictionaries" in caplog.text
 
     def test_log_with_valid_documents(self):
         """Test logging with valid document formats"""
