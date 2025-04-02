@@ -4,9 +4,9 @@ class AuthResource:
         self._client = client
 
     def authenticate(self):
-        '''
+        """
         A call to GET /auth/profile to initially authenticate the user.
-        '''
+        """
         response = self._client._get("/auth/profile")
         return response
     
