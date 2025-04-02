@@ -614,18 +614,21 @@ class TestDatasetsResource:
 
     def test_append_rows_to_dataset(self, mock_client):
         def mock_post(path, data):
-            if "dataset_rows" in path:
-                return {
-                    "dataset_row_id": "new-row-id",
-                    "input": data["input"],
-                    "context": data["context"],
-                    "expected": data["expected"],
-                    "annotation": data.get("annotation", "ungraded"),
-                    "annotation_note": data.get("annotation_note"),
-                    "created_at": "2024-01-01T00:00:00",
-                    "updated_at": "2024-01-01T00:00:00",
-                    "created_by": "test-user"
-                }
+            if "dataset_rows/batch" in path:
+                responses = []
+                for row in data["rows"]:
+                    responses.append({
+                        "dataset_row_id": "new-row-id",
+                        "input": row["input"],
+                        "context": row["context"],
+                        "expected": row["expected"],
+                        "annotation": row.get("annotation", "ungraded"),
+                        "annotation_note": row.get("annotation_note"),
+                        "created_at": "2024-01-01T00:00:00",
+                        "updated_at": "2024-01-01T00:00:00",
+                        "created_by": "test-user"
+                    })
+                return responses
             return {}
 
         mock_client._post = mock_post
@@ -680,6 +683,21 @@ class TestDatasetsResource:
         assert row2.expected == "test expected 2"
         assert row2.metadata.annotation == "bad"
         assert row2.metadata.annotation_note == "test note 2"
+
+    def test_append_with_none_rows(self, mock_client):
+        datasets = DatasetsResource(mock_client)
+        dataset = Dataset(
+            id="test-id",
+            name="Test Dataset",
+            description="Test Description",
+            created_at=datetime.now(),
+            updated_at=datetime.now(),
+            created_by="test-user",
+            rows=[]
+        )
+        
+        result = datasets.append(dataset=dataset, rows=None)
+        assert result is None
 
 # Asynchronous Resource Tests
 class TestAsyncDatasetsResource:
@@ -1018,18 +1036,21 @@ class TestAsyncDatasetsResource:
     @pytest.mark.asyncio
     async def test_append_rows_to_dataset(self, mock_async_client):
         async def mock_post(path, data):
-            if "dataset_rows" in path:
-                return {
-                    "dataset_row_id": "new-row-id",
-                    "input": data["input"],
-                    "context": data["context"],
-                    "expected": data["expected"],
-                    "annotation": data.get("annotation", "ungraded"),
-                    "annotation_note": data.get("annotation_note"),
-                    "created_at": "2024-01-01T00:00:00",
-                    "updated_at": "2024-01-01T00:00:00",
-                    "created_by": "test-user"
-                }
+            if "dataset_rows/batch" in path:
+                responses = []
+                for row in data["rows"]:
+                    responses.append({
+                        "dataset_row_id": "new-row-id",
+                        "input": row["input"],
+                        "context": row["context"],
+                        "expected": row["expected"],
+                        "annotation": row.get("annotation", "ungraded"),
+                        "annotation_note": row.get("annotation_note"),
+                        "created_at": "2024-01-01T00:00:00",
+                        "updated_at": "2024-01-01T00:00:00",
+                        "created_by": "test-user"
+                    })
+                return responses
             return {}
 
         mock_async_client._post = mock_post
@@ -1083,4 +1104,36 @@ class TestAsyncDatasetsResource:
         assert row2.context == "test context 2"
         assert row2.expected == "test expected 2"
         assert row2.metadata.annotation == "bad"
-        assert row2.metadata.annotation_note == "test note 2" 
+        assert row2.metadata.annotation_note == "test note 2"
+
+    @pytest.mark.asyncio
+    async def test_append_with_none_rows(self, mock_async_client):
+        datasets = AsyncDatasetsResource(mock_async_client)
+        dataset = Dataset(
+            id="test-id",
+            name="Test Dataset",
+            description="Test Description",
+            created_at=datetime.now(),
+            updated_at=datetime.now(),
+            created_by="test-user",
+            rows=[]
+        )
+        
+        result = await datasets.append(dataset=dataset, rows=None)
+        assert result is None
+
+    @pytest.mark.asyncio
+    async def test_async_append_with_none_rows(self, mock_async_client):
+        datasets = AsyncDatasetsResource(mock_async_client)
+        dataset = Dataset(
+            id="test-id",
+            name="Test Dataset",
+            description="Test Description",
+            created_at=datetime.now(),
+            updated_at=datetime.now(),
+            created_by="test-user",
+            rows=[]
+        )
+        
+        result = await datasets.append(dataset=dataset, rows=None)
+        assert result is None 
