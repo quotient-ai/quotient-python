@@ -323,7 +323,7 @@ class AsyncQuotientAI:
             self.auth.authenticate()
         except Exception as e:
             logger.error(f"{str(e)}\n"
-                "If you are seeing this error, please check that your API key is correct and that you have access to the QuotientAI API.\n"
+                "If you are seeing this error, please check that your API key is correct.\n"
                 f"If the issue persists, please contact support@quotientai.co\n{traceback.format_exc()}")
             return None
 
