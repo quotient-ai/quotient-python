@@ -15,9 +15,9 @@ class AsyncAuthResource:
         self._client = client
 
     def authenticate(self):
-        '''
+        """
         A synchronous wrapper for an async auth call to be used during initialization.
-        '''
+        """
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
         try:
