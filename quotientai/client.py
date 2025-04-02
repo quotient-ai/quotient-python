@@ -310,8 +310,6 @@ class QuotientAI:
 
         _client = _BaseQuotientClient(self.api_key)
         self.auth = AuthResource(_client)
-        self.auth.authenticate()
-
         self.prompts = resources.PromptsResource(_client)
         self.datasets = resources.DatasetsResource(_client)
         self.models = resources.ModelsResource(_client)
@@ -321,6 +319,14 @@ class QuotientAI:
 
         # Create an unconfigured logger instance.
         self.logger = QuotientLogger(self.logs)
+
+        try:
+            self.auth.authenticate()
+        except Exception as e:
+            logger.error(f"{str(e)}\n"
+                "If you are seeing this error, please check that your API key is correct and that you have access to the QuotientAI API.\n"
+                f"If the issue persists, please contact support@quotientai.co\n{traceback.format_exc()}")
+            return None
 
     def evaluate(
         self,

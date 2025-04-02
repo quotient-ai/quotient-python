@@ -10,6 +10,7 @@ import httpx
 
 from quotientai import resources
 from quotientai.exceptions import handle_async_errors, logger
+from quotientai.resources.auth import AsyncAuthResource
 from quotientai.resources.prompts import Prompt
 from quotientai.resources.logs import LogDocument
 from quotientai.resources.models import Model
@@ -307,7 +308,7 @@ class AsyncQuotientAI:
                 f"if you do not have an API key, you can create one at https://app.quotientai.co in your settings page")
 
         self._client = _AsyncQuotientClient(self.api_key)
-
+        self.auth = AsyncAuthResource(self._client)
         self.prompts = resources.AsyncPromptsResource(self._client)
         self.datasets = resources.AsyncDatasetsResource(self._client)
         self.models = resources.AsyncModelsResource(self._client)
@@ -317,6 +318,14 @@ class AsyncQuotientAI:
 
         # Create an unconfigured logger instance.
         self.logger = AsyncQuotientLogger(self.logs)
+
+        try:
+            self.auth.authenticate()
+        except Exception as e:
+            logger.error(f"{str(e)}\n"
+                "If you are seeing this error, please check that your API key is correct and that you have access to the QuotientAI API.\n"
+                f"If the issue persists, please contact support@quotientai.co\n{traceback.format_exc()}")
+            return None
 
     async def evaluate(
         self,
