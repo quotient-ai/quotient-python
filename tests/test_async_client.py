@@ -418,6 +418,17 @@ class TestAsyncQuotientAI:
         assert "invalid_param" in caplog.text
         assert "valid parameters are" in caplog.text
 
+    @pytest.mark.asyncio
+    async def test_init_auth_failure(self, caplog):
+        """Test that the client logs authentication failure"""
+        with patch('quotientai.async_client.AsyncAuthResource') as MockAuthResource:
+            mock_auth = MockAuthResource.return_value
+            mock_auth.authenticate = Mock(side_effect=Exception("'Exception' object has no attribute 'message'"))
+            
+            AsyncQuotientAI(api_key="test-api-key")
+            assert "'Exception' object has no attribute 'message'" in caplog.text
+            assert "If you are seeing this error, please check that your API key is correct" in caplog.text
+
 class TestAsyncQuotientLogger:
     """Tests for the AsyncQuotientLogger class"""
     
