@@ -364,13 +364,15 @@ class DatasetsResource:
         Dataset
             The updated dataset with the appended rows.
         """
+        if rows is None:
+            logger.error("Rows are required.")
+            return None
+
         row_responses = []
-        for row in rows:
-            row_response = self._client._post(
-                f"/datasets/{dataset.id}/dataset_rows",
-                data=row,
-            )
-            row_responses.append(
+        dataset_rows = []
+        self.batch_create_rows(dataset.id, rows, row_responses)
+        for row_response in row_responses:
+            dataset_rows.append(
                 DatasetRow(
                     id=row_response["dataset_row_id"],
                     input=row_response["input"],
@@ -393,7 +395,7 @@ class DatasetsResource:
             created_at=dataset.created_at,
             updated_at=dataset.updated_at,
             created_by=dataset.created_by,
-            rows=dataset.rows + row_responses,
+            rows=dataset.rows + dataset_rows,
         )
         return dataset
 
@@ -715,7 +717,7 @@ class AsyncDatasetsResource:
         self,
         dataset: Dataset,
         rows: Optional[List[dict]] = None,
-    ) -> Dataset:
+    ) -> Dataset | None:
         """
         Append rows to an existing dataset.
 
@@ -731,13 +733,15 @@ class AsyncDatasetsResource:
         Dataset
             The updated dataset with the appended rows.
         """
+        if rows is None:
+            logger.error("Rows are required.")
+            return None
+
         row_responses = []
-        for row in rows:
-            row_response = await self._client._post(
-                f"/datasets/{dataset.id}/dataset_rows",
-                data=row,
-            )
-            row_responses.append(
+        dataset_rows = []
+        await self.batch_create_rows(dataset.id, rows, row_responses)
+        for row_response in row_responses:
+            dataset_rows.append(
                 DatasetRow(
                     id=row_response["dataset_row_id"],
                     input=row_response["input"],
@@ -760,7 +764,7 @@ class AsyncDatasetsResource:
             created_at=dataset.created_at,
             updated_at=dataset.updated_at,
             created_by=dataset.created_by,
-            rows=dataset.rows + row_responses,
+            rows=dataset.rows + dataset_rows,
         )
         return dataset
 

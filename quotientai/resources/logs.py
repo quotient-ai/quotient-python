@@ -231,6 +231,9 @@ class AsyncLogsResource:
 
         try:
             response = await self._client._get("/logs", params=params)
+            if response is None  or response["logs"] is None:
+                logger.error(f"No logs found. Please check your query parameters and try again.\n{traceback.format_exc()}")
+                return []
             data = response["logs"]
 
             logs = []

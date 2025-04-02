@@ -252,4 +252,18 @@ class TestAsyncLogsResource:
             raise Exception("Network error")
 
         async_logs_resource._client._post = mock_failed_post
-        await async_logs_resource._post_log_in_background(test_data)  # Should complete without error 
+        await async_logs_resource._post_log_in_background(test_data)  # Should complete without error
+
+    @pytest.mark.asyncio
+    async def test_list_logs_with_none_response(self, mock_client):
+        mock_client._get = AsyncMock(return_value=None)
+        logs = AsyncLogsResource(mock_client)
+        result = await logs.list()
+        assert result == []
+
+    @pytest.mark.asyncio
+    async def test_list_logs_with_none_logs(self, mock_client):
+        mock_client._get = AsyncMock(return_value={"logs": None})
+        logs = AsyncLogsResource(mock_client)
+        result = await logs.list()
+        assert result == [] 
