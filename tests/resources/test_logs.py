@@ -2,10 +2,13 @@ import pytest
 from datetime import datetime
 from unittest.mock import Mock, AsyncMock, patch
 from quotientai.resources.logs import Log, LogsResource, AsyncLogsResource, LogDocument
+from quotientai.exceptions import logger
 import asyncio
 import atexit
 import threading
 import logging
+import time
+import traceback
 
 # Fixtures
 @pytest.fixture
@@ -294,25 +297,61 @@ class TestLogsResource:
         # Verify shutdown was requested
         assert logs_resource._shutdown_requested is True
 
-    def test_cleanup_queue_with_nonterminating_thread(self, logs_resource, mock_client, caplog):
-        """Test the _cleanup_queue method when the worker thread doesn't terminate"""
-        # Set the log level to capture all logs
+    def test_cleanup_queue_with_nonterminating_thread(self, logs_resource, caplog):
+        """Test cleanup when worker thread doesn't terminate."""
         caplog.set_level(logging.WARNING, logger="quotientai.exceptions")
         
-        # Add an item to the queue
+        # Add a test item to the queue
         logs_resource._log_queue.append({"test": "data"})
         
         # Mock the worker thread to simulate it being alive after join
         logs_resource._worker_thread.is_alive.return_value = True
         
-        # Call the cleanup method
+        # Call cleanup
         logs_resource._cleanup_queue()
         
-        # Verify that the warning was logged
+        # Verify warning was logged
         assert "Worker thread did not terminate during shutdown" in caplog.text
-        
-        # Verify shutdown was requested
         assert logs_resource._shutdown_requested is True
+
+    def test_worker_thread_error_logging(self, logs_resource, caplog):
+        """Test that errors during log processing are properly logged."""
+        # Set the log level for the correct logger
+        caplog.set_level(logging.ERROR, logger="quotientai.exceptions")
+        
+        # Mock _post_log to raise an exception
+        def mock_post_log(data):
+            raise Exception("Test error during log processing")
+        logs_resource._post_log = mock_post_log
+        
+        # Add a test item to the queue that will cause an error
+        logs_resource._log_queue.append({"test": "data"})
+        
+        # Mock the worker thread's run loop
+        original_process_queue = logs_resource._process_log_queue
+        def mock_process_queue():
+            # Process one item then exit
+            if logs_resource._log_queue:
+                log_data = logs_resource._log_queue.popleft()
+                try:
+                    logs_resource._post_log(log_data)
+                except Exception:
+                    logger.error(f"Error processing log, continuing\n{traceback.format_exc()}")
+        logs_resource._process_log_queue = mock_process_queue
+        
+        # Process the queue
+        logs_resource._process_log_queue()
+        
+        # Get all log records for our logger
+        error_logs = [r for r in caplog.records if r.name == "quotientai.exceptions" and r.levelno == logging.ERROR]
+        
+        # Verify error was logged
+        assert len(error_logs) > 0, "No error logs were captured"
+        assert "Error processing log, continuing" in error_logs[0].message
+        assert "Test error during log processing" in error_logs[0].message
+        
+        # Restore original method
+        logs_resource._process_log_queue = original_process_queue
 
 # Asynchronous Resource Tests
 class TestAsyncLogsResource:

@@ -78,8 +78,9 @@ class LogsResource:
                         # Process the log
                         self._post_log(log_data)
                     except Exception: # pragma: no cover
+                        logger.error(f"Error processing log, continuing\n{traceback.format_exc()}")
                         # Handle exceptions but keep the thread running
-                        # hard to test due to threading
+                        # hard to test that this continues due to threading
                         pass
                 
                 # If we've processed all items and shutdown wasn't requested, set the event
