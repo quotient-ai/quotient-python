@@ -4,7 +4,7 @@ version = "0.2.6"
 authors = [
     "Freddie Vargus <freddie@quotientai.co>",
     "Michael Goitia Sarmiento <mike@quotientai.co>",
-    "Walden Bodtker <walden@quotientai.co,
+    "Walden Bodtker <walden@quotientai.co>",
 ]
 description = "CLI for evaluating large language models with Quotient"
 readme = "README.md"
