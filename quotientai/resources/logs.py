@@ -95,7 +95,7 @@ class LogsResource:
         self._shutdown_requested = True
         
         # Wait for the queue to be empty (with a timeout)
-        if not self._queue_empty_event.wait(timeout=5.0):
+        if not self._queue_empty_event.wait(timeout=3.0):
             logger.warning("Timeout waiting for log queue to empty during shutdown")
             
             # If we timed out, try to process remaining items directly
