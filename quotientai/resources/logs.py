@@ -1,14 +1,16 @@
-from typing import Any, Dict, List, Optional, Union
 import asyncio
+import atexit
 import logging
+import time
+import traceback
+
 from collections import deque
-from threading import Thread, Event
 from dataclasses import dataclass
 from datetime import datetime
-import time
+from threading import Thread, Event
+from typing import Any, Dict, List, Optional, Union
+
 from pydantic import BaseModel
-import traceback
-import atexit
 
 from quotientai.exceptions import logger
 
@@ -52,6 +54,7 @@ class LogsResource:
         self._queue_empty_event = Event()
         self._queue_empty_event.set()  # Initially set since queue is empty
         self._shutdown_requested = False
+        self._processing_timeout = 5.0
 
         # Create a single worker thread
         self._worker_thread = Thread(
@@ -59,7 +62,7 @@ class LogsResource:
         )
         self._worker_thread.start()
         
-        # Register an atexit handler for this class
+        # Register an atexit handler
         atexit.register(self._cleanup_queue)
 
     def _process_log_queue(self):
@@ -70,50 +73,61 @@ class LogsResource:
                 # Queue is not empty, clear the event
                 self._queue_empty_event.clear()
                 
-                # Process all items in the queue
+                # Process all logs in the queue
                 while self._log_queue and not self._shutdown_requested:
                     # Get the leftmost item
                     log_data = self._log_queue.popleft()
                     try:
                         # Process the log
                         self._post_log(log_data)
-                    except Exception: # pragma: no cover
-                        logger.error(f"Error processing log, continuing\n{traceback.format_exc()}")
+                    except Exception: # Process the log
                         # Handle exceptions but keep the thread running
                         # hard to test that this continues due to threading
-                        pass
+                        logger.error(f"Error processing log, continuing\n{traceback.format_exc()}")
                 
-                # If we've processed all items and shutdown wasn't requested, set the event
-                if not self._log_queue and not self._shutdown_requested:
+                # If we've processed all items set the event
+                if not self._log_queue:
                     self._queue_empty_event.set()
             else:
-                # Prevent busy waiting
-                time.sleep(0.1)
-    
+                # If the queue is empty, sleep for a short duration
+                time.sleep(0.01)
+
     def _cleanup_queue(self):
         """Cleanup function to ensure all logs are processed before exit"""
-        # Signal the worker thread to stop after processing current items
+        if not self._log_queue and not self._queue_empty_event.is_set():
+            # Wait for any in-progress logs to complete
+            self._queue_empty_event.wait(timeout=self._processing_timeout)
+            return
+
+        if not self._log_queue:
+            return
+
         self._shutdown_requested = True
         
-        # Wait for the queue to be empty (with a timeout)
-        if not self._queue_empty_event.wait(timeout=3.0):
-            logger.warning("Timeout waiting for log queue to empty during shutdown")
-            
-            # If we timed out, try to process remaining items directly
-            if self._log_queue:
-                logger.info(f"Processing {len(self._log_queue)} remaining items directly")
-                while self._log_queue:
-                    log_data = self._log_queue.popleft()
-                    try:
-                        self._post_log(log_data)
-                    except Exception as e:
-                        logger.error(f"Error processing log during shutdown: {e}")
-        
-        # Wait for the thread to finish
+        # Try waiting for worker thread
+        if self._queue_empty_event.wait(timeout=self._processing_timeout):
+            logger.info("Queue processed normally by worker thread")
+        else:
+            logger.warning(f"Processing remaining {len(self._log_queue)} logs directly")
+            while self._log_queue:
+                log_data = self._log_queue.popleft()
+                try:
+                    self._post_log(log_data)
+                except Exception as e:
+                    logger.error(f"Error processing log during shutdown: {e}")
+
+        # Wait for worker thread to complete
         if self._worker_thread.is_alive():
-            self._worker_thread.join(timeout=1.0)
+            self._worker_thread.join(timeout=2.0)
             if self._worker_thread.is_alive():
                 logger.warning("Worker thread did not terminate during shutdown")
+
+    def _post_log(self, data):
+        """Send the log to the API"""
+        try:
+            return self._client._post("/logs", data)
+        except Exception:
+            logger.error(f"Error sending log\n{traceback.format_exc()}")
 
     def create(
         self,
@@ -163,16 +177,9 @@ class LogsResource:
             "hallucination_detection_sample_rate": hallucination_detection_sample_rate,
         }
 
-        # Add to deque and return immediately
         self._log_queue.append(data)
+        time.sleep(0.1)  # Small delay to allow worker thread to pick up the log
         return None
-
-    def _post_log(self, data):
-        """Send the log to the API"""
-        try:
-            self._client._post("/logs", data)
-        except Exception:
-            pass
 
     def list(
         self,

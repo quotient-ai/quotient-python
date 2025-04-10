@@ -287,7 +287,7 @@ class TestLogsResource:
         logs_resource._cleanup_queue()
         
         # Verify that the timeout was logged
-        assert "Timeout waiting for log queue to empty during shutdown" in caplog.text
+        assert "Processing remaining 1 logs directly" in caplog.text
         
         # Verify that the remaining items were processed directly
         assert len(post_log_calls) == 1
