@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "quotientai"
-version = "0.2.6"
+version = "0.2.7"
 authors = [
     "Freddie Vargus <freddie@quotientai.co>",
     "Michael Goitia Sarmiento <mike@quotientai.co>",
