@@ -108,7 +108,7 @@ class LogsResource:
         if self._queue_empty_event.wait(timeout=self._processing_timeout):
             logger.info("Queue processed normally by worker thread")
         else:
-            logger.warning("Processing remaining logs directly")
+            logger.warning(f"Processing remaining {len(self._log_queue)} logs directly")
             while self._log_queue:
                 log_data = self._log_queue.popleft()
                 try:
