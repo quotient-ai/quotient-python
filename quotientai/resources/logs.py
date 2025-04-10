@@ -119,6 +119,8 @@ class LogsResource:
         # Wait for worker thread to complete
         if self._worker_thread.is_alive():
             self._worker_thread.join(timeout=2.0)
+            if self._worker_thread.is_alive():
+                logger.warning("Worker thread did not terminate during shutdown")
 
     def _post_log(self, data):
         """Send the log to the API"""
