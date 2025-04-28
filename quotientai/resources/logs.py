@@ -3,6 +3,7 @@ import atexit
 import logging
 import time
 import traceback
+import uuid
 
 from collections import deque
 from dataclasses import dataclass
@@ -10,16 +11,19 @@ from datetime import datetime
 from threading import Thread, Event
 from typing import Any, Dict, List, Optional, Union
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from quotientai.exceptions import logger
+
 
 class LogDocument(BaseModel):
     """
     Represents a log document
     """
+
     page_content: str
-    metadata: Optional[Dict[str, Any]] = None
+    metadata: Optional[Dict[str, Any]] = Field(default=None)
+
 
 @dataclass
 class Log:
@@ -40,7 +44,7 @@ class Log:
     tags: Dict[str, Any]
     created_at: datetime
 
-    def __rich_repr__(self): # pragma: no cover
+    def __rich_repr__(self):  # pragma: no cover
         yield "id", self.id
         yield "app_name", self.app_name
         yield "environment", self.environment
@@ -61,7 +65,7 @@ class LogsResource:
             target=self._process_log_queue, daemon=True, name="QuotientLogProcessor"
         )
         self._worker_thread.start()
-        
+
         # Register an atexit handler
         atexit.register(self._cleanup_queue)
 
@@ -72,7 +76,7 @@ class LogsResource:
             if self._log_queue:
                 # Queue is not empty, clear the event
                 self._queue_empty_event.clear()
-                
+
                 # Process all logs in the queue
                 while self._log_queue and not self._shutdown_requested:
                     # Get the leftmost item
@@ -80,11 +84,13 @@ class LogsResource:
                     try:
                         # Process the log
                         self._post_log(log_data)
-                    except Exception: # Process the log
+                    except Exception:  # Process the log
                         # Handle exceptions but keep the thread running
                         # hard to test that this continues due to threading
-                        logger.error(f"Error processing log, continuing\n{traceback.format_exc()}")
-                
+                        logger.error(
+                            f"Error processing log, continuing\n{traceback.format_exc()}"
+                        )
+
                 # If we've processed all items set the event
                 if not self._log_queue:
                     self._queue_empty_event.set()
@@ -103,7 +109,7 @@ class LogsResource:
             return
 
         self._shutdown_requested = True
-        
+
         # Try waiting for worker thread
         if self._queue_empty_event.wait(timeout=self._processing_timeout):
             logger.info("Queue processed normally by worker thread")
@@ -162,8 +168,19 @@ class LogsResource:
             instructions: Optional system instructions
             tags: Optional tags to add to the log
             hallucination_detection_sample_rate: Sample rate for hallucination detection
+
+        Returns:
+            str: The generated log ID
         """
+        # Generate a unique ID for this log
+        log_id = str(uuid.uuid4())
+
+        # Create current timestamp
+        created_at = datetime.now().isoformat()
+
         data = {
+            "id": log_id,
+            "created_at": created_at,
             "app_name": app_name,
             "environment": environment,
             "tags": tags,
@@ -179,7 +196,7 @@ class LogsResource:
 
         self._log_queue.append(data)
         time.sleep(0.1)  # Small delay to allow worker thread to pick up the log
-        return None
+        return log_id
 
     def list(
         self,
@@ -249,7 +266,6 @@ class AsyncLogsResource:
         # Register the cleanup function
         atexit.register(self._cleanup_background_tasks)
 
-
     def _cleanup_background_tasks(self):
         """Cleanup function to run when the script exits"""
         if not self._pending_tasks:
@@ -260,13 +276,14 @@ class AsyncLogsResource:
 
         # Run until all tasks are complete
         try:
-            loop.run_until_complete(asyncio.gather(*self._pending_tasks, return_exceptions=True))
+            loop.run_until_complete(
+                asyncio.gather(*self._pending_tasks, return_exceptions=True)
+            )
         except Exception as e:
             logger.error(f"Error during cleanup: {e}")
         finally:
             # Close the loop
             loop.close()
-
 
     async def list(
         self,
@@ -302,8 +319,10 @@ class AsyncLogsResource:
 
         try:
             response = await self._client._get("/logs", params=params)
-            if response is None  or response["logs"] is None:
-                logger.error(f"No logs found. Please check your query parameters and try again.")
+            if response is None or response["logs"] is None:
+                logger.error(
+                    f"No logs found. Please check your query parameters and try again."
+                )
                 return []
             data = response["logs"]
 
@@ -362,9 +381,20 @@ class AsyncLogsResource:
             instructions: Optional system instructions
             tags: Optional tags to add to the log
             hallucination_detection_sample_rate: Sample rate for hallucination detection
+
+        Returns:
+            str: The generated log ID
         """
+        # Generate a unique ID for this log
+        log_id = str(uuid.uuid4())
+
+        # Create current timestamp
+        created_at = datetime.now().isoformat()
+
         # Create a copy of all the data
         data = {
+            "id": log_id,
+            "created_at": created_at,
             "app_name": app_name,
             "environment": environment,
             "tags": tags,
@@ -381,15 +411,15 @@ class AsyncLogsResource:
         # Create a task and add it to our pending tasks set
         task = asyncio.create_task(self._post_log_in_background(data))
         self._pending_tasks.add(task)
-        
+
         # Set up a callback to remove the task from pending when it completes
         def task_done_callback(t):
             self._pending_tasks.discard(t)
-        
+
         task.add_done_callback(task_done_callback)
 
-        # Return immediately without waiting for the result
-        return None
+        # Return the generated log ID
+        return log_id
 
     async def _post_log_in_background(self, data: Dict[str, Any]):
         """
