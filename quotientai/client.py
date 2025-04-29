@@ -34,7 +34,7 @@ class _BaseQuotientClient(httpx.Client):
         self.token = None
         self.token_expiry = 0
         self.token_api_key = None
-        self._token_path = token_dir / ".quotient" / f"{api_key[-6:]}_auth_token.json"
+        self._token_path = token_dir / ".quotient" / f"{api_key[-6:]+'_' if api_key else ''}auth_token.json"
 
         # Try to load existing token
         self._load_token()
