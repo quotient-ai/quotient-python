@@ -31,7 +31,8 @@ class _AsyncQuotientClient(httpx.AsyncClient):
         self.api_key = api_key
         self.token = None
         self.token_expiry = 0
-        self._token_path = token_dir / ".quotient" / "auth_token.json"
+        self.token_api_key = None
+        self._token_path = token_dir / ".quotient" / f"{api_key[-6:]+'_' if api_key else ''}auth_token.json"
 
         # Try to load existing token
         self._load_token()
@@ -59,7 +60,7 @@ class _AsyncQuotientClient(httpx.AsyncClient):
             return None
         # Save to disk
         with open(self._token_path, "w") as f:
-            json.dump({"token": token, "expires_at": expiry}, f)
+            json.dump({"token": token, "expires_at": expiry, "api_key": self.api_key}, f)
 
     def _load_token(self):
         """Load token from disk if available"""
@@ -71,13 +72,19 @@ class _AsyncQuotientClient(httpx.AsyncClient):
                 data = json.load(f)
                 self.token = data.get("token")
                 self.token_expiry = data.get("expires_at", 0)
+                self.token_api_key = data.get("api_key")
         except Exception:
             # If loading fails, token remains None
             pass
 
     def _is_token_valid(self):
         """Check if token exists and is not expired"""
+        self._load_token()
+        
         if not self.token:
+            return False
+        
+        if self.token_api_key != self.api_key:
             return False
 
         # With 5-minute buffer
