@@ -2,10 +2,9 @@ from quotientai import AsyncQuotientAI
 import asyncio
 
 quotient = AsyncQuotientAI()
-
 quotient_logger = quotient.logger.init(
     # Required
-    app_name="my-app",
+    app_name="test-id-create",
     environment="dev",
     # dynamic labels for slicing/dicing analytics e.g. by customer, feature, etc
     tags={"model": "gpt-4o", "feature": "customer-support"},
@@ -19,7 +18,7 @@ async def main():
     # Mock retrieved documents
     retrieved_documents = [{"page_content": "Sample document"}]
 
-    await quotient_logger.log(
+    log_id = await quotient_logger.log(
         user_query="Sample input",
         model_output="Sample output",
         # Page content from Documents from your retriever used to generate the model output
@@ -40,6 +39,7 @@ async def main():
     )
 
     print("Log request sent")
+    print("Log ID: ", log_id)
     print("Press Enter to exit...")
 
     # Use asyncio's run_in_executor to handle blocking input() call

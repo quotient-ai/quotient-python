@@ -3,7 +3,7 @@ from quotientai import QuotientAI
 quotient = QuotientAI()
 quotient_logger = quotient.logger.init(
     # Required
-    app_name="my-app",
+    app_name="test-id-create",
     environment="dev",
     # dynamic labels for slicing/dicing analytics e.g. by customer, feature, etc
     tags={"model": "gpt-4o", "feature": "customer-support"},
@@ -14,7 +14,7 @@ quotient_logger = quotient.logger.init(
 # Mock retrieved documents
 retrieved_documents = [{"page_content": "Sample document"}]
 
-quotient_logger.log(
+log_id = quotient_logger.log(
     user_query="Sample input",
     model_output="Sample output",
     # Page content from Documents from your retriever used to generate the model output
@@ -33,5 +33,7 @@ quotient_logger.log(
     # Tags can be overridden at log time
     tags={"model": "gpt-4o-mini", "feature": "customer-support"},
 )
+
+print("Log ID: ", log_id)
 
 print("Log created")

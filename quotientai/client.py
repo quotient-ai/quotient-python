@@ -1,3 +1,5 @@
+from datetime import datetime, timezone
+import uuid
 import json
 import os
 import random
@@ -34,7 +36,11 @@ class _BaseQuotientClient(httpx.Client):
         self.token = None
         self.token_expiry = 0
         self.token_api_key = None
-        self._token_path = token_dir / ".quotient" / f"{api_key[-6:]+'_' if api_key else ''}auth_token.json"
+        self._token_path = (
+            token_dir
+            / ".quotient"
+            / f"{api_key[-6:]+'_' if api_key else ''}auth_token.json"
+        )
 
         # Try to load existing token
         self._load_token()
@@ -45,7 +51,8 @@ class _BaseQuotientClient(httpx.Client):
         )
 
         super().__init__(
-            base_url="https://api.quotientai.co/api/v1",
+            # base_url="https://api.quotientai.co/api/v1",
+            base_url="http://127.0.0.1:8082/api/v1",
             headers={"Authorization": auth_header},
         )
 
@@ -58,12 +65,16 @@ class _BaseQuotientClient(httpx.Client):
         try:
             self._token_path.parent.mkdir(parents=True, exist_ok=True)
         except Exception:
-            logger.error(f"could not create directory for token. if you see this error please notify us at contact@quotientai.co" )
+            logger.error(
+                f"could not create directory for token. if you see this error please notify us at contact@quotientai.co"
+            )
             return None
 
         # Save to disk
         with open(self._token_path, "w") as f:
-            json.dump({"token": token, "expires_at": expiry, "api_key": self.api_key}, f)
+            json.dump(
+                {"token": token, "expires_at": expiry, "api_key": self.api_key}, f
+            )
 
     def _load_token(self):
         """Load token from disk if available"""
@@ -83,10 +94,10 @@ class _BaseQuotientClient(httpx.Client):
     def _is_token_valid(self):
         """Check if token exists and is not expired"""
         self._load_token()
-        
+
         if not self.token:
             return False
-        
+
         if self.token_api_key != self.api_key:
             return False
 
@@ -241,7 +252,9 @@ class QuotientLogger:
         underlying non_blocking_create function.
         """
         if not self._configured:
-            logger.error(f"Logger is not configured. Please call init() before logging.")
+            logger.error(
+                f"Logger is not configured. Please call init() before logging."
+            )
             return None
 
         # Merge default tags with any tags provided at log time.
@@ -268,15 +281,18 @@ class QuotientLogger:
                     try:
                         LogDocument(**doc)
                     except Exception as e:
-                        logger.error(f"Invalid document format: Documents must include 'page_content' field and optional 'metadata' object with string keys.")
+                        logger.error(
+                            f"Invalid document format: Documents must include 'page_content' field and optional 'metadata' object with string keys."
+                        )
                         return None
                 else:
                     actual_type = type(doc).__name__
-                    logger.error(f"Invalid document type: Received {actual_type}, but documents must be strings or dictionaries.")
+                    logger.error(
+                        f"Invalid document type: Received {actual_type}, but documents must be strings or dictionaries."
+                    )
                     return None
-                
         if self._should_sample():
-            self.logs_resource.create(
+            log_id = self.logs_resource.create(
                 app_name=self.app_name,
                 environment=self.environment,
                 user_query=user_query,
@@ -290,7 +306,7 @@ class QuotientLogger:
                 hallucination_detection_sample_rate=self.hallucination_detection_sample_rate,
             )
 
-            return None
+            return log_id
         else:
             return None
 
@@ -308,12 +324,14 @@ class QuotientAI:
             will attempt to read from QUOTIENT_API_KEY environment variable.
     """
 
-    def __init__(self, api_key: Optional[str] = None):  
+    def __init__(self, api_key: Optional[str] = None):
         self.api_key = api_key or os.environ.get("QUOTIENT_API_KEY")
         if not self.api_key:
-            logger.error("could not find API key. either pass api_key to QuotientAI() or "
+            logger.error(
+                "could not find API key. either pass api_key to QuotientAI() or "
                 "set the QUOTIENT_API_KEY environment variable. "
-                f"if you do not have an API key, you can create one at https://app.quotientai.co in your settings page")
+                f"if you do not have an API key, you can create one at https://app.quotientai.co in your settings page"
+            )
 
         _client = _BaseQuotientClient(self.api_key)
         self.auth = AuthResource(_client)
@@ -332,7 +350,8 @@ class QuotientAI:
         except Exception as e:
             logger.error(
                 "If you are seeing this error, please check that your API key is correct.\n"
-                f"If the issue persists, please contact support@quotientai.co\n{traceback.format_exc()}")
+                f"If the issue persists, please contact support@quotientai.co\n{traceback.format_exc()}"
+            )
             return None
 
     def evaluate(
@@ -363,7 +382,9 @@ class QuotientAI:
 
             invalid_parameters = set(parameters.keys()) - set(valid_parameters)
             if invalid_parameters:
-                logger.error(f"invalid parameters: {', '.join(invalid_parameters)}. \nvalid parameters are: {', '.join(valid_parameters)}")
+                logger.error(
+                    f"invalid parameters: {', '.join(invalid_parameters)}. \nvalid parameters are: {', '.join(valid_parameters)}"
+                )
                 return None
 
             return parameters
