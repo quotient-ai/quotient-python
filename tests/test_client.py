@@ -73,7 +73,9 @@ class TestBaseQuotientClient:
             assert client.api_key == api_key
             assert client.token is None
             assert client.token_expiry == 0
+            assert client.token_api_key is None
             assert client.headers["Authorization"] == f"Bearer {api_key}"
+            assert client._token_path == tmp_path / ".quotient" / f"{api_key[-6:]}_auth_token.json"
 
     def test_handle_jwt_response(self):
         """Test that _handle_response properly processes JWT tokens"""
@@ -111,11 +113,12 @@ class TestBaseQuotientClient:
             assert client.token_expiry == test_expiry
             
             # Verify token was saved to disk
-            token_file = tmp_path / ".quotient" / "auth_token.json"
+            token_file = tmp_path / ".quotient" / f"{client.api_key[-6:]}_auth_token.json"
             assert token_file.exists()
             stored_data = json.loads(token_file.read_text())
             assert stored_data["token"] == test_token
             assert stored_data["expires_at"] == test_expiry
+            assert stored_data["api_key"] == client.api_key
 
     def test_load_token(self, tmp_path):
         """Test that _load_token reads token data correctly"""
@@ -127,10 +130,11 @@ class TestBaseQuotientClient:
             # Write a token file
             token_dir = tmp_path / ".quotient"
             token_dir.mkdir(parents=True)
-            token_file = token_dir / "auth_token.json"
+            token_file = token_dir / f"{client.api_key[-6:]}_auth_token.json"
             token_file.write_text(json.dumps({
                 "token": test_token,
-                "expires_at": test_expiry
+                "expires_at": test_expiry,
+                "api_key": client.api_key
             }))
             
             # Load the token
@@ -138,6 +142,7 @@ class TestBaseQuotientClient:
             
             assert client.token == test_token
             assert client.token_expiry == test_expiry
+            assert client.token_api_key == client.api_key
 
     def test_is_token_valid(self, tmp_path):
         """Test token validity checking"""
@@ -151,16 +156,25 @@ class TestBaseQuotientClient:
             # Test with expired token
             client.token = "expired.token"
             client.token_expiry = int(time.time()) - 3600  # 1 hour ago
+            client.token_api_key = client.api_key
             assert not client._is_token_valid()
             
             # Test with valid token
             client.token = "valid.token"
             client.token_expiry = int(time.time()) + 3600  # 1 hour from now
+            client.token_api_key = client.api_key
             assert client._is_token_valid()
             
             # Test with token about to expire (within 5 minute buffer)
             client.token = "about.to.expire"
             client.token_expiry = int(time.time()) + 200  # Less than 5 minutes
+            client.token_api_key = client.api_key
+            assert not client._is_token_valid()
+            
+            # Test with mismatched API key
+            client.token = "valid.token"
+            client.token_expiry = int(time.time()) + 3600
+            client.token_api_key = "different-api-key"
             assert not client._is_token_valid()
 
     def test_update_auth_header(self, tmp_path):
@@ -177,6 +191,7 @@ class TestBaseQuotientClient:
             test_token = "test.jwt.token"
             client.token = test_token
             client.token_expiry = int(time.time()) + 3600
+            client.token_api_key = client.api_key
             client._update_auth_header()
             assert client.headers["Authorization"] == f"Bearer {test_token}"
             
@@ -184,12 +199,19 @@ class TestBaseQuotientClient:
             client.token_expiry = int(time.time()) - 3600
             client._update_auth_header()
             assert client.headers["Authorization"] == f"Bearer {client.api_key}"
+            
+            # Should revert to API key when API key doesn't match
+            client.token = test_token
+            client.token_expiry = int(time.time()) + 3600
+            client.token_api_key = "different-api-key"
+            client._update_auth_header()
+            assert client.headers["Authorization"] == f"Bearer {client.api_key}"
 
     def test_token_path_uses_home(self):
         with patch('pathlib.Path.home') as mock_home:
             mock_home.return_value = Path('/home/user')
             client = _BaseQuotientClient('test-key')
-            assert client._token_path == Path('/home/user/.quotient/auth_token.json')
+            assert client._token_path == Path('/home/user/.quotient/st-key_auth_token.json')
 
     def test_token_path_fallback_to_root(self):
         with patch('pathlib.Path.home') as mock_home, \
@@ -200,7 +222,7 @@ class TestBaseQuotientClient:
             mock_exists.return_value = True
             
             client = _BaseQuotientClient('test-key')
-            assert client._token_path == Path('/root/.quotient/auth_token.json')
+            assert client._token_path == Path('/root/.quotient/st-key_auth_token.json')
 
     def test_token_path_fallback_to_cwd(self):
         with patch('pathlib.Path.home') as mock_home, \
@@ -214,7 +236,7 @@ class TestBaseQuotientClient:
             mock_cwd.return_value = Path('/current/dir')
             
             client = _BaseQuotientClient('test-key')
-            assert client._token_path == Path('/current/dir/.quotient/auth_token.json')
+            assert client._token_path == Path('/current/dir/.quotient/st-key_auth_token.json')
 
     def test_handle_jwt_token_success(self):
         client = _BaseQuotientClient('test-key')
