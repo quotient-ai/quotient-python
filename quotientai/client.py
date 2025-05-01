@@ -1,5 +1,3 @@
-from datetime import datetime, timezone
-import uuid
 import json
 import os
 import random
@@ -309,6 +307,35 @@ class QuotientLogger:
             return log_id
         else:
             return None
+
+    def poll_for_detection(
+        self, log_id: str, timeout: int = 300, poll_interval: float = 2.0
+    ):
+        """
+        Get Detection results for a log.
+
+        This method polls the Detection endpoint until the results are ready or the timeout is reached.
+
+        Args:
+            log_id: The ID of the log to get Detection results for
+            timeout: Maximum time to wait for results in seconds (default: 300s/5min)
+            poll_interval: How often to poll the API in seconds (default: 2s)
+
+        Returns:
+            Log object with Detection results if successful, None otherwise
+        """
+        if not self._configured:
+            logger.error(
+                f"Logger is not configured. Please call init() before getting Detection results."
+            )
+            return None
+
+        if not log_id:
+            logger.error("Log ID is required for Detection")
+            return None
+
+        # Call the underlying resource method
+        return self.logs_resource.poll_for_detection(log_id, timeout, poll_interval)
 
 
 class QuotientAI:
