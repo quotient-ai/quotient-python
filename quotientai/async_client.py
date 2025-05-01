@@ -47,8 +47,7 @@ class _AsyncQuotientClient(httpx.AsyncClient):
         )
 
         super().__init__(
-            # base_url="https://api.quotientai.co/api/v1",
-            base_url="http://127.0.0.1:8082/api/v1",
+            base_url="https://api.quotientai.co/api/v1",
             headers={"Authorization": auth_header},
         )
 
