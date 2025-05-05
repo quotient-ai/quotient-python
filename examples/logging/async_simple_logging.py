@@ -1,4 +1,3 @@
-import uuid
 from quotientai import AsyncQuotientAI
 import asyncio
 
