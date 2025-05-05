@@ -32,7 +32,11 @@ class _AsyncQuotientClient(httpx.AsyncClient):
         self.token = None
         self.token_expiry = 0
         self.token_api_key = None
-        self._token_path = token_dir / ".quotient" / f"{api_key[-6:]+'_' if api_key else ''}auth_token.json"
+        self._token_path = (
+            token_dir
+            / ".quotient"
+            / f"{api_key[-6:]+'_' if api_key else ''}auth_token.json"
+        )
 
         # Try to load existing token
         self._load_token()
@@ -56,11 +60,15 @@ class _AsyncQuotientClient(httpx.AsyncClient):
         try:
             self._token_path.parent.mkdir(parents=True, exist_ok=True)
         except Exception:
-            logger.error(f"could not create directory for token. if you see this error please notify us at contact@quotientai.co")
+            logger.error(
+                f"could not create directory for token. if you see this error please notify us at contact@quotientai.co"
+            )
             return None
         # Save to disk
         with open(self._token_path, "w") as f:
-            json.dump({"token": token, "expires_at": expiry, "api_key": self.api_key}, f)
+            json.dump(
+                {"token": token, "expires_at": expiry, "api_key": self.api_key}, f
+            )
 
     def _load_token(self):
         """Load token from disk if available"""
@@ -80,10 +88,10 @@ class _AsyncQuotientClient(httpx.AsyncClient):
     def _is_token_valid(self):
         """Check if token exists and is not expired"""
         self._load_token()
-        
+
         if not self.token:
             return False
-        
+
         if self.token_api_key != self.api_key:
             return False
 
@@ -210,7 +218,7 @@ class AsyncQuotientLogger:
         if not (0.0 <= self.sample_rate <= 1.0):
             logger.error(f"sample_rate must be between 0.0 and 1.0")
             return None
-        
+
         self.hallucination_detection = hallucination_detection
         self.inconsistency_detection = inconsistency_detection
         self._configured = True
@@ -242,7 +250,9 @@ class AsyncQuotientLogger:
         underlying non_blocking_create function.
         """
         if not self._configured:
-            logger.error(f"Logger is not configured. Please call init() before logging.")
+            logger.error(
+                f"Logger is not configured. Please call init() before logging."
+            )
             return None
 
         # Merge default tags with any tags provided at log time.
@@ -269,15 +279,19 @@ class AsyncQuotientLogger:
                     try:
                         LogDocument(**doc)
                     except Exception as e:
-                        logger.error(f"Invalid document format: Documents must include 'page_content' field and optional 'metadata' object with string keys.")
+                        logger.error(
+                            f"Invalid document format: Documents must include 'page_content' field and optional 'metadata' object with string keys."
+                        )
                         return None
                 else:
                     actual_type = type(doc).__name__
-                    logger.error(f"Invalid document type: Received {actual_type}, but documents must be strings or dictionaries.")
+                    logger.error(
+                        f"Invalid document type: Received {actual_type}, but documents must be strings or dictionaries."
+                    )
                     return None
-                
+
         if self._should_sample():
-            await self.logs_resource.create(
+            log_id = await self.logs_resource.create(
                 app_name=self.app_name,
                 environment=self.environment,
                 user_query=user_query,
@@ -290,8 +304,39 @@ class AsyncQuotientLogger:
                 inconsistency_detection=inconsistency_detection,
                 hallucination_detection_sample_rate=self.hallucination_detection_sample_rate,
             )
-
+            return log_id
         return None
+
+    async def poll_for_detection(
+        self, log_id: str, timeout: int = 300, poll_interval: float = 2.0
+    ):
+        """
+        Get Detection results for a log asynchronously.
+
+        This method polls the Detection endpoint until the results are ready or the timeout is reached.
+
+        Args:
+            log_id: The ID of the log to get Detection results for
+            timeout: Maximum time to wait for results in seconds (default: 300s/5min)
+            poll_interval: How often to poll the API in seconds (default: 2s)
+
+        Returns:
+            Log object with Detection results if successful, None otherwise
+        """
+        if not self._configured:
+            logger.error(
+                f"Logger is not configured. Please call init() before getting Detection results."
+            )
+            return None
+
+        if not log_id:
+            logger.error("Log ID is required for Detection")
+            return None
+
+        # Call the underlying resource method
+        return await self.logs_resource.poll_for_detection(
+            log_id, timeout, poll_interval
+        )
 
 
 class AsyncQuotientAI:
@@ -310,9 +355,11 @@ class AsyncQuotientAI:
     def __init__(self, api_key: Optional[str] = None):
         self.api_key = api_key or os.environ.get("QUOTIENT_API_KEY")
         if not self.api_key:
-            logger.error("could not find API key. either pass api_key to AsyncQuotientAI() or "
+            logger.error(
+                "could not find API key. either pass api_key to AsyncQuotientAI() or "
                 "set the QUOTIENT_API_KEY environment variable. "
-                f"if you do not have an API key, you can create one at https://app.quotientai.co in your settings page")
+                f"if you do not have an API key, you can create one at https://app.quotientai.co in your settings page"
+            )
 
         self._client = _AsyncQuotientClient(self.api_key)
         self.auth = AsyncAuthResource(self._client)
@@ -331,7 +378,8 @@ class AsyncQuotientAI:
         except Exception as e:
             logger.error(
                 "If you are seeing this error, please check that your API key is correct.\n"
-                f"If the issue persists, please contact support@quotientai.co\n{traceback.format_exc()}")
+                f"If the issue persists, please contact support@quotientai.co\n{traceback.format_exc()}"
+            )
             return None
 
     async def evaluate(
@@ -362,9 +410,11 @@ class AsyncQuotientAI:
 
             invalid_parameters = set(parameters.keys()) - set(valid_parameters)
             if invalid_parameters:
-                logger.error(f"invalid parameters: {', '.join(invalid_parameters)}. \nvalid parameters are: {', '.join(valid_parameters)}")
+                logger.error(
+                    f"invalid parameters: {', '.join(invalid_parameters)}. \nvalid parameters are: {', '.join(valid_parameters)}"
+                )
                 return None
-            
+
             return parameters
 
         v_parameters = _validate_parameters(parameters)
