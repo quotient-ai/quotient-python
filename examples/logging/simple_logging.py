@@ -1,4 +1,3 @@
-import uuid
 from quotientai import QuotientAI
 
 quotient = QuotientAI()
@@ -37,7 +36,6 @@ log_id = quotient_logger.log(
 )
 
 print("Log ID: ", log_id)
-
 print("Log created, waiting for detection results...")
 
 # Poll for detection results with a timeout of 60 seconds
