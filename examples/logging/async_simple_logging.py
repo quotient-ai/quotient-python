@@ -1,10 +1,11 @@
+import uuid
 from quotientai import AsyncQuotientAI
 import asyncio
 
 quotient = AsyncQuotientAI()
 quotient_logger = quotient.logger.init(
     # Required
-    app_name="test-id-create",
+    app_name="my-app",
     environment="dev",
     # dynamic labels for slicing/dicing analytics e.g. by customer, feature, etc
     tags={"model": "gpt-4o", "feature": "customer-support"},
