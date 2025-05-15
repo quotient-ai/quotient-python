@@ -1,17 +1,7 @@
-import time
-
-import click
 import typer
 
-from pathlib import Path
+from rich.console import Console
 
-from rich.console import Console, Group
-from rich.live import Live
-from rich.panel import Panel
-from rich.progress import Progress, SpinnerColumn, TextColumn, TimeElapsedColumn
-from rich.table import Table
-
-from quotientai.cli.imports import exec_evaluate
 from quotientai.client import QuotientAI
 from quotientai.exceptions import QuotientAIError
 
