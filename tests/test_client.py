@@ -24,29 +24,15 @@ def mock_api_key():
 def mock_auth_response():
     return {"id": "test-user-id", "email": "test@example.com"}
 
-@pytest.fixture
-def mock_run_response():
-    return {
-        "id": "test-run-id",
-        "prompt_id": "test-prompt-id",
-        "dataset_id": "test-dataset-id",
-        "model_id": "test-model-id",
-        "parameters": {"temperature": 0.7},
-        "metrics": ["accuracy"],
-        "status": "completed",
-        "created_at": datetime.now().isoformat(),
-        "finished_at": datetime.now().isoformat()
-    }
 
 @pytest.fixture
-def mock_client(mock_auth_response, mock_run_response):
+def mock_client(mock_auth_response):
     with patch('quotientai.client._BaseQuotientClient') as MockClient, \
          patch('quotientai.client.AuthResource') as MockAuthResource:
         mock_instance = MockClient.return_value
         mock_auth = MockAuthResource.return_value
         mock_auth.authenticate = Mock()
         mock_instance._get = Mock(return_value=mock_auth_response)
-        mock_instance._post = Mock(return_value=mock_run_response)
         mock_instance._patch = Mock()
         mock_instance._delete = Mock()
         yield mock_instance
@@ -380,58 +366,6 @@ class TestQuotientAI:
             api_key = "test-api-key"
             client = QuotientAI(api_key=api_key)
             assert MockAuthResource.call_count == 1
-
-    def test_evaluate_valid_parameters(self, quotient_client):
-        mock_prompt = Mock()
-        mock_prompt.id = "test-prompt-id"
-        mock_dataset = Mock()
-        mock_dataset.id = "test-dataset-id"
-        mock_model = Mock()
-        mock_model.id = "test-model-id"
-        
-        valid_params = {
-            "temperature": 0.7,
-            "top_k": 50,
-            "top_p": 0.9,
-            "max_tokens": 100
-        }
-        
-        run = quotient_client.evaluate(
-            prompt=mock_prompt,
-            dataset=mock_dataset,
-            model=mock_model,
-            parameters=valid_params,
-            metrics=["accuracy"]
-        )
-        
-        assert run.id == "test-run-id"
-        assert run.prompt == "test-prompt-id"
-        assert run.dataset == "test-dataset-id"
-        assert run.model == "test-model-id"
-        assert run.parameters == valid_params
-        assert run.metrics == ["accuracy"]
-
-    def test_evaluate_invalid_parameters(self, quotient_client, caplog):
-        mock_prompt = Mock()
-        mock_dataset = Mock()
-        mock_model = Mock()
-
-        invalid_params = {
-            "invalid_param": 123
-        }
-
-        result = quotient_client.evaluate(
-            prompt=mock_prompt,
-            dataset=mock_dataset,
-            model=mock_model,
-            parameters=invalid_params,
-            metrics=["accuracy"]
-        )
-
-        assert result is None
-        assert "invalid parameters" in caplog.text
-        assert "invalid_param" in caplog.text
-        assert "valid parameters are" in caplog.text
 
     def test_init_auth_failure(self, caplog):
         """Test that the client logs authentication failure"""

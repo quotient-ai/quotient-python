@@ -23,25 +23,10 @@ def mock_auth_response():
     return {"id": "test-user-id", "email": "test@example.com"}
 
 @pytest.fixture
-def mock_run_response():
-    return {
-        "id": "test-run-id",
-        "prompt_id": "test-prompt-id",
-        "dataset_id": "test-dataset-id",
-        "model_id": "test-model-id",
-        "parameters": {"temperature": 0.7},
-        "metrics": ["accuracy"],
-        "status": "completed",
-        "created_at": datetime.now().isoformat(),
-        "finished_at": datetime.now().isoformat()
-    }
-
-@pytest.fixture
-def mock_client(mock_auth_response, mock_run_response):
+def mock_client(mock_auth_response):
     with patch('quotientai.async_client._AsyncQuotientClient') as MockClient:
         mock_instance = MockClient.return_value
         mock_instance._get = AsyncMock(return_value=mock_auth_response)
-        mock_instance._post = AsyncMock(return_value=mock_run_response)
         mock_instance._patch = AsyncMock()
         mock_instance._delete = AsyncMock()
         yield mock_instance
@@ -372,60 +357,6 @@ class TestAsyncQuotientAI:
             assert client.api_key is None
             assert "could not find API key" in caplog.text
             assert "https://app.quotientai.co" in caplog.text
-
-    @pytest.mark.asyncio
-    async def test_evaluate_valid_parameters(self, async_quotient_client):
-        mock_prompt = Mock()
-        mock_prompt.id = "test-prompt-id"
-        mock_dataset = Mock()
-        mock_dataset.id = "test-dataset-id"
-        mock_model = Mock()
-        mock_model.id = "test-model-id"
-        
-        valid_params = {
-            "temperature": 0.7,
-            "top_k": 50,
-            "top_p": 0.9,
-            "max_tokens": 100
-        }
-        
-        run = await async_quotient_client.evaluate(
-            prompt=mock_prompt,
-            dataset=mock_dataset,
-            model=mock_model,
-            parameters=valid_params,
-            metrics=["accuracy"]
-        )
-        
-        assert run.id == "test-run-id"
-        assert run.prompt == "test-prompt-id"
-        assert run.dataset == "test-dataset-id"
-        assert run.model == "test-model-id"
-        assert run.parameters == valid_params
-        assert run.metrics == ["accuracy"]
-
-    @pytest.mark.asyncio
-    async def test_evaluate_invalid_parameters(self, async_quotient_client, caplog):
-        mock_prompt = Mock()
-        mock_dataset = Mock()
-        mock_model = Mock()
-        
-        invalid_params = {
-            "invalid_param": 123
-        }
-        
-        result = await async_quotient_client.evaluate(
-            prompt=mock_prompt,
-            dataset=mock_dataset,
-            model=mock_model,
-            parameters=invalid_params,
-            metrics=["accuracy"]
-        )
-        
-        assert result is None
-        assert "invalid parameters" in caplog.text
-        assert "invalid_param" in caplog.text
-        assert "valid parameters are" in caplog.text
 
     @pytest.mark.asyncio
     async def test_init_auth_failure(self, caplog):

@@ -11,11 +11,7 @@ import httpx
 from quotientai import resources
 from quotientai.exceptions import handle_async_errors, logger
 from quotientai.resources.auth import AsyncAuthResource
-from quotientai.resources.prompts import Prompt
 from quotientai.resources.logs import LogDocument
-from quotientai.resources.models import Model
-from quotientai.resources.datasets import Dataset
-from quotientai.resources.runs import Run
 
 
 class _AsyncQuotientClient(httpx.AsyncClient):
@@ -344,8 +340,7 @@ class AsyncQuotientAI:
     An async client that provides access to the QuotientAI API.
 
     The AsyncQuotientAI class provides asynchronous methods to interact with the QuotientAI API,
-    including logging in, creating and managing API keys, and creating and managing models,
-    system prompts, prompt templates, recipes, datasets, and tasks.
+    including logging data to Quotient and running detections.
 
     Args:
         api_key (Optional[str]): The API key to use for authentication. If not provided,
@@ -363,11 +358,6 @@ class AsyncQuotientAI:
 
         self._client = _AsyncQuotientClient(self.api_key)
         self.auth = AsyncAuthResource(self._client)
-        self.prompts = resources.AsyncPromptsResource(self._client)
-        self.datasets = resources.AsyncDatasetsResource(self._client)
-        self.models = resources.AsyncModelsResource(self._client)
-        self.runs = resources.AsyncRunsResource(self._client)
-        self.metrics = resources.AsyncMetricsResource(self._client)
         self.logs = resources.AsyncLogsResource(self._client)
 
         # Create an unconfigured logger instance.
@@ -382,51 +372,3 @@ class AsyncQuotientAI:
             )
             return None
 
-    async def evaluate(
-        self,
-        *,
-        prompt: Prompt,
-        dataset: Dataset,
-        model: Model,
-        parameters: dict,
-        metrics: List[str],
-    ) -> Run:
-        def _validate_parameters(parameters):
-            """
-            Validate the parameters dictionary. Currently the only valid parameters are:
-
-            - temperature: float
-            - top_k: int
-            - top_p: float
-            - max_tokens: int
-            - repetition_penalty: float
-            """
-            valid_parameters = [
-                "temperature",
-                "top_k",
-                "top_p",
-                "max_tokens",
-            ]
-
-            invalid_parameters = set(parameters.keys()) - set(valid_parameters)
-            if invalid_parameters:
-                logger.error(
-                    f"invalid parameters: {', '.join(invalid_parameters)}. \nvalid parameters are: {', '.join(valid_parameters)}"
-                )
-                return None
-
-            return parameters
-
-        v_parameters = _validate_parameters(parameters)
-
-        if v_parameters is None:
-            return None
-
-        run = await self.runs.create(
-            prompt=prompt,
-            dataset=dataset,
-            model=model,
-            parameters=v_parameters,
-            metrics=metrics,
-        )
-        return run
