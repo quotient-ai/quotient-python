@@ -12,10 +12,6 @@ import httpx
 from quotientai import resources
 from quotientai.exceptions import handle_errors, logger
 from quotientai.resources.logs import LogDocument
-from quotientai.resources.prompts import Prompt
-from quotientai.resources.models import Model
-from quotientai.resources.datasets import Dataset
-from quotientai.resources.runs import Run
 from quotientai.resources.auth import AuthResource
 from pathlib import Path
 
@@ -341,9 +337,8 @@ class QuotientAI:
     """
     A client that provides access to the QuotientAI API.
 
-    The QuotientClient class provides methods to interact with the QuotientAI API, including
-    logging in, creating and managing API keys, and creating and managing models, system prompts,
-    prompt templates, recipes, datasets, and tasks.
+    The QuotientAI class provides synchronous methods to interact with the QuotientAI API,
+    including logging data to Quotient and running detections.
 
     Args:
         api_key (Optional[str]): The API key to use for authentication. If not provided,
@@ -361,11 +356,6 @@ class QuotientAI:
 
         _client = _BaseQuotientClient(self.api_key)
         self.auth = AuthResource(_client)
-        self.prompts = resources.PromptsResource(_client)
-        self.datasets = resources.DatasetsResource(_client)
-        self.models = resources.ModelsResource(_client)
-        self.runs = resources.RunsResource(_client)
-        self.metrics = resources.MetricsResource(_client)
         self.logs = resources.LogsResource(_client)
 
         # Create an unconfigured logger instance.
@@ -379,52 +369,3 @@ class QuotientAI:
                 f"If the issue persists, please contact support@quotientai.co\n{traceback.format_exc()}"
             )
             return None
-
-    def evaluate(
-        self,
-        *,
-        prompt: Prompt,
-        dataset: Dataset,
-        model: Model,
-        parameters: dict,
-        metrics: List[str],
-    ) -> Run:
-        def _validate_parameters(parameters):
-            """
-            Validate the parameters dictionary. Currently the only valid parameters are:
-
-            - temperature: float
-            - top_k: int
-            - top_p: float
-            - max_tokens: int
-            - repetition_penalty: float
-            """
-            valid_parameters = [
-                "temperature",
-                "top_k",
-                "top_p",
-                "max_tokens",
-            ]
-
-            invalid_parameters = set(parameters.keys()) - set(valid_parameters)
-            if invalid_parameters:
-                logger.error(
-                    f"invalid parameters: {', '.join(invalid_parameters)}. \nvalid parameters are: {', '.join(valid_parameters)}"
-                )
-                return None
-
-            return parameters
-
-        v_parameters = _validate_parameters(parameters)
-
-        if v_parameters is None:
-            return None
-
-        run = self.runs.create(
-            prompt=prompt,
-            dataset=dataset,
-            model=model,
-            parameters=v_parameters,
-            metrics=metrics,
-        )
-        return run
