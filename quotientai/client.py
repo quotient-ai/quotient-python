@@ -357,7 +357,8 @@ class QuotientAI:
         _client = _BaseQuotientClient(self.api_key)
         self.auth = AuthResource(_client)
         self.logs = resources.LogsResource(_client)
-
+        self.tracing = resources.TracingResource(_client)
+        self.trace = self.tracing.trace
         # Create an unconfigured logger instance.
         self.logger = QuotientLogger(self.logs)
 
