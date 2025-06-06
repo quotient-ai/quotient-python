@@ -38,7 +38,7 @@ class TracingResource:
         
         # Initialize tracer if not already done
         if self.tracer is None:
-            self.tracer = get_tracer(__name__)
+            self.tracer = get_tracer(__name__, tracer_provider=tracer_provider)
 
     def trace(self):
         """Decorator to trace function calls"""
@@ -46,7 +46,6 @@ class TracingResource:
             @functools.wraps(func)
             def wrapper(*args, **kwargs):
                 self._setup_auto_collector()
-                breakpoint()
                 with self.tracer.start_as_current_span(func.__name__):
                     try:
                         return func(*args, **kwargs)
