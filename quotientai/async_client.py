@@ -359,6 +359,8 @@ class AsyncQuotientAI:
         self._client = _AsyncQuotientClient(self.api_key)
         self.auth = AsyncAuthResource(self._client)
         self.logs = resources.AsyncLogsResource(self._client)
+        self.tracing = resources.AsyncTracingResource(self._client)
+        self.trace = self.tracing.trace
 
         # Create an unconfigured logger instance.
         self.logger = AsyncQuotientLogger(self.logs)
