@@ -1,124 +1,255 @@
-from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
-from opentelemetry.sdk.trace import TracerProvider
-from opentelemetry.sdk.trace.export import BatchSpanProcessor
-from opentelemetry.trace import set_tracer_provider, get_tracer
+import contextlib
 import functools
+import inspect
+import json
 import os
+import atexit
+import weakref
 
-QUOTIENT_TRACING_ENDPOINT = "http://localhost:8082/api/v1/traces"
+from enum import Enum
+from typing import Optional
+
+
+from opentelemetry import context as otel_context
+from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
+
+from opentelemetry.sdk.trace import TracerProvider, SpanProcessor, Span
+from opentelemetry.sdk.trace.export import BatchSpanProcessor
+
+from opentelemetry.trace import (
+    set_tracer_provider,
+    get_tracer,
+    get_tracer_provider,
+)
+
+from quotientai.exceptions import logger
+
+
+TRACER_NAME = "quotient.sdk.python"
+DEFAULT_TRACING_ENDPOINT = "https://api.quotientai.co/api/v1/traces"
+
+@contextlib.contextmanager
+def start_span(name: str):
+    """
+    Context manager to start a span.
+    """
+    with get_tracer(TRACER_NAME).start_as_current_span(name) as span:
+        yield span
+
+
+class QuotientAttributes(str, Enum):
+    app_name = "app.name"
+    environment = "app.environment"
+
+
+class QuotientAttributesSpanProcessor(SpanProcessor):
+    """
+    Processor that adds Quotient-specific attributes to all spans, including:
+    
+    - `app_name`
+    - `environment`
+    - `metadata`
+
+    Which are all required for tracing.
+    """
+
+    app_name: str
+    environment: str
+    metadata: Optional[dict]
+
+    def __init__(self, app_name: str, environment: str, metadata: Optional[dict] = None):
+        self.app_name = app_name
+        self.environment = environment
+        self.metadata = metadata
+
+    def on_start(self, span: Span, parent_context: Optional[otel_context.Context] = None) -> None:
+        attributes = {
+            QuotientAttributes.app_name: self.app_name,
+            QuotientAttributes.environment: self.environment,
+        }
+
+        span.set_attributes(attributes)
+        super().on_start(span, parent_context)
+
+
 class TracingResource:
+    _instances = weakref.WeakSet()
+
     def __init__(self, client):
         self.client = client
         self.tracer = None
+        TracingResource._instances.add(self)
+        atexit.register(self._cleanup)
 
     @functools.lru_cache()
-    def _setup_auto_collector(self):
-        """Automatically setup OTLP exporter to send traces to collector"""
-        print("Setting up auto collector")
-        # Check if tracer provider is already set up
-        from opentelemetry.trace import get_tracer_provider
-        current_provider = get_tracer_provider()
-        # Only set up if not already configured (avoid double setup)
-        if not hasattr(current_provider, '_span_processors') or not current_provider._span_processors:
-            tracer_provider = TracerProvider()
-            
-            # Get collector endpoint from environment or use default
-            collector_endpoint = os.environ.get("OTEL_EXPORTER_OTLP_ENDPOINT", QUOTIENT_TRACING_ENDPOINT)
-            otlp_collector_headers = os.environ.get("OTEL_EXPORTER_OTLP_HEADERS",
-                                                    {"Authorization": f"Bearer {self.client.api_key}",
-                                                     "Content-Type": "application/x-protobuf"})
-            # Configure OTLP exporter to send to collector
-            otlp_exporter = OTLPSpanExporter(
-                endpoint=collector_endpoint,
-                headers=otlp_collector_headers,
-            )
+    def _setup_auto_collector(self, app_name: str, environment: str, instruments: Optional[list] = None):
+        """
+        Automatically setup OTLP exporter to send traces to collector
+        """
+        # validate inputs
+        if not app_name or not isinstance(app_name, str):
+            raise ValueError("app_name must be a non-empty string")
+        if not environment or not isinstance(environment, str):
+            raise ValueError("environment must be a non-empty string")
+        if instruments is not None and not isinstance(instruments, (list, tuple)):
+            raise ValueError("instruments must be a list or tuple")
 
-            # Use batch processor for better performance
-            span_processor = BatchSpanProcessor(otlp_exporter)
-            tracer_provider.add_span_processor(span_processor)
-            
-            # Set the global tracer provider
-            set_tracer_provider(tracer_provider)
-        
-        # Initialize tracer if not already done
-        if self.tracer is None:
-            self.tracer = get_tracer(__name__, tracer_provider=tracer_provider)
+        try:
+            # Check if tracer provider is already set up
+            current_provider = get_tracer_provider()
 
-    def trace(self):
-        """Decorator to trace function calls"""
-        def decorator(func):
-            @functools.wraps(func)
-            def wrapper(*args, **kwargs):
-                self._setup_auto_collector()
-                with self.tracer.start_as_current_span(func.__name__):
+            # Only set up if not already configured (avoid double setup)
+            if not hasattr(current_provider, '_span_processors') or not current_provider._span_processors:
+                tracer_provider = TracerProvider()
+                
+                # Get collector endpoint from environment or use default
+                exporter_endpoint = os.environ.get(
+                    "OTEL_EXPORTER_OTLP_ENDPOINT",
+                    DEFAULT_TRACING_ENDPOINT,
+                )
+                
+                # Parse headers from environment or use default
+                headers = {
+                    "Authorization": f"Bearer {self.client.api_key}",
+                    "Content-Type": "application/x-protobuf",
+                }
+                if "OTEL_EXPORTER_OTLP_HEADERS" in os.environ:
                     try:
-                        return func(*args, **kwargs)
+                        env_headers = json.loads(os.environ["OTEL_EXPORTER_OTLP_HEADERS"])
+                        if isinstance(env_headers, dict):
+                            headers.update(env_headers)
+                    except json.JSONDecodeError:
+                        logger.warning("failed to parse OTEL_EXPORTER_OTLP_HEADERS, using default headers")
+
+                # Configure OTLP exporter to send to collector
+                otlp_exporter = OTLPSpanExporter(
+                    endpoint=exporter_endpoint,
+                    headers=headers,
+                )
+
+                # Use batch processor for better performance
+                span_processor = BatchSpanProcessor(otlp_exporter)
+                quotient_attributes_span_processor = QuotientAttributesSpanProcessor(
+                    app_name=app_name,
+                    environment=environment,
+                    metadata=None,
+                )
+                tracer_provider.add_span_processor(quotient_attributes_span_processor)
+                tracer_provider.add_span_processor(span_processor)
+                
+                # Set the global tracer provider
+                set_tracer_provider(tracer_provider)
+
+                # Initialize instruments if provided
+                if instruments:
+                    for instrument in instruments:
+                        instrument.instrument()
+            
+            # Initialize tracer if not already done
+            if self.tracer is None:
+                self.tracer = get_tracer(TRACER_NAME, tracer_provider=get_tracer_provider())
+
+        except Exception as e:
+            logger.error(f"Failed to setup tracing: {str(e)}")
+            # Fallback to no-op tracer
+            self.tracer = None
+
+    def trace(self, app_name: str, environment: str, instruments: Optional[list] = None):
+        """
+        Decorator to trace function calls for Quotient.
+        
+        Example:
+            @quotient.trace(app_name="my_app", environment="prod")
+            def my_function():
+                pass
+                
+            @quotient.trace(app_name="my_app", environment="prod")
+            async def my_async_function():
+                pass
+        """
+        def decorator(func):
+            name = func.__qualname__
+
+            @functools.wraps(func)
+            def sync_func_wrapper(*args, **kwargs):
+                self._setup_auto_collector(
+                    app_name=app_name,
+                    environment=environment,
+                    instruments=tuple(instruments) if instruments is not None else None,
+                )
+
+                # if there is no tracer, just run the function normally
+                if self.tracer is None:
+                    return func(*args, **kwargs)
+
+                with self.tracer.start_as_current_span(name):
+                    try:
+                        result = func(*args, **kwargs)
                     except Exception as e:
-                        # Set span status to error
-                        # from opentelemetry.trace import Status, StatusCode
-                        # from opentelemetry.trace import get_current_span
-                        # current_span = get_current_span()
-                        # if current_span:
-                        #     current_span.set_status(Status(StatusCode.ERROR, str(e)))
                         raise e
-            return wrapper
+                    finally:
+                        # here we can log the call once we have the result.
+                        # TODO: add otel support for quotient logging
+                        pass
+
+                return result
+
+            @functools.wraps(func)
+            async def async_func_wrapper(*args, **kwargs):
+                self._setup_auto_collector(
+                    app_name=app_name,
+                    environment=environment,
+                    instruments=tuple(instruments) if instruments is not None else None,
+                )
+
+                if self.tracer is None:
+                    return await func(*args, **kwargs)
+
+                with self.tracer.start_as_current_span(name):
+                    try:
+                        result = await func(*args, **kwargs)
+                    except Exception as e:
+                        raise e
+                    finally:
+                        # here we can log the call once we have the result.
+                        # TODO: add otel support for quotient logging
+                        pass
+
+                return result
+
+            if inspect.iscoroutinefunction(func):
+                return async_func_wrapper
+
+            return sync_func_wrapper
+
         return decorator
 
+    def _cleanup(self):
+        """
+        Internal cleanup method registered with atexit.
+        This ensures cleanup happens even if the program exits unexpectedly.
+        """
+        if self.tracer is not None:
+            try:
+                provider = get_tracer_provider()
+                if hasattr(provider, 'shutdown'):
+                    provider.shutdown()
+                self.tracer = None
+            except Exception as e:
+                logger.error(f"failed to cleanup tracing: {str(e)}")
 
-class AsyncTracingResource:
-    def __init__(self, client):
-        self.client = client
-        self.tracer = None
+    @classmethod
+    def cleanup_all(cls):
+        """
+        Clean up all tracing resources for all instances.
+        This is useful for explicit cleanup before program exit.
+        """
+        for instance in cls._instances:
+            instance._cleanup()
 
-    @functools.lru_cache()
-    def _setup_auto_collector(self):
-        """Automatically setup OTLP exporter to send traces to collector"""
-        print("Setting up auto collector")
-        # Check if tracer provider is already set up
-        from opentelemetry.trace import get_tracer_provider
-        current_provider = get_tracer_provider()
-        # Only set up if not already configured (avoid double setup)
-        if not hasattr(current_provider, '_span_processors') or not current_provider._span_processors:
-            tracer_provider = TracerProvider()
-            
-            # Get collector endpoint from environment or use default
-            collector_endpoint = os.environ.get("OTEL_EXPORTER_OTLP_ENDPOINT", QUOTIENT_TRACING_ENDPOINT)
-            otlp_collector_headers = os.environ.get("OTEL_EXPORTER_OTLP_HEADERS",
-                                                    {"Authorization": f"Bearer {self.client.api_key}",
-                                                     "Content-Type": "application/x-protobuf"})
-            # Configure OTLP exporter to send to collector
-            otlp_exporter = OTLPSpanExporter(
-                endpoint=collector_endpoint,
-                headers=otlp_collector_headers,
-            )
-
-            # Use batch processor for better performance
-            span_processor = BatchSpanProcessor(otlp_exporter)
-            tracer_provider.add_span_processor(span_processor)
-            
-            # Set the global tracer provider
-            set_tracer_provider(tracer_provider)
-        
-        # Initialize tracer if not already done
-        if self.tracer is None:
-            self.tracer = get_tracer(__name__, tracer_provider=tracer_provider)
-
-    def trace(self):
-        """Decorator to trace function calls (works with both sync and async functions)"""
-        def decorator(func):
-            @functools.wraps(func)
-            async def async_wrapper(*args, **kwargs):
-                self._setup_auto_collector()
-                with self.tracer.start_as_current_span(func.__name__):
-                    try:
-                        return await func(*args, **kwargs)
-                    except Exception as e:
-                        # Set span status to error
-                        # from opentelemetry.trace import Status, StatusCode
-                        # from opentelemetry.trace import get_current_span
-                        # current_span = get_current_span()
-                        # if current_span:
-                        #     current_span.set_status(Status(StatusCode.ERROR, str(e)))
-                        raise e
-            return async_wrapper
-        return decorator
+    def cleanup(self):
+        """
+        Clean up tracing resources for this instance.
+        This is called automatically on program exit via atexit.
+        """
+        self._cleanup()

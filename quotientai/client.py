@@ -1,11 +1,13 @@
 import json
+import jwt
 import os
 import random
 import time
+import traceback
+import warnings
+
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Union
-import traceback
-import jwt
 
 import httpx
 
@@ -13,7 +15,7 @@ from quotientai import resources
 from quotientai.exceptions import handle_errors, logger
 from quotientai.resources.logs import LogDocument
 from quotientai.resources.auth import AuthResource
-from pathlib import Path
+from quotientai.resources.tracing import TracingResource
 
 
 class _BaseQuotientClient(httpx.Client):
@@ -214,10 +216,17 @@ class QuotientLogger:
         if not (0.0 <= self.sample_rate <= 1.0):
             logger.error(f"sample_rate must be between 0.0 and 1.0")
             return None
+
         self.hallucination_detection = hallucination_detection
         self.inconsistency_detection = inconsistency_detection
-        self._configured = True
         self.hallucination_detection_sample_rate = hallucination_detection_sample_rate
+
+        self._configured = True
+
+        # Set up the convenience log method
+        if hasattr(self.logs_resource, '_client'):
+            self.logs_resource._client._setup_log()
+
         return self
 
     def _should_sample(self) -> bool:
@@ -243,7 +252,17 @@ class QuotientLogger:
 
         Merges the default tags (set via init) with any runtime-supplied tags and calls the
         underlying non_blocking_create function.
+
+        .. deprecated:: 1.0.0
+            Use :meth:`quotient.log()` instead. This method will be removed in a future version.
         """
+        warnings.warn(
+            "quotient.logger.log() is deprecated and will be removed in a future version. "
+            "Please use quotient.log() instead.",
+            DeprecationWarning,
+            stacklevel=2
+        )
+
         if not self._configured:
             logger.error(
                 f"Logger is not configured. Please call init() before logging."
@@ -284,6 +303,7 @@ class QuotientLogger:
                         f"Invalid document type: Received {actual_type}, but documents must be strings or dictionaries."
                     )
                     return None
+
         if self._should_sample():
             log_id = self.logs_resource.create(
                 app_name=self.app_name,
@@ -332,6 +352,68 @@ class QuotientLogger:
         # Call the underlying resource method
         return self.logs_resource.poll_for_detection(log_id, timeout, poll_interval)
 
+class QuotientTracer:
+    """
+    Tracer interface that wraps the underlying tracing resource.
+    This class handles both configuration (via init) and tracing.
+    """
+
+    def __init__(self, tracing_resource: TracingResource, parent=None):
+        self.tracing_resource = tracing_resource
+        self.parent = parent
+        self.app_name: Optional[str] = None
+        self.environment: Optional[str] = None
+        self.metadata: Optional[Dict[str, Any]] = None
+        self.instruments: Optional[List[Any]] = None
+        self._configured = False
+
+    def init(
+        self,
+        *,
+        app_name: str,
+        environment: str,
+        instruments: Optional[List[Any]] = None,
+    ) -> "QuotientTracer":
+        """
+        Configure the tracer with the provided parameters and return self.
+        This method must be called before using trace().
+        """
+        self.app_name = app_name
+        self.environment = environment
+        self.instruments = instruments
+        self._configured = True
+
+        # Set up the convenience trace method
+        if self.parent is not None and hasattr(self.parent, '_setup_trace'):
+            self.parent._setup_trace()
+
+        return self
+
+    def trace(self):
+        """
+        Decorator to trace function calls for Quotient.
+        
+        Example:
+            @quotient.tracer.trace()
+            def my_function():
+                pass
+                
+            @quotient.tracer.trace()
+            async def my_async_function():
+                pass
+        """
+        if not self._configured:
+            logger.error(
+                f"Tracer is not configured. Please call init() before tracing."
+            )
+            return lambda func: func
+
+        decorator = self.tracing_resource.trace(
+            app_name=self.app_name,
+            environment=self.environment,
+            instruments=self.instruments,
+        )
+        return decorator
 
 class QuotientAI:
     """
@@ -358,9 +440,14 @@ class QuotientAI:
         self.auth = AuthResource(_client)
         self.logs = resources.LogsResource(_client)
         self.tracing = resources.TracingResource(_client)
-        self.trace = self.tracing.trace
+
         # Create an unconfigured logger instance.
         self.logger = QuotientLogger(self.logs)
+        self.tracer = QuotientTracer(self.tracing, self)
+
+        # Initialize log and trace methods as None
+        self.log = None
+        self.trace = None
 
         try:
             self.auth.authenticate()
@@ -370,3 +457,17 @@ class QuotientAI:
                 f"If the issue persists, please contact support@quotientai.co\n{traceback.format_exc()}"
             )
             return None
+
+    def _setup_log(self):
+        """Set up the log method after logger initialization"""
+        if self.logger._configured:
+            self.log = self.logger.log
+        else:
+            logger.error("Logger is not configured. Please call logger.init() before using log()")
+
+    def _setup_trace(self):
+        """Set up the trace method after tracer initialization"""
+        if self.tracer._configured:
+            self.trace = self.tracer.trace
+        else:
+            logger.error("Tracer is not configured. Please call tracer.init() before using trace()")
