@@ -1,8 +1,9 @@
-from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import OTLPSpanExporter
+from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
 from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry.sdk.trace.export import BatchSpanProcessor
 from opentelemetry.trace import set_tracer_provider, get_tracer
 import functools
+import os
 
 class TracingResource:
     def __init__(self, client):
@@ -21,12 +22,14 @@ class TracingResource:
             tracer_provider = TracerProvider()
             
             # Get collector endpoint from environment or use default
-            collector_endpoint = "http://localhost:4317"
+            collector_endpoint = os.environ.get("OTEL_EXPORTER_OTLP_ENDPOINT", "https://api.quotientai.co/api/v1/traces")
+            otlp_collector_headers = os.environ.get("OTEL_EXPORTER_OTLP_HEADERS",
+                                                    {"Authorization": f"Bearer {self.client.api_key}",
+                                                     "Content-Type": "application/x-protobuf"})
             # Configure OTLP exporter to send to collector
             otlp_exporter = OTLPSpanExporter(
                 endpoint=collector_endpoint,
-                headers={"x-api-key": self.client.api_key},
-                insecure=True  # For local development
+                headers=otlp_collector_headers,
             )
 
             # Use batch processor for better performance
@@ -78,12 +81,14 @@ class AsyncTracingResource:
             tracer_provider = TracerProvider()
             
             # Get collector endpoint from environment or use default
-            collector_endpoint = "http://localhost:4317"
+            collector_endpoint = os.environ.get("OTEL_EXPORTER_OTLP_ENDPOINT", "https://api.quotientai.co/api/v1/traces")
+            otlp_collector_headers = os.environ.get("OTEL_EXPORTER_OTLP_HEADERS",
+                                                    {"Authorization": f"Bearer {self.client.api_key}",
+                                                     "Content-Type": "application/x-protobuf"})
             # Configure OTLP exporter to send to collector
             otlp_exporter = OTLPSpanExporter(
                 endpoint=collector_endpoint,
-                headers={"x-api-key": self.client.api_key},
-                insecure=True  # For local development
+                headers=otlp_collector_headers,
             )
 
             # Use batch processor for better performance
