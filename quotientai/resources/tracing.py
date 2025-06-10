@@ -5,6 +5,7 @@ from opentelemetry.trace import set_tracer_provider, get_tracer
 import functools
 import os
 
+QUOTIENT_TRACING_ENDPOINT = "http://localhost:8082/api/v1/traces"
 class TracingResource:
     def __init__(self, client):
         self.client = client
@@ -22,7 +23,7 @@ class TracingResource:
             tracer_provider = TracerProvider()
             
             # Get collector endpoint from environment or use default
-            collector_endpoint = os.environ.get("OTEL_EXPORTER_OTLP_ENDPOINT", "https://api.quotientai.co/api/v1/traces")
+            collector_endpoint = os.environ.get("OTEL_EXPORTER_OTLP_ENDPOINT", QUOTIENT_TRACING_ENDPOINT)
             otlp_collector_headers = os.environ.get("OTEL_EXPORTER_OTLP_HEADERS",
                                                     {"Authorization": f"Bearer {self.client.api_key}",
                                                      "Content-Type": "application/x-protobuf"})
@@ -81,7 +82,7 @@ class AsyncTracingResource:
             tracer_provider = TracerProvider()
             
             # Get collector endpoint from environment or use default
-            collector_endpoint = os.environ.get("OTEL_EXPORTER_OTLP_ENDPOINT", "https://api.quotientai.co/api/v1/traces")
+            collector_endpoint = os.environ.get("OTEL_EXPORTER_OTLP_ENDPOINT", QUOTIENT_TRACING_ENDPOINT)
             otlp_collector_headers = os.environ.get("OTEL_EXPORTER_OTLP_HEADERS",
                                                     {"Authorization": f"Bearer {self.client.api_key}",
                                                      "Content-Type": "application/x-protobuf"})
