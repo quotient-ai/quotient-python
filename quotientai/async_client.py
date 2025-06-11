@@ -374,3 +374,48 @@ class AsyncQuotientAI:
             )
             return None
 
+    async def log(
+        self,
+        *,
+        user_query: str,
+        model_output: str,
+        documents: Optional[List[Union[str, LogDocument]]] = None,
+        message_history: Optional[List[Dict[str, Any]]] = None,
+        instructions: Optional[List[str]] = None,
+        tags: Optional[Dict[str, Any]] = {},
+        hallucination_detection: Optional[bool] = None,
+        inconsistency_detection: Optional[bool] = None,
+    ):
+        """
+        Log the model interaction.
+        
+        Args:
+            user_query: The user's input query
+            model_output: The model's response
+            documents: Optional list of documents (strings or LogDocument objects)
+            message_history: Optional conversation history
+            instructions: Optional list of instructions
+            tags: Optional tags to attach to the log
+            hallucination_detection: Override hallucination detection setting
+            inconsistency_detection: Override inconsistency detection setting
+            
+        Returns:
+            Log ID if successful, None otherwise
+        """
+        if not self.logger._configured:
+            logger.error(
+                "Logger is not configured. Please call quotient.logger.init() before using log()."
+            )
+            return None
+            
+        result = await self.logger.log(
+            user_query=user_query,
+            model_output=model_output,
+            documents=documents,
+            message_history=message_history,
+            instructions=instructions,
+            tags=tags,
+            hallucination_detection=hallucination_detection,
+            inconsistency_detection=inconsistency_detection,
+        )
+        return result

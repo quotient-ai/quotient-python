@@ -221,10 +221,7 @@ class QuotientLogger:
         self.inconsistency_detection = inconsistency_detection
         self.hallucination_detection_sample_rate = hallucination_detection_sample_rate
 
-        # Set up the convenience log method
-        if hasattr(self.logs_resource, '_client'):
-            self.logs_resource._client._setup_log()
-            self._configured = True
+        self._configured = True
 
         return self
 
@@ -388,10 +385,7 @@ class QuotientTracer:
             instruments=instruments,
         )
 
-        # Set up the convenience trace method (consistent with logger pattern)
-        if hasattr(self.tracing_resource, '_client') and hasattr(self.tracing_resource._client, '_setup_trace'):
-            self.tracing_resource._client._setup_trace()
-            self._configured = True
+        self._configured = True
 
         return self
 
@@ -449,9 +443,6 @@ class QuotientAI:
         self.logger = QuotientLogger(self.logs)
         self.tracer = QuotientTracer(self.tracing)
 
-        # Initialize log and trace methods as None
-        self.log = None
-        self.trace = None
 
         try:
             self.auth.authenticate()
@@ -461,17 +452,54 @@ class QuotientAI:
                 f"If the issue persists, please contact support@quotientai.co\n{traceback.format_exc()}"
             )
             return None
-    def _setup_log(self):
-        """Set up the log method after logger initialization"""
-        if self.logger._configured:
-            self.log = self.logger.log
-        else:
-            logger.error("Logger is not configured. Please call quotient.logger.init() before using log()")
 
-    def _setup_trace(self):
-        """Set up the trace method after tracer initialization"""
-        if self.tracer._configured:
-            self.trace = self.tracer.trace
-        else:
-            logger.error("Tracer is not configured. Please call quotient.tracer.init() before using trace()")
+    def log(
+        self,
+        *,
+        user_query: str,
+        model_output: str,
+        documents: List[Union[str, LogDocument]] = None,
+        message_history: Optional[List[Dict[str, Any]]] = None,
+        instructions: Optional[List[str]] = None,
+        tags: Optional[Dict[str, Any]] = {},
+        hallucination_detection: Optional[bool] = None,
+        inconsistency_detection: Optional[bool] = None,
+    ):
+        """
+        Log the model interaction.
+        
+        Args:
+            user_query: The user's input query
+            model_output: The model's response
+            documents: Optional list of documents (strings or LogDocument objects)
+            message_history: Optional conversation history
+            instructions: Optional list of instructions
+            tags: Optional tags to attach to the log
+            hallucination_detection: Override hallucination detection setting
+            inconsistency_detection: Override inconsistency detection setting
+            
+        Returns:
+            Log ID if successful, None otherwise
+        """
+        if not self.logger._configured:
+            logger.error(
+                "Logger is not configured. Please call quotient.logger.init() before using log()."
+            )
+            return None
+            
+        result = self.logger.log(
+            user_query=user_query,
+            model_output=model_output,
+            documents=documents,
+            message_history=message_history,
+            instructions=instructions,
+            tags=tags,
+            hallucination_detection=hallucination_detection,
+            inconsistency_detection=inconsistency_detection,
+        )
+        return result
+
+    def trace(self):
+        """Direct access to the tracer's trace decorator."""
+        return self.tracer.trace()
 
