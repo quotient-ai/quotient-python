@@ -78,11 +78,24 @@ class TracingResource:
     def __init__(self, client):
         self.client = client
         self.tracer = None
+        # Store configuration for reuse
+        self._app_name = None
+        self._environment = None
+        self._instruments = None
         TracingResource._instances.add(self)
         atexit.register(self._cleanup)
 
+    def configure(self, app_name: str, environment: str, instruments: Optional[list] = None):
+        """
+        Configure the tracing resource with app_name, environment, and instruments.
+        This allows the trace decorator to be used without parameters.
+        """
+        self._app_name = app_name
+        self._environment = environment
+        self._instruments = instruments
+
     @functools.lru_cache()
-    def _setup_auto_collector(self, app_name: str, environment: str, instruments: Optional[list] = None):
+    def _setup_auto_collector(self, app_name: str, environment: str, instruments: Optional[tuple] = None):
         """
         Automatically setup OTLP exporter to send traces to collector
         """
@@ -154,28 +167,33 @@ class TracingResource:
             # Fallback to no-op tracer
             self.tracer = None
 
-    def trace(self, app_name: str, environment: str, instruments: Optional[list] = None):
+    def trace(self):
         """
         Decorator to trace function calls for Quotient.
         
+        The TracingResource must be pre-configured via the configure() method
+        before using this decorator.
+        
         Example:
-            @quotient.trace(app_name="my_app", environment="prod")
+            quotient.tracer.init(app_name="my_app", environment="prod")
+            @quotient.trace()
             def my_function():
                 pass
-                
-            @quotient.trace(app_name="my_app", environment="prod")
-            async def my_async_function():
-                pass
         """
+        # Use only configured values - no parameters accepted
+        if not self._app_name or not self._environment:
+            logger.error("TracingResource must be configured with app_name and environment before using trace(). Call configure() first.")
+            return lambda func: func
+
         def decorator(func):
             name = func.__qualname__
 
             @functools.wraps(func)
             def sync_func_wrapper(*args, **kwargs):
                 self._setup_auto_collector(
-                    app_name=app_name,
-                    environment=environment,
-                    instruments=tuple(instruments) if instruments is not None else None,
+                    app_name=self._app_name,
+                    environment=self._environment,
+                    instruments=tuple(self._instruments) if self._instruments is not None else None,
                 )
 
                 # if there is no tracer, just run the function normally
@@ -197,9 +215,9 @@ class TracingResource:
             @functools.wraps(func)
             async def async_func_wrapper(*args, **kwargs):
                 self._setup_auto_collector(
-                    app_name=app_name,
-                    environment=environment,
-                    instruments=tuple(instruments) if instruments is not None else None,
+                    app_name=self._app_name,
+                    environment=self._environment,
+                    instruments=tuple(self._instruments) if self._instruments is not None else None,
                 )
 
                 if self.tracer is None:

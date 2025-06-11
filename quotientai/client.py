@@ -383,6 +383,13 @@ class QuotientTracer:
         self.instruments = instruments
         self._configured = True
 
+        # Configure the underlying tracing resource
+        self.tracing_resource.configure(
+            app_name=app_name,
+            environment=environment,
+            instruments=instruments,
+        )
+
         # Set up the convenience trace method
         if self.parent is not None and hasattr(self.parent, '_setup_trace'):
             self.parent._setup_trace()
@@ -394,11 +401,13 @@ class QuotientTracer:
         Decorator to trace function calls for Quotient.
         
         Example:
-            @quotient.tracer.trace()
+            quotient.tracer.init(app_name="my_app", environment="prod")
+            
+            @quotient.trace()
             def my_function():
                 pass
                 
-            @quotient.tracer.trace()
+            @quotient.trace()
             async def my_async_function():
                 pass
         """
@@ -408,11 +417,8 @@ class QuotientTracer:
             )
             return lambda func: func
 
-        decorator = self.tracing_resource.trace(
-            app_name=self.app_name,
-            environment=self.environment,
-            instruments=self.instruments,
-        )
+        # Call the tracing resource without parameters since it's now configured
+        decorator = self.tracing_resource.trace()
         return decorator
 
 class QuotientAI:
