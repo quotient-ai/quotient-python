@@ -380,7 +380,7 @@ class AsyncQuotientTracer:
             logger.error(
                 "Tracer is not configured. Please call init() before using trace()."
             )
-            return None
+            return lambda func: func
         
         return self.tracing_resource.trace()
 

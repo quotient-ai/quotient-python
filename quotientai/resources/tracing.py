@@ -85,23 +85,26 @@ class TracingResource:
         Configure the tracing resource with app_name, environment, and instruments.
         This allows the trace decorator to be used without parameters.
         """
+        # validate inputs
+        if not app_name or not isinstance(app_name, str):
+            logger.error("app_name must be a non-empty string")
+            return
+        if not environment or not isinstance(environment, str):
+            logger.error("environment must be a non-empty string")
+            return
+        if instruments is not None and not isinstance(instruments, list):
+            logger.error("instruments must be a list")
+            return
+
         self._app_name = app_name
         self._environment = environment
         self._instruments = instruments
 
     @functools.lru_cache()
-    def _setup_auto_collector(self, app_name: str, environment: str, instruments: Optional[tuple] = None):
+    def _setup_auto_collector(self, app_name: str, environment: str, instruments: Optional[list] = None):
         """
         Automatically setup OTLP exporter to send traces to collector
         """
-        # validate inputs
-        if not app_name or not isinstance(app_name, str):
-            raise ValueError("app_name must be a non-empty string")
-        if not environment or not isinstance(environment, str):
-            raise ValueError("environment must be a non-empty string")
-        if instruments is not None and not isinstance(instruments, (list, tuple)):
-            raise ValueError("instruments must be a list or tuple")
-
         try:
             # Check if tracer provider is already set up
             current_provider = get_tracer_provider()
@@ -176,7 +179,7 @@ class TracingResource:
         """
         # Use only configured values - no parameters accepted
         if not self._app_name or not self._environment:
-            logger.error("TracingResource must be configured with app_name and environment before using trace(). Call configure() first.")
+            logger.error("tracer must be initialized with valid inputs before using trace(). Double check your inputs and try again.")
             return lambda func: func
 
         def decorator(func):
@@ -184,6 +187,7 @@ class TracingResource:
 
             @functools.wraps(func)
             def sync_func_wrapper(*args, **kwargs):
+
                 self._setup_auto_collector(
                     app_name=self._app_name,
                     environment=self._environment,

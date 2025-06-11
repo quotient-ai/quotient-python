@@ -21,6 +21,7 @@ def test_openai():
         stream=True,
         stream_options={"include_usage": True},
     )
+
     for chunk in response:
             if chunk.choices and (content := chunk.choices[0].delta.content):
                 print(content, end="")

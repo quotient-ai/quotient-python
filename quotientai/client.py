@@ -208,6 +208,28 @@ class QuotientLogger:
         Configure the logger with the provided parameters and return self.
         This method must be called before using log().
         """
+        if not app_name or not isinstance(app_name, str):
+            logger.error("app_name must be a non-empty string")
+            return None
+        if not environment or not isinstance(environment, str):
+            logger.error("environment must be a non-empty string")
+            return None
+        if not isinstance(tags, dict):
+            logger.error("tags must be a dictionary")
+            return None
+        if not isinstance(sample_rate, float):
+            logger.error("sample_rate must be a float")
+            return None
+        if not isinstance(hallucination_detection, bool):
+            logger.error("hallucination_detection must be a boolean")
+            return None
+        if not isinstance(inconsistency_detection, bool):
+            logger.error("inconsistency_detection must be a boolean")
+            return None
+        if not isinstance(hallucination_detection_sample_rate, float):
+            logger.error("hallucination_detection_sample_rate must be a float")
+            return None
+
         self.app_name = app_name
         self.environment = environment
         self.tags = tags or {}
@@ -413,9 +435,9 @@ class QuotientTracer:
         """
         if not self._configured:
             logger.error(
-                f"Tracer is not configured. Please call init() before tracing."
+                f"tracer is not configured. Please call init() before tracing."
             )
-            return None
+            return lambda func: func
 
         # Call the tracing resource without parameters since it's now configured
         return self.tracing_resource.trace()
@@ -490,7 +512,7 @@ class QuotientAI:
         """
         if not self.logger._configured:
             logger.error(
-                "Logger is not configured. Please call quotient.logger.init() before using log()."
+                "logger must be initialized with valid inputs before using trace(). Double check your inputs and try again."
             )
             return None
             
