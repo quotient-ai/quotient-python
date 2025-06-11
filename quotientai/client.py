@@ -275,7 +275,7 @@ class QuotientLogger:
             Use :meth:`quotient.log()` instead. This method will be removed in a future version.
         """
         warnings.warn(
-            "quotient.logger.log() is deprecated and will be removed in a future version. "
+            "quotient.logger.log() is deprecated as of 0.4.0 and will be removed in a future version. "
             "Please use quotient.log() instead.",
             DeprecationWarning,
             stacklevel=2
@@ -356,9 +356,12 @@ class QuotientLogger:
 
         Returns:
             Log object with Detection results if successful, None otherwise
+
+        .. deprecated:: 0.4.0
+            Use :meth:`quotient.poll_for_detection()` instead. This method will be removed in a future version.
         """
         warnings.warn(
-            "quotient.logger.poll_for_detection() is deprecated and will be removed in a future version. "
+            "quotient.logger.poll_for_detection() is deprecated as of 0.4.0 and will be removed in a future version. "
             "Please use quotient.poll_for_detection() instead.",
             DeprecationWarning,
             stacklevel=2
