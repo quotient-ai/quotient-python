@@ -23,10 +23,7 @@ from opentelemetry.trace import (
 )
 
 from quotientai.exceptions import logger
-
-
-TRACER_NAME = "quotient.sdk.python"
-DEFAULT_TRACING_ENDPOINT = "https://api.quotientai.co/api/v1/traces"
+from quotientai._constants import TRACER_NAME, DEFAULT_TRACING_ENDPOINT
 
 @contextlib.contextmanager
 def start_span(name: str):
@@ -76,12 +73,13 @@ class TracingResource:
     _instances = weakref.WeakSet()
 
     def __init__(self, client):
-        self.client = client
+        self._client = client
         self.tracer = None
         # Store configuration for reuse
         self._app_name = None
         self._environment = None
         self._instruments = None
+
         TracingResource._instances.add(self)
         atexit.register(self._cleanup)
 
@@ -123,7 +121,7 @@ class TracingResource:
                 
                 # Parse headers from environment or use default
                 headers = {
-                    "Authorization": f"Bearer {self.client.api_key}",
+                    "Authorization": f"Bearer {self._client.api_key}",
                     "Content-Type": "application/x-protobuf",
                 }
                 if "OTEL_EXPORTER_OTLP_HEADERS" in os.environ:

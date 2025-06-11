@@ -221,17 +221,16 @@ class QuotientLogger:
         self.inconsistency_detection = inconsistency_detection
         self.hallucination_detection_sample_rate = hallucination_detection_sample_rate
 
-        self._configured = True
-
         # Set up the convenience log method
         if hasattr(self.logs_resource, '_client'):
             self.logs_resource._client._setup_log()
+            self._configured = True
 
         return self
 
     def _should_sample(self) -> bool:
         """
-        Determine if the log should be sampled based on the sample rate.
+        Determine if the log should be sampled based on the sample rate. Intentionally naive client-side sampling.
         """
         return random.random() < self.sample_rate
 
@@ -358,13 +357,13 @@ class QuotientTracer:
     This class handles both configuration (via init) and tracing.
     """
 
-    def __init__(self, tracing_resource: TracingResource, parent=None):
+    def __init__(self, tracing_resource: TracingResource):
         self.tracing_resource = tracing_resource
-        self.parent = parent
         self.app_name: Optional[str] = None
         self.environment: Optional[str] = None
         self.metadata: Optional[Dict[str, Any]] = None
         self.instruments: Optional[List[Any]] = None
+
         self._configured = False
 
     def init(
@@ -381,7 +380,6 @@ class QuotientTracer:
         self.app_name = app_name
         self.environment = environment
         self.instruments = instruments
-        self._configured = True
 
         # Configure the underlying tracing resource
         self.tracing_resource.configure(
@@ -390,9 +388,10 @@ class QuotientTracer:
             instruments=instruments,
         )
 
-        # Set up the convenience trace method
-        if self.parent is not None and hasattr(self.parent, '_setup_trace'):
-            self.parent._setup_trace()
+        # Set up the convenience trace method (consistent with logger pattern)
+        if hasattr(self.tracing_resource, '_client') and hasattr(self.tracing_resource._client, '_setup_trace'):
+            self.tracing_resource._client._setup_trace()
+            self._configured = True
 
         return self
 
@@ -418,8 +417,7 @@ class QuotientTracer:
             return lambda func: func
 
         # Call the tracing resource without parameters since it's now configured
-        decorator = self.tracing_resource.trace()
-        return decorator
+        return self.tracing_resource.trace()
 
 class QuotientAI:
     """
@@ -449,7 +447,7 @@ class QuotientAI:
 
         # Create an unconfigured logger instance.
         self.logger = QuotientLogger(self.logs)
-        self.tracer = QuotientTracer(self.tracing, self)
+        self.tracer = QuotientTracer(self.tracing)
 
         # Initialize log and trace methods as None
         self.log = None
@@ -463,17 +461,17 @@ class QuotientAI:
                 f"If the issue persists, please contact support@quotientai.co\n{traceback.format_exc()}"
             )
             return None
-
     def _setup_log(self):
         """Set up the log method after logger initialization"""
         if self.logger._configured:
             self.log = self.logger.log
         else:
-            logger.error("Logger is not configured. Please call logger.init() before using log()")
+            logger.error("Logger is not configured. Please call quotient.logger.init() before using log()")
 
     def _setup_trace(self):
         """Set up the trace method after tracer initialization"""
         if self.tracer._configured:
             self.trace = self.tracer.trace
         else:
-            logger.error("Tracer is not configured. Please call tracer.init() before using trace()")
+            logger.error("Tracer is not configured. Please call quotient.tracer.init() before using trace()")
+
