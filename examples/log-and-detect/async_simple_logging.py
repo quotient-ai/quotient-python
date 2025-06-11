@@ -2,7 +2,7 @@ from quotientai import AsyncQuotientAI
 import asyncio
 
 quotient = AsyncQuotientAI()
-quotient_logger = quotient.logger.init(
+quotient.logger.init(
     # Required
     app_name="my-app",
     environment="dev",
@@ -18,7 +18,7 @@ async def main():
     # Mock retrieved documents
     retrieved_documents = [{"page_content": "Sample document"}]
 
-    log_id = await quotient_logger.log(
+    log_id = await quotient.log(
         user_query="Sample input",
         model_output="Sample output",
         # Page content from Documents from your retriever used to generate the model output
@@ -44,7 +44,7 @@ async def main():
 
     # Poll for detection results with a timeout of 60 seconds
     # You can adjust timeout and poll_interval based on your needs
-    detection_results = await quotient_logger.poll_for_detection(
+    detection_results = await quotient.logger.poll_for_detection(
         log_id=log_id,
         timeout=60,  # Wait up to 60 seconds for results
         poll_interval=2.0,  # Check every 2 seconds
@@ -69,7 +69,7 @@ async def main():
             "\nNo detection results received. The detection might still be in progress or failed."
         )
         print("You can try again later with:")
-        print(f"await quotient_logger.get_detection(log_id='{log_id}')")
+        print(f"await quotient.logger.poll_for_detection(log_id='{log_id}')")
 
     print("Press Enter to exit...")
 

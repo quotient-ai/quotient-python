@@ -7,6 +7,7 @@ import jwt
 from typing import Any, Dict, List, Optional, Union
 import traceback
 import httpx
+import warnings
 
 from quotientai import resources
 from quotientai.exceptions import handle_async_errors, logger
@@ -244,7 +245,16 @@ class AsyncQuotientLogger:
 
         Merges the default tags (set via init) with any runtime-supplied tags and calls the
         underlying non_blocking_create function.
+
+        .. deprecated:: 0.4.0
+        Use :meth:`quotient.log()` instead. This method will be removed in a future version.
         """
+        warnings.warn(
+            "quotient.logger.log() is deprecated as of 0.4.0 and will be removed in a future version. "
+            "Please use quotient.log() instead.",
+            DeprecationWarning,
+            stacklevel=2
+        )
         if not self._configured:
             logger.error(
                 f"Logger is not configured. Please call init() before logging."
@@ -318,7 +328,17 @@ class AsyncQuotientLogger:
 
         Returns:
             Log object with Detection results if successful, None otherwise
+
+        .. deprecated:: 0.4.0
+            Use :meth:`quotient.poll_for_detection()` instead. This method will be removed in a future version.
         """
+        warnings.warn(
+            "quotient.logger.poll_for_detection() is deprecated as of 0.4.0 and will be removed in a future version. "
+            "Please use quotient.poll_for_detection() instead.",
+            DeprecationWarning,
+            stacklevel=2
+        )
+
         if not self._configured:
             logger.error(
                 f"Logger is not configured. Please call init() before getting Detection results."
@@ -333,6 +353,46 @@ class AsyncQuotientLogger:
         return await self.logs_resource.poll_for_detection(
             log_id, timeout, poll_interval
         )
+    
+class AsyncQuotientTracer:
+    """
+    Tracer interface that wraps the underlying tracing resource for asynchronous operations.
+    """
+
+    def __init__(self, tracing_resource):
+        self.tracing_resource = tracing_resource
+
+        self.app_name: Optional[str] = None
+        self.environment: Optional[str] = None
+        self.instruments: Optional[list] = None
+        self._configured = False
+
+    def init(self, app_name: str, environment: str, instruments: Optional[list] = None):
+        """
+        Configure the tracer with the provided parameters and return self.
+        This method must be called before using trace().
+        """
+        self.app_name = app_name
+        self.environment = environment
+        self.instruments = instruments
+
+        self.tracing_resource.configure(app_name=app_name, environment=environment, instruments=instruments)
+
+        self._configured = True
+
+        return self
+    
+    def trace(self):
+        """
+        Trace a function asynchronously.
+        """
+        if not self._configured:
+            logger.error(
+                "Tracer is not configured. Please call init() before using trace()."
+            )
+            return lambda func: func
+        
+        return self.tracing_resource.trace()
 
 
 class AsyncQuotientAI:
@@ -359,9 +419,11 @@ class AsyncQuotientAI:
         self._client = _AsyncQuotientClient(self.api_key)
         self.auth = AsyncAuthResource(self._client)
         self.logs = resources.AsyncLogsResource(self._client)
+        self.tracing = resources.TracingResource(self._client)
 
         # Create an unconfigured logger instance.
         self.logger = AsyncQuotientLogger(self.logs)
+        self.tracer = AsyncQuotientTracer(self.tracing)
 
         try:
             self.auth.authenticate()
@@ -372,3 +434,73 @@ class AsyncQuotientAI:
             )
             return None
 
+    async def log(
+        self,
+        *,
+        user_query: str,
+        model_output: str,
+        documents: Optional[List[Union[str, LogDocument]]] = None,
+        message_history: Optional[List[Dict[str, Any]]] = None,
+        instructions: Optional[List[str]] = None,
+        tags: Optional[Dict[str, Any]] = {},
+        hallucination_detection: Optional[bool] = None,
+        inconsistency_detection: Optional[bool] = None,
+    ):
+        """
+        Log the model interaction.
+        
+        Args:
+            user_query: The user's input query
+            model_output: The model's response
+            documents: Optional list of documents (strings or LogDocument objects)
+            message_history: Optional conversation history
+            instructions: Optional list of instructions
+            tags: Optional tags to attach to the log
+            hallucination_detection: Override hallucination detection setting
+            inconsistency_detection: Override inconsistency detection setting
+            
+        Returns:
+            Log ID if successful, None otherwise
+        """
+        if not self.logger._configured:
+            logger.error(
+                "Logger is not configured. Please call quotient.logger.init() before using log()."
+            )
+            return None
+            
+        result = await self.logger.log(
+            user_query=user_query,
+            model_output=model_output,
+            documents=documents,
+            message_history=message_history,
+            instructions=instructions,
+            tags=tags,
+            hallucination_detection=hallucination_detection,
+            inconsistency_detection=inconsistency_detection,
+        )
+        return result
+    
+    def trace(self):
+        """
+        Trace a function asynchronously.
+        """
+        return self.tracer.trace()
+    
+    async def poll_for_detection(
+        self, log_id: str, timeout: int = 300, poll_interval: float = 2.0
+    ):
+        """
+        Get Detection results for a log asynchronously.
+        """
+        if not self.logger._configured:
+            logger.error(
+                "Logger is not configured. Please call init() before using poll_for_detection()."
+            )
+            return None
+
+        if not log_id:
+            logger.error("Log ID is required for Detection")
+            return None
+
+        detection = await self.logger.poll_for_detection(log_id=log_id, timeout=timeout, poll_interval=poll_interval)
+        return detection

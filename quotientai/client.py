@@ -1,11 +1,13 @@
 import json
+import jwt
 import os
 import random
 import time
+import traceback
+import warnings
+
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Union
-import traceback
-import jwt
 
 import httpx
 
@@ -13,7 +15,7 @@ from quotientai import resources
 from quotientai.exceptions import handle_errors, logger
 from quotientai.resources.logs import LogDocument
 from quotientai.resources.auth import AuthResource
-from pathlib import Path
+from quotientai.resources.tracing import TracingResource
 
 
 class _BaseQuotientClient(httpx.Client):
@@ -206,6 +208,28 @@ class QuotientLogger:
         Configure the logger with the provided parameters and return self.
         This method must be called before using log().
         """
+        if not app_name or not isinstance(app_name, str):
+            logger.error("app_name must be a non-empty string")
+            return None
+        if not environment or not isinstance(environment, str):
+            logger.error("environment must be a non-empty string")
+            return None
+        if not isinstance(tags, dict):
+            logger.error("tags must be a dictionary")
+            return None
+        if not isinstance(sample_rate, float):
+            logger.error("sample_rate must be a float")
+            return None
+        if not isinstance(hallucination_detection, bool):
+            logger.error("hallucination_detection must be a boolean")
+            return None
+        if not isinstance(inconsistency_detection, bool):
+            logger.error("inconsistency_detection must be a boolean")
+            return None
+        if not isinstance(hallucination_detection_sample_rate, float):
+            logger.error("hallucination_detection_sample_rate must be a float")
+            return None
+
         self.app_name = app_name
         self.environment = environment
         self.tags = tags or {}
@@ -214,15 +238,18 @@ class QuotientLogger:
         if not (0.0 <= self.sample_rate <= 1.0):
             logger.error(f"sample_rate must be between 0.0 and 1.0")
             return None
+
         self.hallucination_detection = hallucination_detection
         self.inconsistency_detection = inconsistency_detection
-        self._configured = True
         self.hallucination_detection_sample_rate = hallucination_detection_sample_rate
+
+        self._configured = True
+
         return self
 
     def _should_sample(self) -> bool:
         """
-        Determine if the log should be sampled based on the sample rate.
+        Determine if the log should be sampled based on the sample rate. Intentionally naive client-side sampling.
         """
         return random.random() < self.sample_rate
 
@@ -243,7 +270,17 @@ class QuotientLogger:
 
         Merges the default tags (set via init) with any runtime-supplied tags and calls the
         underlying non_blocking_create function.
+
+        .. deprecated:: 0.4.0
+            Use :meth:`quotient.log()` instead. This method will be removed in a future version.
         """
+        warnings.warn(
+            "quotient.logger.log() is deprecated as of 0.4.0 and will be removed in a future version. "
+            "Please use quotient.log() instead.",
+            DeprecationWarning,
+            stacklevel=2
+        )
+
         if not self._configured:
             logger.error(
                 f"Logger is not configured. Please call init() before logging."
@@ -284,6 +321,7 @@ class QuotientLogger:
                         f"Invalid document type: Received {actual_type}, but documents must be strings or dictionaries."
                     )
                     return None
+
         if self._should_sample():
             log_id = self.logs_resource.create(
                 app_name=self.app_name,
@@ -318,7 +356,17 @@ class QuotientLogger:
 
         Returns:
             Log object with Detection results if successful, None otherwise
+
+        .. deprecated:: 0.4.0
+            Use :meth:`quotient.poll_for_detection()` instead. This method will be removed in a future version.
         """
+        warnings.warn(
+            "quotient.logger.poll_for_detection() is deprecated as of 0.4.0 and will be removed in a future version. "
+            "Please use quotient.poll_for_detection() instead.",
+            DeprecationWarning,
+            stacklevel=2
+        )
+
         if not self._configured:
             logger.error(
                 f"Logger is not configured. Please call init() before getting Detection results."
@@ -332,6 +380,70 @@ class QuotientLogger:
         # Call the underlying resource method
         return self.logs_resource.poll_for_detection(log_id, timeout, poll_interval)
 
+class QuotientTracer:
+    """
+    Tracer interface that wraps the underlying tracing resource.
+    This class handles both configuration (via init) and tracing.
+    """
+
+    def __init__(self, tracing_resource: TracingResource):
+        self.tracing_resource = tracing_resource
+        self.app_name: Optional[str] = None
+        self.environment: Optional[str] = None
+        self.metadata: Optional[Dict[str, Any]] = None
+        self.instruments: Optional[List[Any]] = None
+
+        self._configured = False
+
+    def init(
+        self,
+        *,
+        app_name: str,
+        environment: str,
+        instruments: Optional[List[Any]] = None,
+    ) -> "QuotientTracer":
+        """
+        Configure the tracer with the provided parameters and return self.
+        This method must be called before using trace().
+        """
+        self.app_name = app_name
+        self.environment = environment
+        self.instruments = instruments
+
+        # Configure the underlying tracing resource
+        self.tracing_resource.configure(
+            app_name=app_name,
+            environment=environment,
+            instruments=instruments,
+        )
+
+        self._configured = True
+
+        return self
+
+    def trace(self):
+        """
+        Decorator to trace function calls for Quotient.
+        
+        Example:
+            quotient.tracer.init(app_name="my_app", environment="prod")
+            
+            @quotient.trace()
+            def my_function():
+                pass
+                
+            @quotient.trace()
+            async def my_async_function():
+                pass
+        """
+        if not self._configured:
+            logger.error(
+                f"tracer is not configured. Please call init() before tracing."
+            )
+            return lambda func: func
+
+        # Call the tracing resource without parameters since it's now configured
+        return self.tracing_resource.trace()
 
 class QuotientAI:
     """
@@ -357,9 +469,12 @@ class QuotientAI:
         _client = _BaseQuotientClient(self.api_key)
         self.auth = AuthResource(_client)
         self.logs = resources.LogsResource(_client)
+        self.tracing = resources.TracingResource(_client)
 
         # Create an unconfigured logger instance.
         self.logger = QuotientLogger(self.logs)
+        self.tracer = QuotientTracer(self.tracing)
+
 
         try:
             self.auth.authenticate()
@@ -369,3 +484,76 @@ class QuotientAI:
                 f"If the issue persists, please contact support@quotientai.co\n{traceback.format_exc()}"
             )
             return None
+
+    def log(
+        self,
+        *,
+        user_query: str,
+        model_output: str,
+        documents: List[Union[str, LogDocument]] = None,
+        message_history: Optional[List[Dict[str, Any]]] = None,
+        instructions: Optional[List[str]] = None,
+        tags: Optional[Dict[str, Any]] = {},
+        hallucination_detection: Optional[bool] = None,
+        inconsistency_detection: Optional[bool] = None,
+    ):
+        """
+        Log the model interaction.
+        
+        Args:
+            user_query: The user's input query
+            model_output: The model's response
+            documents: Optional list of documents (strings or LogDocument objects)
+            message_history: Optional conversation history
+            instructions: Optional list of instructions
+            tags: Optional tags to attach to the log
+            hallucination_detection: Override hallucination detection setting
+            inconsistency_detection: Override inconsistency detection setting
+            
+        Returns:
+            Log ID if successful, None otherwise
+        """
+        if not self.logger._configured:
+            logger.error(
+                "logger must be initialized with valid inputs before using trace(). Double check your inputs and try again."
+            )
+            return None
+            
+        log_id = self.logger.log(
+            user_query=user_query,
+            model_output=model_output,
+            documents=documents,
+            message_history=message_history,
+            instructions=instructions,
+            tags=tags,
+            hallucination_detection=hallucination_detection,
+            inconsistency_detection=inconsistency_detection,
+        )
+        return log_id
+
+    def trace(self):
+        """Direct access to the tracer's trace decorator."""
+        return self.tracer.trace()
+    
+    def poll_for_detection(self, log_id: str, timeout: int = 300, poll_interval: float = 2.0):
+        """
+        Direct access to the logger's poll_for_detection method.
+        
+        Args:
+            log_id: The ID of the log to get Detection results for
+            timeout: Maximum time to wait for results in seconds (default: 300s/5min)
+            poll_interval: How often to poll the API in seconds (default: 2s)
+        """
+        if not self.logger._configured:
+            logger.error(
+                "Logger is not configured. Please call quotient.logger.init() before using poll_for_detection()."
+            )
+            return None
+
+        if not log_id:
+            logger.error("Log ID is required for Detection")
+            return None
+
+        detection = self.logger.poll_for_detection(log_id=log_id, timeout=timeout, poll_interval=poll_interval)
+        return detection
+
