@@ -249,7 +249,7 @@ class QuotientLogger:
         Merges the default tags (set via init) with any runtime-supplied tags and calls the
         underlying non_blocking_create function.
 
-        .. deprecated:: 1.0.0
+        .. deprecated:: 0.4.0
             Use :meth:`quotient.log()` instead. This method will be removed in a future version.
         """
         warnings.warn(

@@ -7,6 +7,7 @@ import jwt
 from typing import Any, Dict, List, Optional, Union
 import traceback
 import httpx
+import warnings
 
 from quotientai import resources
 from quotientai.exceptions import handle_async_errors, logger
@@ -244,7 +245,16 @@ class AsyncQuotientLogger:
 
         Merges the default tags (set via init) with any runtime-supplied tags and calls the
         underlying non_blocking_create function.
+
+        .. deprecated:: 0.4.0
+        Use :meth:`quotient.log()` instead. This method will be removed in a future version.
         """
+        warnings.warn(
+            "quotient.logger.log() is deprecated and will be removed in a future version. "
+            "Please use quotient.log() instead.",
+            DeprecationWarning,
+            stacklevel=2
+        )
         if not self._configured:
             logger.error(
                 f"Logger is not configured. Please call init() before logging."
