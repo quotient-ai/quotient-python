@@ -333,6 +333,46 @@ class AsyncQuotientLogger:
         return await self.logs_resource.poll_for_detection(
             log_id, timeout, poll_interval
         )
+    
+class AsyncQuotientTracer:
+    """
+    Tracer interface that wraps the underlying tracing resource for asynchronous operations.
+    """
+
+    def __init__(self, tracing_resource):
+        self.tracing_resource = tracing_resource
+
+        self.app_name: Optional[str] = None
+        self.environment: Optional[str] = None
+        self.instruments: Optional[list] = None
+        self._configured = False
+
+    def init(self, app_name: str, environment: str, instruments: Optional[list] = None):
+        """
+        Configure the tracer with the provided parameters and return self.
+        This method must be called before using trace().
+        """
+        self.app_name = app_name
+        self.environment = environment
+        self.instruments = instruments
+
+        self.tracing_resource.configure(app_name=app_name, environment=environment, instruments=instruments)
+
+        self._configured = True
+
+        return self
+    
+    def trace(self):
+        """
+        Trace a function asynchronously.
+        """
+        if not self._configured:
+            logger.error(
+                "Tracer is not configured. Please call init() before using trace()."
+            )
+            return None
+        
+        return self.tracing_resource.trace()
 
 
 class AsyncQuotientAI:
@@ -359,11 +399,11 @@ class AsyncQuotientAI:
         self._client = _AsyncQuotientClient(self.api_key)
         self.auth = AsyncAuthResource(self._client)
         self.logs = resources.AsyncLogsResource(self._client)
-        self.tracing = resources.AsyncTracingResource(self._client)
-        self.trace = self.tracing.trace
+        self.tracing = resources.TracingResource(self._client)
 
         # Create an unconfigured logger instance.
         self.logger = AsyncQuotientLogger(self.logs)
+        self.tracer = AsyncQuotientTracer(self.tracing)
 
         try:
             self.auth.authenticate()
@@ -419,3 +459,28 @@ class AsyncQuotientAI:
             inconsistency_detection=inconsistency_detection,
         )
         return result
+    
+    def trace(self):
+        """
+        Trace a function asynchronously.
+        """
+        return self.tracer.trace()
+    
+    async def poll_for_detection(
+        self, log_id: str, timeout: int = 300, poll_interval: float = 2.0
+    ):
+        """
+        Get Detection results for a log asynchronously.
+        """
+        if not self.logger._configured:
+            logger.error(
+                "Logger is not configured. Please call init() before using poll_for_detection()."
+            )
+            return None
+
+        if not log_id:
+            logger.error("Log ID is required for Detection")
+            return None
+
+        detection = await self.logger.poll_for_detection(log_id=log_id, timeout=timeout, poll_interval=poll_interval)
+        return detection

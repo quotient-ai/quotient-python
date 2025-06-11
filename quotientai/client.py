@@ -335,6 +335,13 @@ class QuotientLogger:
         Returns:
             Log object with Detection results if successful, None otherwise
         """
+        warnings.warn(
+            "quotient.logger.poll_for_detection() is deprecated and will be removed in a future version. "
+            "Please use quotient.poll_for_detection() instead.",
+            DeprecationWarning,
+            stacklevel=2
+        )
+
         if not self._configured:
             logger.error(
                 f"Logger is not configured. Please call init() before getting Detection results."
@@ -408,7 +415,7 @@ class QuotientTracer:
             logger.error(
                 f"Tracer is not configured. Please call init() before tracing."
             )
-            return lambda func: func
+            return None
 
         # Call the tracing resource without parameters since it's now configured
         return self.tracing_resource.trace()
@@ -487,7 +494,7 @@ class QuotientAI:
             )
             return None
             
-        result = self.logger.log(
+        log_id = self.logger.log(
             user_query=user_query,
             model_output=model_output,
             documents=documents,
@@ -497,9 +504,31 @@ class QuotientAI:
             hallucination_detection=hallucination_detection,
             inconsistency_detection=inconsistency_detection,
         )
-        return result
+        return log_id
 
     def trace(self):
         """Direct access to the tracer's trace decorator."""
         return self.tracer.trace()
+    
+    def poll_for_detection(self, log_id: str, timeout: int = 300, poll_interval: float = 2.0):
+        """
+        Direct access to the logger's poll_for_detection method.
+        
+        Args:
+            log_id: The ID of the log to get Detection results for
+            timeout: Maximum time to wait for results in seconds (default: 300s/5min)
+            poll_interval: How often to poll the API in seconds (default: 2s)
+        """
+        if not self.logger._configured:
+            logger.error(
+                "Logger is not configured. Please call quotient.logger.init() before using poll_for_detection()."
+            )
+            return None
+
+        if not log_id:
+            logger.error("Log ID is required for Detection")
+            return None
+
+        detection = self.logger.poll_for_detection(log_id=log_id, timeout=timeout, poll_interval=poll_interval)
+        return detection
 
