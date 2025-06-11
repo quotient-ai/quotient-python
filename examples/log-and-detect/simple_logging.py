@@ -40,7 +40,7 @@ print("Log created, waiting for detection results...")
 
 # Poll for detection results with a timeout of 60 seconds
 # You can adjust timeout and poll_interval based on your needs
-detection_results = quotient.logger.poll_for_detection(
+detection_results = quotient.poll_for_detection(
     log_id=log_id,
     timeout=60,  # Wait up to 60 seconds for results
     poll_interval=2.0,  # Check every 2 seconds
