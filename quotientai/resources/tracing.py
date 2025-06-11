@@ -45,19 +45,16 @@ class QuotientAttributesSpanProcessor(SpanProcessor):
     
     - `app_name`
     - `environment`
-    - `metadata`
 
     Which are all required for tracing.
     """
 
     app_name: str
     environment: str
-    metadata: Optional[dict]
 
-    def __init__(self, app_name: str, environment: str, metadata: Optional[dict] = None):
+    def __init__(self, app_name: str, environment: str):
         self.app_name = app_name
         self.environment = environment
-        self.metadata = metadata
 
     def on_start(self, span: Span, parent_context: Optional[otel_context.Context] = None) -> None:
         attributes = {
@@ -143,7 +140,6 @@ class TracingResource:
                 quotient_attributes_span_processor = QuotientAttributesSpanProcessor(
                     app_name=app_name,
                     environment=environment,
-                    metadata=None,
                 )
                 tracer_provider.add_span_processor(quotient_attributes_span_processor)
                 tracer_provider.add_span_processor(span_processor)
