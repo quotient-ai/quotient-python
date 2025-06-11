@@ -1,7 +1,7 @@
 from quotientai import QuotientAI
 
 quotient = QuotientAI()
-quotient_logger = quotient.logger.init(
+quotient.logger.init(
     # Required
     app_name="my-app",
     environment="dev",
@@ -15,7 +15,7 @@ quotient_logger = quotient.logger.init(
 # Mock retrieved documents
 retrieved_documents = [{"page_content": "Sample document"}]
 
-log_id = quotient_logger.log(
+log_id = quotient.log(
     user_query="Sample input",
     model_output="Sample output",
     # Page content from Documents from your retriever used to generate the model output
@@ -40,7 +40,7 @@ print("Log created, waiting for detection results...")
 
 # Poll for detection results with a timeout of 60 seconds
 # You can adjust timeout and poll_interval based on your needs
-detection_results = quotient_logger.poll_for_detection(
+detection_results = quotient.logger.poll_for_detection(
     log_id=log_id,
     timeout=60,  # Wait up to 60 seconds for results
     poll_interval=2.0,  # Check every 2 seconds
@@ -65,4 +65,4 @@ else:
         "\nNo detection results received. The detection might still be in progress or failed."
     )
     print("You can try again later with:")
-    print(f"quotient_logger.get_detection(log_id='{log_id}')")
+    print(f"quotient.logger.poll_for_detection(log_id='{log_id}')")
