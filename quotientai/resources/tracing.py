@@ -67,7 +67,6 @@ class QuotientAttributesSpanProcessor(SpanProcessor):
 
 
 class TracingResource:
-    _instances = weakref.WeakSet()
 
     def __init__(self, client):
         self._client = client
@@ -77,7 +76,6 @@ class TracingResource:
         self._environment = None
         self._instruments = None
 
-        TracingResource._instances.add(self)
         atexit.register(self._cleanup)
 
     def configure(self, app_name: str, environment: str, instruments: Optional[list] = None):
@@ -253,15 +251,6 @@ class TracingResource:
                 self.tracer = None
             except Exception as e:
                 logger.error(f"failed to cleanup tracing: {str(e)}")
-
-    @classmethod
-    def cleanup_all(cls):
-        """
-        Clean up all tracing resources for all instances.
-        This is useful for explicit cleanup before program exit.
-        """
-        for instance in cls._instances:
-            instance._cleanup()
 
     def cleanup(self):
         """
