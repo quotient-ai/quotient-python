@@ -470,6 +470,7 @@ class QuotientAI:
         self.auth = AuthResource(_client)
         self.logs = resources.LogsResource(_client)
         self.tracing = resources.TracingResource(_client)
+        self.detections = resources.DetectionsResource(_client)
 
         # Create an unconfigured logger instance.
         self.logger = QuotientLogger(self.logs)
@@ -543,7 +544,17 @@ class QuotientAI:
             log_id: The ID of the log to get Detection results for
             timeout: Maximum time to wait for results in seconds (default: 300s/5min)
             poll_interval: How often to poll the API in seconds (default: 2s)
+            
+        .. deprecated:: 0.3.1
+            Use :meth:`quotient.detections.poll()` instead. This method will be removed in a future version.
         """
+        warnings.warn(
+            "quotient.poll_for_detection() is deprecated as of 0.3.1 and will be removed in a future version. "
+            "Please use quotient.detections.poll() instead.",
+            DeprecationWarning,
+            stacklevel=2
+        )
+        
         if not self.logger._configured:
             logger.error(
                 "Logger is not configured. Please call quotient.logger.init() before using poll_for_detection()."

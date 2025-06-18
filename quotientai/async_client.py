@@ -330,11 +330,11 @@ class AsyncQuotientLogger:
             Log object with Detection results if successful, None otherwise
 
         .. deprecated:: 0.3.1
-            Use :meth:`quotient.poll_for_detection()` instead. This method will be removed in a future version.
+            Use :meth:`quotient.detections.poll()` instead. This method will be removed in a future version.
         """
         warnings.warn(
-            "quotient.logger.poll_for_detection() is deprecated as of 0.3.1 and will be removed in a future version. "
-            "Please use quotient.poll_for_detection() instead.",
+            "quotient.poll_for_detection() is deprecated as of 0.3.1 and will be removed in a future version. "
+            "Please use quotient.detections.poll() instead.",
             DeprecationWarning,
             stacklevel=2
         )
@@ -420,6 +420,7 @@ class AsyncQuotientAI:
         self.auth = AsyncAuthResource(self._client)
         self.logs = resources.AsyncLogsResource(self._client)
         self.tracing = resources.TracingResource(self._client)
+        self.detections = resources.AsyncDetectionsResource(self._client)
 
         # Create an unconfigured logger instance.
         self.logger = AsyncQuotientLogger(self.logs)
@@ -491,7 +492,17 @@ class AsyncQuotientAI:
     ):
         """
         Get Detection results for a log asynchronously.
+        
+        .. deprecated:: 0.3.1
+            Use :meth:`quotient.detections.poll()` instead. This method will be removed in a future version.
         """
+        warnings.warn(
+            "quotient.poll_for_detection() is deprecated as of 0.3.1 and will be removed in a future version. "
+            "Please use quotient.detections.poll() instead.",
+            DeprecationWarning,
+            stacklevel=2
+        )
+        
         if not self.logger._configured:
             logger.error(
                 "Logger is not configured. Please call init() before using poll_for_detection()."
