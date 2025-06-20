@@ -139,6 +139,13 @@ class TracingResource:
             else:
                 logger.warning(f"Unknown vector database: {db_name}")
 
+    def _create_otlp_exporter(self, endpoint: str, headers: dict):
+        """
+        Factory method for creating OTLP exporters.
+        Can be overridden or patched for testing.
+        """
+        return OTLPSpanExporter(endpoint=endpoint, headers=headers)
+
     @functools.lru_cache()
     def _setup_auto_collector(self, app_name: str, environment: str, instruments: Optional[list] = None):
         """
@@ -172,10 +179,7 @@ class TracingResource:
                         logger.warning("failed to parse OTEL_EXPORTER_OTLP_HEADERS, using default headers")
 
                 # Configure OTLP exporter to send to collector
-                otlp_exporter = OTLPSpanExporter(
-                    endpoint=exporter_endpoint,
-                    headers=headers,
-                )
+                otlp_exporter = self._create_otlp_exporter(exporter_endpoint, headers)
 
                 # Use batch processor for better performance
                 span_processor = BatchSpanProcessor(otlp_exporter)
