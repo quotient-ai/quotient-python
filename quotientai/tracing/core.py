@@ -25,6 +25,9 @@ from opentelemetry.trace import (
 from quotientai.exceptions import logger
 from quotientai._constants import TRACER_NAME, DEFAULT_TRACING_ENDPOINT
 
+# Import the new instrumentors
+from quotientai.tracing.instrumentation import ChromaInstrumentor, PineconeInstrumentor, QdrantInstrumentor
+
 @contextlib.contextmanager
 def start_span(name: str):
     """
@@ -97,6 +100,44 @@ class TracingResource:
         self._app_name = app_name
         self._environment = environment
         self._instruments = instruments
+
+    def init(self, app_name: str, environment: str, instruments: Optional[list] = None):
+        """
+        Initialize tracing with app_name, environment, and instruments.
+        This is a convenience method that calls configure and then sets up the collector.
+        """
+        self.configure(app_name, environment, instruments)
+        self._setup_auto_collector(app_name, environment, instruments)
+
+    def get_vector_db_instrumentors(self):
+        """
+        Get a list of available vector database instrumentors.
+        
+        Returns:
+            dict: Dictionary containing available instrumentors
+        """
+        return {
+            "chroma": ChromaInstrumentor(),
+            "pinecone": PineconeInstrumentor(),
+            "qdrant": QdrantInstrumentor(),
+        }
+
+    def instrument_vector_dbs(self, *db_names):
+        """
+        Instrument specific vector databases.
+        
+        Args:
+            *db_names: Names of vector databases to instrument ('chroma', 'pinecone', 'qdrant')
+        """
+        available_instrumentors = self.get_vector_db_instrumentors()
+        
+        for db_name in db_names:
+            if db_name.lower() in available_instrumentors:
+                instrumentor = available_instrumentors[db_name.lower()]
+                instrumentor.instrument()
+                logger.info(f"Instrumented {db_name}")
+            else:
+                logger.warning(f"Unknown vector database: {db_name}")
 
     @functools.lru_cache()
     def _setup_auto_collector(self, app_name: str, environment: str, instruments: Optional[list] = None):
@@ -258,3 +299,16 @@ class TracingResource:
         This is called automatically on program exit via atexit.
         """
         self._cleanup()
+
+    def force_flush(self):
+        """
+        Force flush all pending spans to the collector.
+        This is useful for debugging and ensuring spans are sent immediately.
+        """
+        try:
+            provider = get_tracer_provider()
+            if hasattr(provider, 'force_flush'):
+                provider.force_flush()
+            logger.info("Forced flush of pending spans")
+        except Exception as e:
+            logger.error(f"Failed to force flush spans: {str(e)}")

@@ -1,6 +1,6 @@
 from quotientai.resources.logs import LogsResource
 from quotientai.resources.logs import AsyncLogsResource
-from quotientai.resources.tracing import TracingResource
+from quotientai.tracing.core import TracingResource
 
 __all__ = [
     "LogsResource",
