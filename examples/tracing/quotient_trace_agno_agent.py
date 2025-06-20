@@ -6,7 +6,7 @@ from agno.models.openai import OpenAIChat
 from agno.tools.duckduckgo import DuckDuckGoTools
 
 from quotientai import QuotientAI
-from quotientai.resources.tracing import start_span
+from quotientai.tracing import start_span
 
 quotient = QuotientAI()
 quotient.tracer.init(
