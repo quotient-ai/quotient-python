@@ -98,21 +98,29 @@ class PineconeInstrumentor(BaseInstrumentor):
         instrumentor = self  # Capture the instrumentor instance
         
         @functools.wraps(original_method)
-        def wrapper(self, name, dimension, metric="cosine", **kwargs):
+        def wrapper(self, *args, **kwargs):
             attributes = instrumentor._get_common_attributes("create_index")
             attributes["db.system.name"] = "pinecone"
-            attributes["db.index.name"] = name
-            attributes["db.index.dimension"] = dimension
-            attributes["db.create_index.metric"] = metric
-            
-            # Add spec if provided
+            # Try to extract name, dimension, metric, spec from args/kwargs for attributes
+            if len(args) > 0:
+                attributes["db.index.name"] = args[0]
+            elif "name" in kwargs:
+                attributes["db.index.name"] = kwargs["name"]
+            if len(args) > 1:
+                attributes["db.index.dimension"] = args[1]
+            elif "dimension" in kwargs:
+                attributes["db.index.dimension"] = kwargs["dimension"]
+            if len(args) > 2:
+                attributes["db.create_index.metric"] = args[2]
+            elif "metric" in kwargs:
+                attributes["db.create_index.metric"] = kwargs["metric"]
             if "spec" in kwargs:
                 attributes["db.create_index.spec"] = instrumentor._safe_json_dumps(kwargs["spec"])
             
             with instrumentor.tracer.start_as_current_span("pinecone.create_index") as span:
                 span.set_attributes(attributes)
                 try:
-                    result = original_method(self, name, dimension, metric=metric, **kwargs)
+                    result = original_method(self, *args, **kwargs)
                     span.set_attribute("db.operation.status", "completed")
                     return result
                 except Exception as e:

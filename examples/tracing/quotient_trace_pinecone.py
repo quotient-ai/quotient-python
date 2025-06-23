@@ -55,9 +55,9 @@ def demonstrate_pinecone_operations():
                 )
                 pc.create_index(
                     name=index_name,
+                    spec=spec,
                     dimension=128,
                     metric="cosine",
-                    spec=spec,
                 )
                 print(f"Created index: {index_name}")
             
@@ -101,6 +101,7 @@ def demonstrate_pinecone_operations():
             print("Pinecone not installed. Install with: pip install pinecone")
         except Exception as e:
             print(f"Error in Pinecone demo: {e}")
+            raise
 
 
 if __name__ == "__main__":
