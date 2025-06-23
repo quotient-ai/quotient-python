@@ -8,7 +8,7 @@ import uuid
 
 from collections import deque
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, timezone
 from threading import Thread, Event
 from typing import Any, Dict, List, Optional, Union
 
@@ -200,7 +200,7 @@ class LogsResource:
         log_id = str(uuid.uuid4())
 
         # Create current timestamp
-        created_at = datetime.now().isoformat()
+        created_at = datetime.now(timezone.utc).isoformat()
 
         data = {
             "id": log_id,
@@ -493,7 +493,7 @@ class AsyncLogsResource:
         log_id = str(uuid.uuid4())
 
         # Create current timestamp
-        created_at = datetime.now().isoformat()
+        created_at = datetime.now(timezone.utc).isoformat()
 
         # Create a copy of all the data
         data = {
