@@ -1,4 +1,5 @@
 from quotientai import AsyncQuotientAI
+from quotientai.client import DetectionType
 import asyncio
 
 quotient = AsyncQuotientAI()
@@ -8,9 +9,6 @@ quotient.logger.init(
     environment="dev",
     # dynamic labels for slicing/dicing analytics e.g. by customer, feature, etc
     tags={"model": "gpt-4o", "feature": "customer-support"},
-    hallucination_detection=True,
-    inconsistency_detection=True,
-    hallucination_detection_sample_rate=1.0,
 )
 
 
@@ -19,6 +17,8 @@ async def main():
     retrieved_documents = [{"page_content": "Sample document"}]
 
     log_id = await quotient.log(
+        detections=[DetectionType.HALLUCINATION, DetectionType.DOCUMENT_RELEVANCY],
+        detection_sample_rate=1.0,
         user_query="Sample input",
         model_output="Sample output",
         # Page content from Documents from your retriever used to generate the model output
@@ -44,7 +44,7 @@ async def main():
 
     # Poll for detection results with a timeout of 60 seconds
     # You can adjust timeout and poll_interval based on your needs
-    detection_results = await quotient.logger.poll_for_detection(
+    detection_results = await quotient.poll_for_detection(
         log_id=log_id,
         timeout=60,  # Wait up to 60 seconds for results
         poll_interval=2.0,  # Check every 2 seconds
@@ -69,7 +69,7 @@ async def main():
             "\nNo detection results received. The detection might still be in progress or failed."
         )
         print("You can try again later with:")
-        print(f"await quotient.logger.poll_for_detection(log_id='{log_id}')")
+        print(f"await quotient.poll_for_detection(log_id='{log_id}')")
 
     print("Press Enter to exit...")
 

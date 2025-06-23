@@ -163,15 +163,14 @@ class LogsResource:
         self,
         app_name: str,
         environment: str,
-        hallucination_detection: bool,
-        inconsistency_detection: bool,
-        user_query: str,
-        model_output: str,
-        documents: List[Union[str, LogDocument]],
+        detections: List[str] = None,
+        detection_sample_rate: float = 0.0,
+        user_query: Optional[str] = None,
+        model_output: Optional[str] = None,
+        documents: Optional[List[Union[str, LogDocument]]] = None,
         message_history: Optional[List[Dict[str, Any]]] = None,
         instructions: Optional[List[str]] = None,
         tags: Optional[Dict[str, Any]] = {},
-        hallucination_detection_sample_rate: Optional[float] = 0,
     ):
         """
         Create a log in a background thread (non-blocking operation).
@@ -183,15 +182,14 @@ class LogsResource:
         Args:
             app_name: The name of the application
             environment: The environment (e.g., "production", "development")
-            hallucination_detection: Whether to enable hallucination detection
-            inconsistency_detection: Whether to enable inconsistency detection
-            user_query: The user's query
-            model_output: The model's response
+            detections: List of detection types to run
+            detection_sample_rate: Sample rate for all detections (0-1)
+            user_query: The user's query (optional, validated by detections)
+            model_output: The model's response (optional, validated by detections)
             documents: List of documents used for retrieval
             message_history: Optional conversation history
             instructions: Optional system instructions
             tags: Optional tags to add to the log
-            hallucination_detection_sample_rate: Sample rate for hallucination detection
 
         Returns:
             str: The generated log ID
@@ -202,16 +200,26 @@ class LogsResource:
         # Create current timestamp
         created_at = datetime.now(timezone.utc).isoformat()
 
+        detections = detections or []
+
+        # Convert to v1 format for backward compatibility with existing backend
+        # TODO: Update when backend supports v2 schema
+        hallucination_detection = "hallucination" in detections
+        inconsistency_detection = "inconsistency" in detections
+        hallucination_detection_sample_rate = (
+            detection_sample_rate if hallucination_detection else 0.0
+        )
+
         data = {
             "id": log_id,
             "created_at": created_at,
             "app_name": app_name,
             "environment": environment,
-            "tags": tags,
+            "tags": tags or {},
             "hallucination_detection": hallucination_detection,
             "inconsistency_detection": inconsistency_detection,
-            "user_query": user_query,
-            "model_output": model_output,
+            "user_query": user_query or "",
+            "model_output": model_output or "",
             "documents": documents,
             "message_history": message_history,
             "instructions": instructions,
@@ -456,15 +464,14 @@ class AsyncLogsResource:
         self,
         app_name: str,
         environment: str,
-        hallucination_detection: bool,
-        inconsistency_detection: bool,
-        user_query: str,
-        model_output: str,
-        documents: List[str],
+        detections: List[str] = None,
+        detection_sample_rate: float = 0.0,
+        user_query: Optional[str] = None,
+        model_output: Optional[str] = None,
+        documents: Optional[List[Union[str, LogDocument]]] = None,
         message_history: Optional[List[Dict[str, Any]]] = None,
         instructions: Optional[List[str]] = None,
         tags: Optional[Dict[str, Any]] = {},
-        hallucination_detection_sample_rate: Optional[float] = 0,
     ):
         """
         Create a log in a background task (non-blocking operation).
@@ -476,15 +483,14 @@ class AsyncLogsResource:
         Args:
             app_name: The name of the application
             environment: The environment (e.g., "production", "development")
-            hallucination_detection: Whether to enable hallucination detection
-            inconsistency_detection: Whether to enable inconsistency detection
-            user_query: The user's query
-            model_output: The model's response
+            detections: List of detection types to run
+            detection_sample_rate: Sample rate for all detections (0-1)
+            user_query: The user's query (optional, validated by detections)
+            model_output: The model's response (optional, validated by detections)
             documents: List of documents used for retrieval
             message_history: Optional conversation history
             instructions: Optional system instructions
             tags: Optional tags to add to the log
-            hallucination_detection_sample_rate: Sample rate for hallucination detection
 
         Returns:
             str: The generated log ID
@@ -495,17 +501,27 @@ class AsyncLogsResource:
         # Create current timestamp
         created_at = datetime.now(timezone.utc).isoformat()
 
+        detections = detections or []
+
+        # Convert to v1 format for backward compatibility with existing backend
+        # TODO: Update when backend supports v2 schema
+        hallucination_detection = "hallucination" in detections
+        inconsistency_detection = "inconsistency" in detections
+        hallucination_detection_sample_rate = (
+            detection_sample_rate if hallucination_detection else 0.0
+        )
+
         # Create a copy of all the data
         data = {
             "id": log_id,
             "created_at": created_at,
             "app_name": app_name,
             "environment": environment,
-            "tags": tags,
+            "tags": tags or {},
             "hallucination_detection": hallucination_detection,
             "inconsistency_detection": inconsistency_detection,
-            "user_query": user_query,
-            "model_output": model_output,
+            "user_query": user_query or "",
+            "model_output": model_output or "",
             "documents": documents,
             "message_history": message_history,
             "instructions": instructions,
