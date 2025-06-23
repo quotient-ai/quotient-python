@@ -14,9 +14,7 @@ import httpx
 from quotientai import resources
 from quotientai.exceptions import handle_errors, logger
 from quotientai.resources.logs import LogDocument
-from quotientai.resources.auth import AuthResource
-from quotientai.resources.tracing import TracingResource
-
+from quotientai.tracing.core import TracingResource
 
 class _BaseQuotientClient(httpx.Client):
     def __init__(self, api_key: str):
@@ -467,7 +465,7 @@ class QuotientAI:
             )
 
         _client = _BaseQuotientClient(self.api_key)
-        self.auth = AuthResource(_client)
+        self.auth = resources.AuthResource(_client)
         self.logs = resources.LogsResource(_client)
         self.tracing = resources.TracingResource(_client)
 
