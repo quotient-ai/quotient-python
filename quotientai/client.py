@@ -14,9 +14,7 @@ import httpx
 from quotientai import resources
 from quotientai.exceptions import handle_errors, logger
 from quotientai.resources.logs import LogDocument
-from quotientai.resources.auth import AuthResource
-from quotientai.resources.tracing import TracingResource
-
+from quotientai.tracing.core import TracingResource
 
 class _BaseQuotientClient(httpx.Client):
     def __init__(self, api_key: str):
@@ -444,6 +442,13 @@ class QuotientTracer:
 
         # Call the tracing resource without parameters since it's now configured
         return self.tracing_resource.trace()
+    
+    def force_flush(self):
+        """
+        Force flush all pending spans to the collector.
+        This is useful for debugging and ensuring spans are sent immediately.
+        """
+        self.tracing_resource.force_flush()
 
 class QuotientAI:
     """
@@ -467,7 +472,7 @@ class QuotientAI:
             )
 
         _client = _BaseQuotientClient(self.api_key)
-        self.auth = AuthResource(_client)
+        self.auth = resources.AuthResource(_client)
         self.logs = resources.LogsResource(_client)
         self.tracing = resources.TracingResource(_client)
 
@@ -556,4 +561,11 @@ class QuotientAI:
 
         detection = self.logger.poll_for_detection(log_id=log_id, timeout=timeout, poll_interval=poll_interval)
         return detection
+    
+    def force_flush(self):
+        """
+        Force flush all pending spans to the collector.
+        This is useful for debugging and ensuring spans are sent immediately.
+        """
+        self.tracer.force_flush()
 
