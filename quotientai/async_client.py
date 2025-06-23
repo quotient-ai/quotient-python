@@ -393,6 +393,13 @@ class AsyncQuotientTracer:
             return lambda func: func
         
         return self.tracing_resource.trace()
+    
+    async def force_flush(self):
+        """
+        Force flush all pending spans to the collector.
+        This is useful for debugging and ensuring spans are sent immediately.
+        """
+        self.tracing_resource.force_flush()
 
 
 class AsyncQuotientAI:
@@ -504,3 +511,10 @@ class AsyncQuotientAI:
 
         detection = await self.logger.poll_for_detection(log_id=log_id, timeout=timeout, poll_interval=poll_interval)
         return detection
+    
+    async def force_flush(self):
+        """
+        Force flush all pending spans to the collector.
+        This is useful for debugging and ensuring spans are sent immediately.
+        """
+        self.tracer.force_flush()
