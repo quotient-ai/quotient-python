@@ -130,8 +130,8 @@ class TestLogsResource:
         result = logs_resource.create(
             app_name="test-app",
             environment="test",
-            hallucination_detection=True,
-            inconsistency_detection=False,
+            detections=["hallucination"],
+            detection_sample_rate=0.5,
             user_query="test query",
             model_output="test output",
             documents=["doc1"],
@@ -381,8 +381,8 @@ class TestAsyncLogsResource:
         result = await async_logs_resource.create(
             app_name="test-app",
             environment="test",
-            hallucination_detection=True,
-            inconsistency_detection=False,
+            detections=["hallucination"],
+            detection_sample_rate=0.5,
             user_query="test query",
             model_output="test output",
             documents=["doc1"],
