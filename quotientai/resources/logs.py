@@ -202,28 +202,19 @@ class LogsResource:
 
         detections = detections or []
 
-        # Convert to v1 format for backward compatibility with existing backend
-        # TODO: Update when backend supports v2 schema
-        hallucination_detection = "hallucination" in detections
-        inconsistency_detection = "inconsistency" in detections
-        hallucination_detection_sample_rate = (
-            detection_sample_rate if hallucination_detection else 0.0
-        )
-
         data = {
             "id": log_id,
             "created_at": created_at,
             "app_name": app_name,
             "environment": environment,
             "tags": tags or {},
-            "hallucination_detection": hallucination_detection,
-            "inconsistency_detection": inconsistency_detection,
+            "detections": detections,
+            "detection_sample_rate": detection_sample_rate,
             "user_query": user_query,
             "model_output": model_output,
             "documents": documents,
             "message_history": message_history,
             "instructions": instructions,
-            "hallucination_detection_sample_rate": hallucination_detection_sample_rate,
         }
 
         self._log_queue.append(data)
@@ -503,14 +494,6 @@ class AsyncLogsResource:
 
         detections = detections or []
 
-        # Convert to v1 format for backward compatibility with existing backend
-        # TODO: Update when backend supports v2 schema
-        hallucination_detection = "hallucination" in detections
-        inconsistency_detection = "inconsistency" in detections
-        hallucination_detection_sample_rate = (
-            detection_sample_rate if hallucination_detection else 0.0
-        )
-
         # Create a copy of all the data
         data = {
             "id": log_id,
@@ -518,14 +501,13 @@ class AsyncLogsResource:
             "app_name": app_name,
             "environment": environment,
             "tags": tags or {},
-            "hallucination_detection": hallucination_detection,
-            "inconsistency_detection": inconsistency_detection,
+            "detections": detections,
+            "detection_sample_rate": detection_sample_rate,
             "user_query": user_query,
             "model_output": model_output,
             "documents": documents,
             "message_history": message_history,
             "instructions": instructions,
-            "hallucination_detection_sample_rate": hallucination_detection_sample_rate,
         }
 
         # Create a task and add it to our pending tasks set

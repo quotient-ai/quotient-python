@@ -4,7 +4,7 @@ from fastapi import APIRouter
 from dotenv import load_dotenv
 from openai import OpenAI, AsyncOpenAI
 from quotientai import QuotientAI, AsyncQuotientAI
-from quotientai.client import DetectionType
+from quotientai.types import DetectionType
 
 from constants import (
     INSTRUCTIONS,

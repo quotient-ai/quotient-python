@@ -1,5 +1,5 @@
 from quotientai import QuotientAI
-from quotientai.client import DetectionType
+from quotientai.types import DetectionType
 
 quotient = QuotientAI()
 quotient.logger.init(
@@ -8,14 +8,14 @@ quotient.logger.init(
     environment="dev",
     # dynamic labels for slicing/dicing analytics e.g. by customer, feature, etc
     tags={"model": "gpt-4o", "feature": "customer-support"},
+    detections=[DetectionType.HALLUCINATION, DetectionType.DOCUMENT_RELEVANCY],
+    detection_sample_rate=1.0,
 )
 
 # Mock retrieved documents
 retrieved_documents = [{"page_content": "Sample document"}]
 
 log_id = quotient.log(
-    detections=[DetectionType.HALLUCINATION, DetectionType.DOCUMENT_RELEVANCY],
-    detection_sample_rate=1.0,
     user_query="Sample input",
     model_output="Sample output",
     # Page content from Documents from your retriever used to generate the model output

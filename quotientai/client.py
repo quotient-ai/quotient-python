@@ -5,7 +5,6 @@ import random
 import time
 import traceback
 import warnings
-from enum import Enum
 
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Union
@@ -16,13 +15,7 @@ from quotientai import resources
 from quotientai.exceptions import handle_errors, logger
 from quotientai.resources.logs import LogDocument
 from quotientai.tracing.core import TracingResource
-
-
-class DetectionType(Enum):
-    """Supported detection types for v2 API"""
-
-    HALLUCINATION = "hallucination"
-    DOCUMENT_RELEVANCY = "document_relevancy"
+from quotientai.types import DetectionType
 
 
 class _BaseQuotientClient(httpx.Client):
@@ -207,13 +200,32 @@ class QuotientLogger:
         environment: str,
         tags: Optional[Dict[str, Any]] = {},
         sample_rate: float = 1.0,
-        hallucination_detection: bool = False,
-        inconsistency_detection: bool = False,
-        hallucination_detection_sample_rate: float = 0.0,
+        # New detection parameters (recommended)
+        detections: Optional[List[DetectionType]] = None,
+        detection_sample_rate: Optional[float] = None,
+        # Deprecated detection parameters
+        hallucination_detection: Optional[bool] = None,
+        inconsistency_detection: Optional[bool] = None,
+        hallucination_detection_sample_rate: Optional[float] = None,
     ) -> "QuotientLogger":
         """
         Configure the logger with the provided parameters and return self.
         This method must be called before using log().
+
+        Args:
+            app_name: The name of the application
+            environment: The environment (e.g., "production", "development")
+            tags: Optional tags to attach to all logs
+            sample_rate: Sample rate for logging (0-1)
+
+            # New detection parameters (recommended):
+            detections: List of detection types to run by default
+            detection_sample_rate: Sample rate for all detections (0-1)
+
+            # Deprecated detection parameters:
+            hallucination_detection: [DEPRECATED in 0.3.4] Use detections=[DetectionType.HALLUCINATION] instead
+            inconsistency_detection: [DEPRECATED in 0.3.4] Use detections=[DetectionType.INCONSISTENCY] instead
+            hallucination_detection_sample_rate: [DEPRECATED in 0.3.4] Use detection_sample_rate instead
         """
         if not app_name or not isinstance(app_name, str):
             logger.error("app_name must be a non-empty string")
@@ -227,15 +239,47 @@ class QuotientLogger:
         if not isinstance(sample_rate, float):
             logger.error("sample_rate must be a float")
             return None
-        if not isinstance(hallucination_detection, bool):
-            logger.error("hallucination_detection must be a boolean")
+
+        # Check for deprecated vs new detection parameter usage
+        deprecated_detection_params_used = any(
+            [
+                hallucination_detection is not None,
+                inconsistency_detection is not None,
+                hallucination_detection_sample_rate is not None,
+            ]
+        )
+
+        detection_params_used = any(
+            [
+                detections is not None,
+                detection_sample_rate is not None,
+            ]
+        )
+
+        # Prevent mixing deprecated and new detection parameters
+        if deprecated_detection_params_used and detection_params_used:
+            logger.error(
+                "Cannot mix deprecated parameters (hallucination_detection, inconsistency_detection, hallucination_detection_sample_rate) "
+                "with new detection parameters (detections, detection_sample_rate) in logger.init(). Please use new detection parameters."
+            )
             return None
-        if not isinstance(inconsistency_detection, bool):
-            logger.error("inconsistency_detection must be a boolean")
-            return None
-        if not isinstance(hallucination_detection_sample_rate, float):
-            logger.error("hallucination_detection_sample_rate must be a float")
-            return None
+
+        # Handle deprecated parameters (with deprecation warnings)
+        if deprecated_detection_params_used:
+            warnings.warn(
+                "Deprecated parameters (hallucination_detection, inconsistency_detection, hallucination_detection_sample_rate) "
+                "are deprecated as of 0.3.4. Please use new detection parameters (detections, detection_sample_rate) instead.",
+                DeprecationWarning,
+                stacklevel=2,
+            )
+
+            # Convert deprecated to new format
+            detections = []
+            if hallucination_detection:
+                detections.append(DetectionType.HALLUCINATION)
+            # Note: inconsistency_detection is deprecated and not supported in v2
+
+            detection_sample_rate = hallucination_detection_sample_rate or 0.0
 
         self.app_name = app_name
         self.environment = environment
@@ -246,9 +290,20 @@ class QuotientLogger:
             logger.error(f"sample_rate must be between 0.0 and 1.0")
             return None
 
-        self.hallucination_detection = hallucination_detection
-        self.inconsistency_detection = inconsistency_detection
-        self.hallucination_detection_sample_rate = hallucination_detection_sample_rate
+        # Store detection configuration (converted to new format)
+        self.detections = detections or []
+        self.detection_sample_rate = detection_sample_rate or 0.0
+
+        if not (0.0 <= self.detection_sample_rate <= 1.0):
+            logger.error(f"detection_sample_rate must be between 0.0 and 1.0")
+            return None
+
+        # Keep old properties for backward compatibility with deprecated logger.log()
+        self.hallucination_detection = DetectionType.HALLUCINATION in self.detections
+        self.inconsistency_detection = (
+            False  # inconsistency_detection is deprecated and not supported in v2
+        )
+        self.hallucination_detection_sample_rate = self.detection_sample_rate
 
         self._configured = True
 
@@ -330,18 +385,24 @@ class QuotientLogger:
                     return None
 
         if self._should_sample():
+            # Convert to new parameters for resources layer
+            detections = []
+            if hallucination_detection:
+                detections.append("hallucination")
+            if inconsistency_detection:
+                detections.append("inconsistency")
+
             log_id = self.logs_resource.create(
                 app_name=self.app_name,
                 environment=self.environment,
+                detections=detections,
+                detection_sample_rate=self.hallucination_detection_sample_rate,
                 user_query=user_query,
                 model_output=model_output,
                 documents=documents,
                 message_history=message_history,
                 instructions=instructions,
                 tags=merged_tags,
-                hallucination_detection=hallucination_detection,
-                inconsistency_detection=inconsistency_detection,
-                hallucination_detection_sample_rate=self.hallucination_detection_sample_rate,
             )
 
             return log_id
@@ -503,14 +564,14 @@ class QuotientAI:
     def log(
         self,
         *,
-        # V2 parameters (recommended)
+        # New detection parameters (recommended)
         detections: Optional[List[DetectionType]] = None,
         detection_sample_rate: Optional[float] = None,
-        # V1 parameters (deprecated)
+        # Deprecated detection parameters
         hallucination_detection: Optional[bool] = None,
         inconsistency_detection: Optional[bool] = None,
         hallucination_detection_sample_rate: Optional[float] = None,
-        # Common parameters
+        # Common input parameters
         user_query: Optional[str] = None,
         model_output: Optional[str] = None,
         documents: Optional[List[Union[str, LogDocument]]] = None,
@@ -522,16 +583,16 @@ class QuotientAI:
         Log the model interaction.
 
         Args:
-            # V2 Parameters (Recommended):
+            # New detection parameters (recommended):
             detections: List of detection types to run (replaces hallucination_detection/inconsistency_detection)
             detection_sample_rate: Sample rate for all detections 0-1 (replaces hallucination_detection_sample_rate)
 
-            # V1 Parameters (Deprecated):
+            # Deprecated detection parameters:
             hallucination_detection: [DEPRECATED in 0.3.4] Use detections=[DetectionType.HALLUCINATION] instead
             inconsistency_detection: [DEPRECATED in 0.3.4] Use detections=[DetectionType.INCONSISTENCY] instead
             hallucination_detection_sample_rate: [DEPRECATED in 0.3.4] Use detection_sample_rate instead
 
-            # Common Parameters:
+            # Common input parameters:
             user_query: The user's input query
             model_output: The model's response
             documents: Optional list of documents (strings or LogDocument objects)
@@ -548,8 +609,8 @@ class QuotientAI:
             )
             return None
 
-        # Check for v1 vs v2 parameter usage
-        v1_params_used = any(
+        # Check for deprecated vs new detection parameter usage
+        deprecated_detection_params_used = any(
             [
                 hallucination_detection is not None,
                 inconsistency_detection is not None,
@@ -557,45 +618,52 @@ class QuotientAI:
             ]
         )
 
-        v2_params_used = any(
+        detection_params_used = any(
             [detections is not None, detection_sample_rate is not None]
         )
 
-        # Prevent mixing v1 and v2 parameters
-        if v1_params_used and v2_params_used:
+        # Prevent mixing deprecated and new detection parameters
+        if deprecated_detection_params_used and detection_params_used:
             logger.error(
-                "Cannot mix v1 parameters (hallucination_detection, inconsistency_detection, hallucination_detection_sample_rate) "
-                "with v2 parameters (detections, detection_sample_rate). Please use v2 parameters."
+                "Cannot mix deprecated parameters (hallucination_detection, inconsistency_detection, hallucination_detection_sample_rate) "
+                "with new detection parameters (detections, detection_sample_rate). Please use new detection parameters."
             )
             return None
 
-        # Handle v1 parameters (with deprecation warnings)
-        if v1_params_used:
+        # Handle deprecated parameters (with deprecation warnings)
+        if deprecated_detection_params_used:
             warnings.warn(
-                "V1 parameters (hallucination_detection, inconsistency_detection, hallucination_detection_sample_rate) "
-                "are deprecated as of 0.3.4. Please use v2 parameters (detections, detection_sample_rate) instead. Document relevancy is not available with v1 parameters.",
+                "Deprecated parameters (hallucination_detection, inconsistency_detection, hallucination_detection_sample_rate) "
+                "are deprecated as of 0.3.4. Please use new detection parameters (detections, detection_sample_rate) instead. Document relevancy is not available with deprecated parameters.",
                 DeprecationWarning,
                 stacklevel=2,
             )
 
-            # Convert v1 to v2 format
+            # Convert deprecated to new format
             detections = []
             if hallucination_detection:
                 detections.append(DetectionType.HALLUCINATION)
 
             detection_sample_rate = hallucination_detection_sample_rate or 0.0
 
-            # For v1 backward compatibility, require user_query and model_output
+            # For backward compatibility, require user_query and model_output
             if not user_query or not model_output:
                 logger.error(
-                    "user_query and model_output are required when using v1 parameters"
+                    "user_query and model_output are required when using deprecated parameters"
                 )
                 return None
 
-        # Handle v2 parameters
+        # Handle new detection parameters
         else:
-            detections = detections or []
-            detection_sample_rate = detection_sample_rate or 0.0
+            # Use logger config as defaults if not provided in method call
+            detections = (
+                detections if detections is not None else self.logger.detections
+            )
+            detection_sample_rate = (
+                detection_sample_rate
+                if detection_sample_rate is not None
+                else self.logger.detection_sample_rate
+            )
 
             # Validate detection_sample_rate
             if not 0 <= detection_sample_rate <= 1:

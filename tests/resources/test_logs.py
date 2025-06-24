@@ -10,6 +10,8 @@ import logging
 import time
 import traceback
 
+from quotientai.types import DetectionType
+
 
 # Fixtures
 @pytest.fixture
@@ -130,7 +132,7 @@ class TestLogsResource:
         result = logs_resource.create(
             app_name="test-app",
             environment="test",
-            detections=["hallucination"],
+            detections=[DetectionType.HALLUCINATION],
             detection_sample_rate=0.5,
             user_query="test query",
             model_output="test output",

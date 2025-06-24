@@ -1,5 +1,5 @@
 from quotientai import AsyncQuotientAI
-from quotientai.client import DetectionType
+from quotientai.types import DetectionType
 import asyncio
 
 quotient = AsyncQuotientAI()
@@ -9,6 +9,8 @@ quotient.logger.init(
     environment="dev",
     # dynamic labels for slicing/dicing analytics e.g. by customer, feature, etc
     tags={"model": "gpt-4o", "feature": "customer-support"},
+    detections=[DetectionType.HALLUCINATION, DetectionType.DOCUMENT_RELEVANCY],
+    detection_sample_rate=1.0,
 )
 
 
@@ -17,8 +19,6 @@ async def main():
     retrieved_documents = [{"page_content": "Sample document"}]
 
     log_id = await quotient.log(
-        detections=[DetectionType.HALLUCINATION, DetectionType.DOCUMENT_RELEVANCY],
-        detection_sample_rate=1.0,
         user_query="Sample input",
         model_output="Sample output",
         # Page content from Documents from your retriever used to generate the model output
