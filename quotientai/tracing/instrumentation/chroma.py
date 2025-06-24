@@ -240,8 +240,16 @@ class ChromaInstrumentor(BaseInstrumentor):
         instrumentor = self  # Capture the instrumentor instance
         
         @functools.wraps(original_method)
-        def wrapper(self, query_texts=None, query_embeddings=None, n_results=10, 
-                   where=None, where_document=None, include=None, **kwargs):
+        def wrapper(
+            self, 
+            query_texts=None, 
+            query_embeddings=None, 
+            n_results=10, 
+            where=None, 
+            where_document=None, 
+            include=None, 
+            **kwargs,
+        ):
             attributes = instrumentor._get_common_attributes("query", collection_name=getattr(self, 'name', None))
             attributes["db.system.name"] = "chroma"
             attributes["db.n_results"] = n_results
@@ -257,25 +265,39 @@ class ChromaInstrumentor(BaseInstrumentor):
             with instrumentor.tracer.start_as_current_span("chroma.collection.query") as span:
                 span.set_attributes(attributes)
                 try:
-                    result = original_method(self, query_texts=query_texts, query_embeddings=query_embeddings,
-                                         n_results=n_results, where=where, where_document=where_document,
-                                         include=include, **kwargs)
+                    result = original_method(
+                        self, 
+                        query_texts=query_texts, 
+                        query_embeddings=query_embeddings,
+                        n_results=n_results, 
+                        where=where, 
+                        where_document=where_document,
+                        include=include, 
+                        **kwargs,
+                    )
                     span.set_attribute("db.operation.status", "completed")
                     
                     # Add retrieved documents if available
-                    if hasattr(result, 'ids') and result.ids and len(result.ids) > 0:
-                        span.set_attribute("db.ids_count", len(result.ids[0]))
+                    # the data looks like this:
+                    # {
+                    #     'ids': [[1, 2, 3]],
+                    #     'distances': [[0.1, 0.2, 0.3]],
+                    #     'documents': [['doc1', 'doc2', 'doc3']],
+                    #     'metadatas': [[{'key1': 'value1'}, {'key2': 'value2'}, {'key3': 'value3'}]]
+                    # }
+                    if isinstance(result, dict) and 'ids' in result and result['ids'] and len(result['ids']) > 0:
+                        span.set_attribute("db.ids_count", len(result['ids'][0]))
                         
                         # Format documents for span attributes
                         documents = []
-                        for i in range(len(result.ids[0])):
-                            doc = {"id": result.ids[0][i]}
-                            if hasattr(result, 'distances') and result.distances and len(result.distances) > 0:
-                                doc["score"] = result.distances[0][i] if i < len(result.distances[0]) else None
-                            if hasattr(result, 'documents') and result.documents and len(result.documents) > 0:
-                                doc["content"] = result.documents[0][i] if i < len(result.documents[0]) else None
-                            if hasattr(result, 'metadatas') and result.metadatas and len(result.metadatas) > 0:
-                                doc["metadata"] = result.metadatas[0][i] if i < len(result.metadatas[0]) else None
+                        for i in range(len(result['ids'][0])):
+                            doc = {"id": result['ids'][0][i]}
+                            if 'distances' in result and result['distances'] and len(result['distances']) > 0:
+                                doc["score"] = result['distances'][0][i] if i < len(result['distances'][0]) else None
+                            if 'documents' in result and result['documents'] and len(result['documents']) > 0:
+                                doc["content"] = result['documents'][0][i] if i < len(result['documents'][0]) else None
+                            if 'metadatas' in result and result['metadatas'] and len(result['metadatas']) > 0:
+                                doc["metadata"] = result['metadatas'][0][i] if i < len(result['metadatas'][0]) else None
                             documents.append(doc)
                         
                         if documents:
