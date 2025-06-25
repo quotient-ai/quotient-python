@@ -85,7 +85,16 @@ class ChromaInstrumentor(BaseInstrumentor):
         instrumentor = self  # Capture the instrumentor instance
         
         @functools.wraps(original_method)
-        def wrapper(self, name, **kwargs):
+        def wrapper(*args, **kwargs):
+            # Extract self and other parameters
+            if not args:
+                raise TypeError("Missing 'self' argument")
+            self_obj = args[0]
+            other_args = args[1:]
+            
+            # Get collection name from first positional argument or kwargs
+            name = other_args[0] if other_args else kwargs.get('name')
+            
             attributes = instrumentor._get_common_attributes("create_collection")
             attributes["db.collection.name"] = name
             attributes["db.system.name"] = "chroma"
@@ -93,7 +102,7 @@ class ChromaInstrumentor(BaseInstrumentor):
             with instrumentor.tracer.start_as_current_span("chroma.create_collection") as span:
                 span.set_attributes(attributes)
                 try:
-                    result = original_method(self, name, **kwargs)
+                    result = original_method(*args, **kwargs)
                     span.set_attribute("db.operation.status", "completed")
                     if hasattr(result, 'id'):
                         span.set_attribute("db.collection.id", str(result.id))
@@ -113,18 +122,35 @@ class ChromaInstrumentor(BaseInstrumentor):
         instrumentor = self  # Capture the instrumentor instance
         
         @functools.wraps(original_method)
-        def wrapper(self, name=None, id=None):
+        def wrapper(*args, **kwargs):
+            # Extract self and other parameters
+            if not args:
+                raise TypeError("Missing 'self' argument")
+            self_obj = args[0]
+            other_args = args[1:]
+            
             attributes = instrumentor._get_common_attributes("get_collection")
             attributes["db.system.name"] = "chroma"
+            
+            # Get name and id from kwargs or positional args
+            name = kwargs.get('name')
+            id_param = kwargs.get('id')
+            
+            # If not in kwargs, check positional args
+            if not name and other_args:
+                name = other_args[0]
+            if not id_param and len(other_args) > 1:
+                id_param = other_args[1]
+            
             if name:
                 attributes["db.collection.name"] = name
-            if id:
-                attributes["db.collection.id"] = str(id)
+            if id_param:
+                attributes["db.collection.id"] = str(id_param)
             
             with instrumentor.tracer.start_as_current_span("chroma.get_collection") as span:
                 span.set_attributes(attributes)
                 try:
-                    result = original_method(self, name=name, id=id)
+                    result = original_method(*args, **kwargs)
                     span.set_attribute("db.operation.status", "completed")
                     
                     # Instrument the collection methods after retrieval
@@ -142,14 +168,14 @@ class ChromaInstrumentor(BaseInstrumentor):
         instrumentor = self  # Capture the instrumentor instance
         
         @functools.wraps(original_method)
-        def wrapper(self):
+        def wrapper(*args, **kwargs):
             attributes = instrumentor._get_common_attributes("list_collections")
             attributes["db.system.name"] = "chroma"
             
             with instrumentor.tracer.start_as_current_span("chroma.list_collections") as span:
                 span.set_attributes(attributes)
                 try:
-                    result = original_method(self)
+                    result = original_method(*args, **kwargs)
                     span.set_attribute("db.operation.status", "completed")
                     span.set_attribute("db.collections.count", len(result))
                     return result
@@ -164,7 +190,16 @@ class ChromaInstrumentor(BaseInstrumentor):
         instrumentor = self  # Capture the instrumentor instance
         
         @functools.wraps(original_method)
-        def wrapper(self, name):
+        def wrapper(*args, **kwargs):
+            # Extract self and other parameters
+            if not args:
+                raise TypeError("Missing 'self' argument")
+            self_obj = args[0]
+            other_args = args[1:]
+            
+            # Get collection name from first positional argument or kwargs
+            name = other_args[0] if other_args else kwargs.get('name')
+            
             attributes = instrumentor._get_common_attributes("delete_collection")
             attributes["db.collection.name"] = name
             attributes["db.system.name"] = "chroma"
@@ -172,7 +207,7 @@ class ChromaInstrumentor(BaseInstrumentor):
             with instrumentor.tracer.start_as_current_span("chroma.delete_collection") as span:
                 span.set_attributes(attributes)
                 try:
-                    result = original_method(self, name)
+                    result = original_method(*args, **kwargs)
                     span.set_attribute("db.operation.status", "completed")
                     return result
                 except Exception as e:
@@ -210,23 +245,38 @@ class ChromaInstrumentor(BaseInstrumentor):
         instrumentor = self  # Capture the instrumentor instance
         
         @functools.wraps(original_method)
-        def wrapper(self, documents=None, embeddings=None, metadatas=None, ids=None, **kwargs):
-            attributes = instrumentor._get_common_attributes("add", collection_name=getattr(self, 'name', None))
+        def wrapper(*args, **kwargs):
+            # Extract self and other parameters
+            if not args:
+                raise TypeError("Missing 'self' argument")
+            self_obj = args[0]
+            
+            # Get collection name for attributes
+            collection_name = getattr(self_obj, 'name', None)
+            attributes = instrumentor._get_common_attributes("add", collection_name=collection_name)
             attributes["db.system.name"] = "chroma"
+            
+            # Extract specific parameters for attributes
+            documents = kwargs.get('documents')
             if documents:
                 attributes["db.documents_count"] = len(documents)
+            
+            ids = kwargs.get('ids')
             if ids:
                 attributes["db.ids_count"] = len(ids)
+            
+            embeddings = kwargs.get('embeddings')
             if embeddings:
                 attributes["db.vector_count"] = len(embeddings)
+            
+            metadatas = kwargs.get('metadatas')
             if metadatas:
                 attributes["db.metadatas_count"] = len(metadatas)
             
             with instrumentor.tracer.start_as_current_span("chroma.collection.add") as span:
                 span.set_attributes(attributes)
                 try:
-                    result = original_method(self, documents=documents, embeddings=embeddings, 
-                                         metadatas=metadatas, ids=ids, **kwargs)
+                    result = original_method(*args, **kwargs)
                     span.set_attribute("db.operation.status", "completed")
                     return result
                 except Exception as e:
@@ -240,42 +290,66 @@ class ChromaInstrumentor(BaseInstrumentor):
         instrumentor = self  # Capture the instrumentor instance
         
         @functools.wraps(original_method)
-        def wrapper(self, query_texts=None, query_embeddings=None, n_results=10, 
-                   where=None, where_document=None, include=None, **kwargs):
-            attributes = instrumentor._get_common_attributes("query", collection_name=getattr(self, 'name', None))
+        def wrapper(*args, **kwargs):
+            # Extract self and other parameters
+            if not args:
+                raise TypeError("Missing 'self' argument")
+            
+            self_obj = args[0]
+            other_args = args[1:]
+            
+            # Get collection name for attributes
+            collection_name = getattr(self_obj, 'name', None)
+            attributes = instrumentor._get_common_attributes("query", collection_name=collection_name)
             attributes["db.system.name"] = "chroma"
+            
+            # Extract specific parameters for attributes
+            n_results = kwargs.get('n_results', 10)  # Default from ChromaDB
             attributes["db.n_results"] = n_results
+            
+            query_texts = kwargs.get('query_texts')
             if query_texts:
                 attributes["db.documents_count"] = len(query_texts)
+            
+            query_embeddings = kwargs.get('query_embeddings')
             if query_embeddings:
                 attributes["db.vector_count"] = len(query_embeddings)
+            
+            where = kwargs.get('where')
             if where:
                 attributes["db.filter"] = instrumentor._safe_json_dumps(where)
+            
+            where_document = kwargs.get('where_document')
             if where_document:
                 attributes["db.where_document"] = instrumentor._safe_json_dumps(where_document)
             
             with instrumentor.tracer.start_as_current_span("chroma.collection.query") as span:
                 span.set_attributes(attributes)
                 try:
-                    result = original_method(self, query_texts=query_texts, query_embeddings=query_embeddings,
-                                         n_results=n_results, where=where, where_document=where_document,
-                                         include=include, **kwargs)
+                    result = original_method(*args, **kwargs)
                     span.set_attribute("db.operation.status", "completed")
                     
                     # Add retrieved documents if available
-                    if hasattr(result, 'ids') and result.ids and len(result.ids) > 0:
-                        span.set_attribute("db.ids_count", len(result.ids[0]))
+                    # the data looks like this:
+                    # {
+                    #     'ids': [[1, 2, 3]],
+                    #     'distances': [[0.1, 0.2, 0.3]],
+                    #     'documents': [['doc1', 'doc2', 'doc3']],
+                    #     'metadatas': [[{'key1': 'value1'}, {'key2': 'value2'}, {'key3': 'value3'}]]
+                    # }
+                    if isinstance(result, dict) and 'ids' in result and result['ids'] and len(result['ids']) > 0:
+                        span.set_attribute("db.ids_count", len(result['ids'][0]))
                         
                         # Format documents for span attributes
                         documents = []
-                        for i in range(len(result.ids[0])):
-                            doc = {"id": result.ids[0][i]}
-                            if hasattr(result, 'distances') and result.distances and len(result.distances) > 0:
-                                doc["score"] = result.distances[0][i] if i < len(result.distances[0]) else None
-                            if hasattr(result, 'documents') and result.documents and len(result.documents) > 0:
-                                doc["content"] = result.documents[0][i] if i < len(result.documents[0]) else None
-                            if hasattr(result, 'metadatas') and result.metadatas and len(result.metadatas) > 0:
-                                doc["metadata"] = result.metadatas[0][i] if i < len(result.metadatas[0]) else None
+                        for i in range(len(result['ids'][0])):
+                            doc = {"id": result['ids'][0][i]}
+                            if 'distances' in result and result['distances'] and len(result['distances']) > 0:
+                                doc["score"] = result['distances'][0][i] if i < len(result['distances'][0]) else None
+                            if 'documents' in result and result['documents'] and len(result['documents']) > 0:
+                                doc["content"] = result['documents'][0][i] if i < len(result['documents'][0]) else None
+                            if 'metadatas' in result and result['metadatas'] and len(result['metadatas']) > 0:
+                                doc["metadata"] = result['metadatas'][0][i] if i < len(result['metadatas'][0]) else None
                             documents.append(doc)
                         
                         if documents:
@@ -293,22 +367,38 @@ class ChromaInstrumentor(BaseInstrumentor):
         instrumentor = self  # Capture the instrumentor instance
         
         @functools.wraps(original_method)
-        def wrapper(self, ids, embeddings=None, metadatas=None, documents=None, **kwargs):
-            attributes = instrumentor._get_common_attributes("update", collection_name=getattr(self, 'name', None))
+        def wrapper(*args, **kwargs):
+            # Extract self and other parameters
+            if not args:
+                raise TypeError("Missing 'self' argument")
+            self_obj = args[0]
+            
+            # Get collection name for attributes
+            collection_name = getattr(self_obj, 'name', None)
+            attributes = instrumentor._get_common_attributes("update", collection_name=collection_name)
             attributes["db.system.name"] = "chroma"
-            attributes["db.ids_count"] = len(ids)
+            
+            # Extract specific parameters for attributes
+            ids = kwargs.get('ids')
+            if ids:
+                attributes["db.ids_count"] = len(ids)
+            
+            embeddings = kwargs.get('embeddings')
             if embeddings:
                 attributes["db.vector_count"] = len(embeddings)
+            
+            metadatas = kwargs.get('metadatas')
             if metadatas:
                 attributes["db.metadatas_count"] = len(metadatas)
+            
+            documents = kwargs.get('documents')
             if documents:
                 attributes["db.documents_count"] = len(documents)
             
             with instrumentor.tracer.start_as_current_span("chroma.collection.update") as span:
                 span.set_attributes(attributes)
                 try:
-                    result = original_method(self, ids=ids, embeddings=embeddings, 
-                                         metadatas=metadatas, documents=documents, **kwargs)
+                    result = original_method(*args, **kwargs)
                     span.set_attribute("db.operation.status", "completed")
                     return result
                 except Exception as e:
@@ -322,21 +412,34 @@ class ChromaInstrumentor(BaseInstrumentor):
         instrumentor = self  # Capture the instrumentor instance
         
         @functools.wraps(original_method)
-        def wrapper(self, ids=None, where=None, where_document=None, **kwargs):
-            attributes = instrumentor._get_common_attributes("delete", collection_name=getattr(self, 'name', None))
+        def wrapper(*args, **kwargs):
+            # Extract self and other parameters
+            if not args:
+                raise TypeError("Missing 'self' argument")
+            self_obj = args[0]
+            
+            # Get collection name for attributes
+            collection_name = getattr(self_obj, 'name', None)
+            attributes = instrumentor._get_common_attributes("delete", collection_name=collection_name)
             attributes["db.system.name"] = "chroma"
+            
+            # Extract specific parameters for attributes
+            ids = kwargs.get('ids')
             if ids:
                 attributes["db.ids_count"] = len(ids)
+            
+            where = kwargs.get('where')
             if where:
                 attributes["db.filter"] = instrumentor._safe_json_dumps(where)
+            
+            where_document = kwargs.get('where_document')
             if where_document:
                 attributes["db.where_document"] = instrumentor._safe_json_dumps(where_document)
             
             with instrumentor.tracer.start_as_current_span("chroma.collection.delete") as span:
                 span.set_attributes(attributes)
                 try:
-                    result = original_method(self, ids=ids, where=where, 
-                                         where_document=where_document, **kwargs)
+                    result = original_method(*args, **kwargs)
                     span.set_attribute("db.operation.status", "completed")
                     return result
                 except Exception as e:
