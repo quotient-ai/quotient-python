@@ -1,4 +1,5 @@
 from quotientai import QuotientAI
+from quotientai.types import DetectionType
 
 quotient = QuotientAI()
 quotient.logger.init(
@@ -7,9 +8,8 @@ quotient.logger.init(
     environment="dev",
     # dynamic labels for slicing/dicing analytics e.g. by customer, feature, etc
     tags={"model": "gpt-4o", "feature": "customer-support"},
-    hallucination_detection=True,
-    inconsistency_detection=True,
-    hallucination_detection_sample_rate=1.0,
+    detections=[DetectionType.HALLUCINATION, DetectionType.DOCUMENT_RELEVANCY],
+    detection_sample_rate=1.0,
 )
 
 # Mock retrieved documents
@@ -65,4 +65,4 @@ else:
         "\nNo detection results received. The detection might still be in progress or failed."
     )
     print("You can try again later with:")
-    print(f"quotient.logger.poll_for_detection(log_id='{log_id}')")
+    print(f"quotient.poll_for_detection(log_id='{log_id}')")

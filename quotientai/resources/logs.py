@@ -163,15 +163,14 @@ class LogsResource:
         self,
         app_name: str,
         environment: str,
-        hallucination_detection: bool,
-        inconsistency_detection: bool,
-        user_query: str,
-        model_output: str,
-        documents: List[Union[str, LogDocument]],
+        detections: List[str] = None,
+        detection_sample_rate: float = 0.0,
+        user_query: Optional[str] = None,
+        model_output: Optional[str] = None,
+        documents: Optional[List[Union[str, LogDocument]]] = None,
         message_history: Optional[List[Dict[str, Any]]] = None,
         instructions: Optional[List[str]] = None,
         tags: Optional[Dict[str, Any]] = {},
-        hallucination_detection_sample_rate: Optional[float] = 0,
     ):
         """
         Create a log in a background thread (non-blocking operation).
@@ -183,15 +182,14 @@ class LogsResource:
         Args:
             app_name: The name of the application
             environment: The environment (e.g., "production", "development")
-            hallucination_detection: Whether to enable hallucination detection
-            inconsistency_detection: Whether to enable inconsistency detection
-            user_query: The user's query
-            model_output: The model's response
+            detections: List of detection types to run
+            detection_sample_rate: Sample rate for all detections (0-1)
+            user_query: The user's query (optional, validated by detections)
+            model_output: The model's response (optional, validated by detections)
             documents: List of documents used for retrieval
             message_history: Optional conversation history
             instructions: Optional system instructions
             tags: Optional tags to add to the log
-            hallucination_detection_sample_rate: Sample rate for hallucination detection
 
         Returns:
             str: The generated log ID
@@ -202,20 +200,21 @@ class LogsResource:
         # Create current timestamp
         created_at = datetime.now(timezone.utc).isoformat()
 
+        detections = detections or []
+
         data = {
             "id": log_id,
             "created_at": created_at,
             "app_name": app_name,
             "environment": environment,
-            "tags": tags,
-            "hallucination_detection": hallucination_detection,
-            "inconsistency_detection": inconsistency_detection,
+            "tags": tags or {},
+            "detections": detections,
+            "detection_sample_rate": detection_sample_rate,
             "user_query": user_query,
             "model_output": model_output,
             "documents": documents,
             "message_history": message_history,
             "instructions": instructions,
-            "hallucination_detection_sample_rate": hallucination_detection_sample_rate,
         }
 
         self._log_queue.append(data)
@@ -456,15 +455,14 @@ class AsyncLogsResource:
         self,
         app_name: str,
         environment: str,
-        hallucination_detection: bool,
-        inconsistency_detection: bool,
-        user_query: str,
-        model_output: str,
-        documents: List[str],
+        detections: List[str] = None,
+        detection_sample_rate: float = 0.0,
+        user_query: Optional[str] = None,
+        model_output: Optional[str] = None,
+        documents: Optional[List[Union[str, LogDocument]]] = None,
         message_history: Optional[List[Dict[str, Any]]] = None,
         instructions: Optional[List[str]] = None,
         tags: Optional[Dict[str, Any]] = {},
-        hallucination_detection_sample_rate: Optional[float] = 0,
     ):
         """
         Create a log in a background task (non-blocking operation).
@@ -476,15 +474,14 @@ class AsyncLogsResource:
         Args:
             app_name: The name of the application
             environment: The environment (e.g., "production", "development")
-            hallucination_detection: Whether to enable hallucination detection
-            inconsistency_detection: Whether to enable inconsistency detection
-            user_query: The user's query
-            model_output: The model's response
+            detections: List of detection types to run
+            detection_sample_rate: Sample rate for all detections (0-1)
+            user_query: The user's query (optional, validated by detections)
+            model_output: The model's response (optional, validated by detections)
             documents: List of documents used for retrieval
             message_history: Optional conversation history
             instructions: Optional system instructions
             tags: Optional tags to add to the log
-            hallucination_detection_sample_rate: Sample rate for hallucination detection
 
         Returns:
             str: The generated log ID
@@ -495,21 +492,22 @@ class AsyncLogsResource:
         # Create current timestamp
         created_at = datetime.now(timezone.utc).isoformat()
 
+        detections = detections or []
+
         # Create a copy of all the data
         data = {
             "id": log_id,
             "created_at": created_at,
             "app_name": app_name,
             "environment": environment,
-            "tags": tags,
-            "hallucination_detection": hallucination_detection,
-            "inconsistency_detection": inconsistency_detection,
+            "tags": tags or {},
+            "detections": detections,
+            "detection_sample_rate": detection_sample_rate,
             "user_query": user_query,
             "model_output": model_output,
             "documents": documents,
             "message_history": message_history,
             "instructions": instructions,
-            "hallucination_detection_sample_rate": hallucination_detection_sample_rate,
         }
 
         # Create a task and add it to our pending tasks set
