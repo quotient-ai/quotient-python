@@ -295,7 +295,6 @@ class ChromaInstrumentor(BaseInstrumentor):
             if not args:
                 raise TypeError("Missing 'self' argument")
             
-            breakpoint()
             self_obj = args[0]
             other_args = args[1:]
             
