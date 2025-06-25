@@ -168,3 +168,6 @@ cython_debug/
 .vscode/
 
 .internal_examples/
+
+examples/log-and-detect/comprehensive_sync_testing.py
+examples/log-and-detect/comprehensive_async_testing.py
