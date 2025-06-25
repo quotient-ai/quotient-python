@@ -85,9 +85,26 @@ class QdrantInstrumentor(BaseInstrumentor):
         instrumentor = self  # Capture the instrumentor instance
         
         @functools.wraps(original_method)
-        def wrapper(self, collection_name, vectors_config=None, **kwargs):
+        def wrapper(*args, **kwargs):
+            # Extract self and other parameters
+            if not args:
+                raise TypeError("Missing 'self' argument")
+            self_obj = args[0]
+            other_args = args[1:]
+            
             attributes = instrumentor._get_common_attributes("create_collection")
             attributes["db.system.name"] = "qdrant"
+            
+            # Extract parameters from kwargs or positional args
+            collection_name = kwargs.get('collection_name')
+            vectors_config = kwargs.get('vectors_config')
+            
+            # If not in kwargs, check positional args
+            if not collection_name and other_args:
+                collection_name = other_args[0]
+            if not vectors_config and len(other_args) > 1:
+                vectors_config = other_args[1]
+            
             attributes["db.collection.name"] = collection_name
             
             if vectors_config:
@@ -99,7 +116,7 @@ class QdrantInstrumentor(BaseInstrumentor):
             with instrumentor.tracer.start_as_current_span("qdrant.create_collection") as span:
                 span.set_attributes(attributes)
                 try:
-                    result = original_method(self, collection_name, vectors_config=vectors_config, **kwargs)
+                    result = original_method(*args, **kwargs)
                     span.set_attribute("db.operation.status", "completed")
                     return result
                 except Exception as e:
@@ -113,14 +130,14 @@ class QdrantInstrumentor(BaseInstrumentor):
         instrumentor = self  # Capture the instrumentor instance
         
         @functools.wraps(original_method)
-        def wrapper(self):
+        def wrapper(*args, **kwargs):
             attributes = instrumentor._get_common_attributes("list_collections")
             attributes["db.system.name"] = "qdrant"
             
             with instrumentor.tracer.start_as_current_span("qdrant.get_collections") as span:
                 span.set_attributes(attributes)
                 try:
-                    result = original_method(self)
+                    result = original_method(*args, **kwargs)
                     span.set_attribute("db.operation.status", "completed")
                     if hasattr(result, 'collections'):
                         span.set_attribute("db.collections.count", len(result.collections))
@@ -136,15 +153,29 @@ class QdrantInstrumentor(BaseInstrumentor):
         instrumentor = self  # Capture the instrumentor instance
         
         @functools.wraps(original_method)
-        def wrapper(self, collection_name):
+        def wrapper(*args, **kwargs):
+            # Extract self and other parameters
+            if not args:
+                raise TypeError("Missing 'self' argument")
+            self_obj = args[0]
+            other_args = args[1:]
+            
             attributes = instrumentor._get_common_attributes("delete_collection")
             attributes["db.system.name"] = "qdrant"
+            
+            # Extract parameters from kwargs or positional args
+            collection_name = kwargs.get('collection_name')
+            
+            # If not in kwargs, check positional args
+            if not collection_name and other_args:
+                collection_name = other_args[0]
+            
             attributes["db.collection.name"] = collection_name
             
             with instrumentor.tracer.start_as_current_span("qdrant.delete_collection") as span:
                 span.set_attributes(attributes)
                 try:
-                    result = original_method(self, collection_name)
+                    result = original_method(*args, **kwargs)
                     span.set_attribute("db.operation.status", "completed")
                     return result
                 except Exception as e:
@@ -158,16 +189,34 @@ class QdrantInstrumentor(BaseInstrumentor):
         instrumentor = self  # Capture the instrumentor instance
         
         @functools.wraps(original_method)
-        def wrapper(self, collection_name, points, **kwargs):
-            attributes = instrumentor._get_common_attributes("upsert", collection_name=collection_name)
+        def wrapper(*args, **kwargs):
+            # Extract self and other parameters
+            if not args:
+                raise TypeError("Missing 'self' argument")
+            self_obj = args[0]
+            other_args = args[1:]
+            
+            attributes = instrumentor._get_common_attributes("upsert")
             attributes["db.system.name"] = "qdrant"
+            
+            # Extract parameters from kwargs or positional args
+            collection_name = kwargs.get('collection_name')
+            points = kwargs.get('points')
+            
+            # If not in kwargs, check positional args
+            if not collection_name and other_args:
+                collection_name = other_args[0]
+            if not points and len(other_args) > 1:
+                points = other_args[1]
+            
+            attributes["db.collection.name"] = collection_name
             attributes["db.vector_count"] = len(points)
             attributes["db.ids_count"] = len(points)
             
             with instrumentor.tracer.start_as_current_span("qdrant.upsert") as span:
                 span.set_attributes(attributes)
                 try:
-                    result = original_method(self, collection_name, points, **kwargs)
+                    result = original_method(*args, **kwargs)
                     span.set_attribute("db.operation.status", "completed")
                     if hasattr(result, 'operation_id'):
                         span.set_attribute("db.operation.id", result.operation_id)
@@ -183,10 +232,42 @@ class QdrantInstrumentor(BaseInstrumentor):
         instrumentor = self  # Capture the instrumentor instance
         
         @functools.wraps(original_method)
-        def wrapper(self, collection_name, query_vector=None, query_filter=None, 
-                   limit=10, offset=0, with_payload=True, with_vectors=False, **kwargs):
-            attributes = instrumentor._get_common_attributes("query", collection_name=collection_name)
+        def wrapper(*args, **kwargs):
+            # Extract self and other parameters
+            if not args:
+                raise TypeError("Missing 'self' argument")
+            self_obj = args[0]
+            other_args = args[1:]
+            
+            attributes = instrumentor._get_common_attributes("query")
             attributes["db.system.name"] = "qdrant"
+            
+            # Extract parameters from kwargs or positional args
+            collection_name = kwargs.get('collection_name')
+            query_vector = kwargs.get('query_vector')
+            query_filter = kwargs.get('query_filter')
+            limit = kwargs.get('limit', 10)  # Default from Qdrant
+            offset = kwargs.get('offset', 0)  # Default from Qdrant
+            with_payload = kwargs.get('with_payload', True)  # Default from Qdrant
+            with_vectors = kwargs.get('with_vectors', False)  # Default from Qdrant
+            
+            # If not in kwargs, check positional args
+            if not collection_name and other_args:
+                collection_name = other_args[0]
+            if not query_vector and len(other_args) > 1:
+                query_vector = other_args[1]
+            if not query_filter and len(other_args) > 2:
+                query_filter = other_args[2]
+            if not limit and len(other_args) > 3:
+                limit = other_args[3]
+            if not offset and len(other_args) > 4:
+                offset = other_args[4]
+            if not with_payload and len(other_args) > 5:
+                with_payload = other_args[5]
+            if not with_vectors and len(other_args) > 6:
+                with_vectors = other_args[6]
+            
+            attributes["db.collection.name"] = collection_name
             attributes["db.n_results"] = limit
             attributes["db.offset"] = offset
             if query_filter:
@@ -197,9 +278,7 @@ class QdrantInstrumentor(BaseInstrumentor):
             with instrumentor.tracer.start_as_current_span("qdrant.search") as span:
                 span.set_attributes(attributes)
                 try:
-                    result = original_method(self, collection_name, query_vector=query_vector,
-                                         query_filter=query_filter, limit=limit, offset=offset,
-                                         with_payload=with_payload, with_vectors=with_vectors, **kwargs)
+                    result = original_method(*args, **kwargs)
                     span.set_attribute("db.operation.status", "completed")
                     
                     # Add retrieved documents if available
@@ -231,9 +310,27 @@ class QdrantInstrumentor(BaseInstrumentor):
         instrumentor = self  # Capture the instrumentor instance
         
         @functools.wraps(original_method)
-        def wrapper(self, collection_name, points_selector, **kwargs):
-            attributes = instrumentor._get_common_attributes("delete", collection_name=collection_name)
+        def wrapper(*args, **kwargs):
+            # Extract self and other parameters
+            if not args:
+                raise TypeError("Missing 'self' argument")
+            self_obj = args[0]
+            other_args = args[1:]
+            
+            attributes = instrumentor._get_common_attributes("delete")
             attributes["db.system.name"] = "qdrant"
+            
+            # Extract parameters from kwargs or positional args
+            collection_name = kwargs.get('collection_name')
+            points_selector = kwargs.get('points_selector')
+            
+            # If not in kwargs, check positional args
+            if not collection_name and other_args:
+                collection_name = other_args[0]
+            if not points_selector and len(other_args) > 1:
+                points_selector = other_args[1]
+            
+            attributes["db.collection.name"] = collection_name
             
             # Handle different types of points_selector
             if hasattr(points_selector, 'points'):
@@ -247,7 +344,7 @@ class QdrantInstrumentor(BaseInstrumentor):
             with instrumentor.tracer.start_as_current_span("qdrant.delete") as span:
                 span.set_attributes(attributes)
                 try:
-                    result = original_method(self, collection_name, points_selector, **kwargs)
+                    result = original_method(*args, **kwargs)
                     span.set_attribute("db.operation.status", "completed")
                     if hasattr(result, 'operation_id'):
                         span.set_attribute("db.operation.id", result.operation_id)
@@ -263,10 +360,39 @@ class QdrantInstrumentor(BaseInstrumentor):
         instrumentor = self  # Capture the instrumentor instance
         
         @functools.wraps(original_method)
-        def wrapper(self, collection_name, scroll_filter=None, limit=10, offset=0,
-                   with_payload=True, with_vectors=False, **kwargs):
-            attributes = instrumentor._get_common_attributes("scroll", collection_name=collection_name)
+        def wrapper(*args, **kwargs):
+            # Extract self and other parameters
+            if not args:
+                raise TypeError("Missing 'self' argument")
+            self_obj = args[0]
+            other_args = args[1:]
+            
+            attributes = instrumentor._get_common_attributes("scroll")
             attributes["db.system.name"] = "qdrant"
+            
+            # Extract parameters from kwargs or positional args
+            collection_name = kwargs.get('collection_name')
+            scroll_filter = kwargs.get('scroll_filter')
+            limit = kwargs.get('limit', 10)  # Default from Qdrant
+            offset = kwargs.get('offset', 0)  # Default from Qdrant
+            with_payload = kwargs.get('with_payload', True)  # Default from Qdrant
+            with_vectors = kwargs.get('with_vectors', False)  # Default from Qdrant
+            
+            # If not in kwargs, check positional args
+            if not collection_name and other_args:
+                collection_name = other_args[0]
+            if not scroll_filter and len(other_args) > 1:
+                scroll_filter = other_args[1]
+            if not limit and len(other_args) > 2:
+                limit = other_args[2]
+            if not offset and len(other_args) > 3:
+                offset = other_args[3]
+            if not with_payload and len(other_args) > 4:
+                with_payload = other_args[4]
+            if not with_vectors and len(other_args) > 5:
+                with_vectors = other_args[5]
+            
+            attributes["db.collection.name"] = collection_name
             attributes["db.limit"] = limit
             attributes["db.offset"] = offset
             if scroll_filter:
@@ -275,9 +401,7 @@ class QdrantInstrumentor(BaseInstrumentor):
             with instrumentor.tracer.start_as_current_span("qdrant.scroll") as span:
                 span.set_attributes(attributes)
                 try:
-                    result = original_method(self, collection_name, scroll_filter=scroll_filter,
-                                         limit=limit, offset=offset, with_payload=with_payload,
-                                         with_vectors=with_vectors, **kwargs)
+                    result = original_method(*args, **kwargs)
                     span.set_attribute("db.operation.status", "completed")
                     
                     # Add retrieved documents if available
@@ -309,19 +433,42 @@ class QdrantInstrumentor(BaseInstrumentor):
         instrumentor = self  # Capture the instrumentor instance
         
         @functools.wraps(original_method)
-        def wrapper(self, collection_name, ids, with_payload=True, with_vectors=False, **kwargs):
-            attributes = instrumentor._get_common_attributes("fetch", collection_name=collection_name)
+        def wrapper(*args, **kwargs):
+            # Extract self and other parameters
+            if not args:
+                raise TypeError("Missing 'self' argument")
+            self_obj = args[0]
+            other_args = args[1:]
+            
+            attributes = instrumentor._get_common_attributes("get")
             attributes["db.system.name"] = "qdrant"
+            
+            # Extract parameters from kwargs or positional args
+            collection_name = kwargs.get('collection_name')
+            ids = kwargs.get('ids')
+            with_payload = kwargs.get('with_payload', True)  # Default from Qdrant
+            with_vectors = kwargs.get('with_vectors', False)  # Default from Qdrant
+            
+            # If not in kwargs, check positional args
+            if not collection_name and other_args:
+                collection_name = other_args[0]
+            if not ids and len(other_args) > 1:
+                ids = other_args[1]
+            if not with_payload and len(other_args) > 2:
+                with_payload = other_args[2]
+            if not with_vectors and len(other_args) > 3:
+                with_vectors = other_args[3]
+            
+            attributes["db.collection.name"] = collection_name
             attributes["db.ids_count"] = len(ids)
             
             with instrumentor.tracer.start_as_current_span("qdrant.get") as span:
                 span.set_attributes(attributes)
                 try:
-                    result = original_method(self, collection_name, ids, with_payload=with_payload,
-                                         with_vectors=with_vectors, **kwargs)
+                    result = original_method(*args, **kwargs)
                     span.set_attribute("db.operation.status", "completed")
                     
-                    # Add fetched documents if available
+                    # Add retrieved documents if available
                     if hasattr(result, 'result') and result.result:
                         span.set_attribute("db.vector_count", len(result.result))
                         

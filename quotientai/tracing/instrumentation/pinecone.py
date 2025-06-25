@@ -157,15 +157,29 @@ class PineconeInstrumentor(BaseInstrumentor):
         instrumentor = self  # Capture the instrumentor instance
         
         @functools.wraps(original_method)
-        def wrapper(self, name):
+        def wrapper(*args, **kwargs):
+            # Extract self and other parameters
+            if not args:
+                raise TypeError("Missing 'self' argument")
+            self_obj = args[0]
+            other_args = args[1:]
+            
             attributes = instrumentor._get_common_attributes("delete_index")
             attributes["db.system.name"] = "pinecone"
+            
+            # Extract parameters from kwargs or positional args
+            name = kwargs.get('name')
+            
+            # If not in kwargs, check positional args
+            if not name and other_args:
+                name = other_args[0]
+            
             attributes["db.index.name"] = name
             
             with instrumentor.tracer.start_as_current_span("pinecone.delete_index") as span:
                 span.set_attributes(attributes)
                 try:
-                    result = original_method(self, name)
+                    result = original_method(*args, **kwargs)
                     span.set_attribute("db.operation.status", "completed")
                     return result
                 except Exception as e:
@@ -179,9 +193,26 @@ class PineconeInstrumentor(BaseInstrumentor):
         instrumentor = self  # Capture the instrumentor instance
         
         @functools.wraps(original_method)
-        def wrapper(self, vectors, namespace=None, **kwargs):
+        def wrapper(*args, **kwargs):
+            # Extract self and other parameters
+            if not args:
+                raise TypeError("Missing 'self' argument")
+            self_obj = args[0]
+            other_args = args[1:]
+            
             attributes = instrumentor._get_common_attributes("upsert")
             attributes["db.system.name"] = "pinecone"
+            
+            # Extract parameters from kwargs or positional args
+            vectors = kwargs.get('vectors')
+            namespace = kwargs.get('namespace')
+            
+            # If not in kwargs, check positional args
+            if not vectors and other_args:
+                vectors = other_args[0]
+            if not namespace and len(other_args) > 1:
+                namespace = other_args[1]
+            
             if namespace:
                 attributes["db.query.namespace"] = namespace
             
@@ -197,7 +228,7 @@ class PineconeInstrumentor(BaseInstrumentor):
             with instrumentor.tracer.start_as_current_span("pinecone.index.upsert") as span:
                 span.set_attributes(attributes)
                 try:
-                    result = original_method(self, vectors, namespace=namespace, **kwargs)
+                    result = original_method(*args, **kwargs)
                     span.set_attribute("db.operation.status", "completed")
                     if hasattr(result, 'upserted_count'):
                         span.set_attribute("db.upserted_count", result.upserted_count)
@@ -213,21 +244,35 @@ class PineconeInstrumentor(BaseInstrumentor):
         instrumentor = self  # Capture the instrumentor instance
         
         @functools.wraps(original_method)
-        def wrapper(self, vector=None, id=None, top_k=10, namespace=None, 
-                   filter=None, include_values=False, include_metadata=True, **kwargs):
+        def wrapper(*args, **kwargs):
+            # Extract self and other parameters
+            if not args:
+                raise TypeError("Missing 'self' argument")
+            self_obj = args[0]
+            
             attributes = instrumentor._get_common_attributes("query")
             attributes["db.system.name"] = "pinecone"
+            
+            # Extract parameters from kwargs
+            vector = kwargs.get('vector')
+            id_param = kwargs.get('id')
+            top_k = kwargs.get('top_k', 10)  # Default from Pinecone
+            namespace = kwargs.get('namespace')
+            filter_param = kwargs.get('filter')
+            include_values = kwargs.get('include_values', False)
+            include_metadata = kwargs.get('include_metadata', True)
+            
             attributes["db.n_results"] = top_k
             if namespace:
                 attributes["db.query.namespace"] = namespace
-            if filter:
-                attributes["db.filter"] = instrumentor._safe_json_dumps(filter)
+            if filter_param:
+                attributes["db.filter"] = instrumentor._safe_json_dumps(filter_param)
             
             # Determine query type
             if vector is not None:
                 attributes["db.vector_count"] = 1
                 query_type = "vector"
-            elif id is not None:
+            elif id_param is not None:
                 query_type = "id"
             else:
                 query_type = "unknown"
@@ -237,10 +282,7 @@ class PineconeInstrumentor(BaseInstrumentor):
             with instrumentor.tracer.start_as_current_span("pinecone.index.query") as span:
                 span.set_attributes(attributes)
                 try:
-                    result = original_method(self, vector=vector, id=id, top_k=top_k,
-                                         namespace=namespace, filter=filter,
-                                         include_values=include_values, 
-                                         include_metadata=include_metadata, **kwargs)
+                    result = original_method(*args, **kwargs)
                     span.set_attribute("db.operation.status", "completed")
                     
                     # Add retrieved documents if available
@@ -272,22 +314,33 @@ class PineconeInstrumentor(BaseInstrumentor):
         instrumentor = self  # Capture the instrumentor instance
         
         @functools.wraps(original_method)
-        def wrapper(self, ids=None, delete_all=False, namespace=None, filter=None, **kwargs):
+        def wrapper(*args, **kwargs):
+            # Extract self and other parameters
+            if not args:
+                raise TypeError("Missing 'self' argument")
+            self_obj = args[0]
+            
             attributes = instrumentor._get_common_attributes("delete")
             attributes["db.system.name"] = "pinecone"
+            
+            # Extract parameters from kwargs
+            ids = kwargs.get('ids')
+            delete_all = kwargs.get('delete_all', False)
+            namespace = kwargs.get('namespace')
+            filter_param = kwargs.get('filter')
+            
             attributes["db.delete_all"] = delete_all
             if namespace:
                 attributes["db.query.namespace"] = namespace
-            if filter:
-                attributes["db.filter"] = instrumentor._safe_json_dumps(filter)
+            if filter_param:
+                attributes["db.filter"] = instrumentor._safe_json_dumps(filter_param)
             if ids:
                 attributes["db.ids_count"] = len(ids)
             
             with instrumentor.tracer.start_as_current_span("pinecone.index.delete") as span:
                 span.set_attributes(attributes)
                 try:
-                    result = original_method(self, ids=ids, delete_all=delete_all,
-                                         namespace=namespace, filter=filter, **kwargs)
+                    result = original_method(*args, **kwargs)
                     span.set_attribute("db.operation.status", "completed")
                     return result
                 except Exception as e:
@@ -301,9 +354,26 @@ class PineconeInstrumentor(BaseInstrumentor):
         instrumentor = self  # Capture the instrumentor instance
         
         @functools.wraps(original_method)
-        def wrapper(self, ids, namespace=None, **kwargs):
+        def wrapper(*args, **kwargs):
+            # Extract self and other parameters
+            if not args:
+                raise TypeError("Missing 'self' argument")
+            self_obj = args[0]
+            other_args = args[1:]
+            
             attributes = instrumentor._get_common_attributes("fetch")
             attributes["db.system.name"] = "pinecone"
+            
+            # Extract parameters from kwargs or positional args
+            ids = kwargs.get('ids')
+            namespace = kwargs.get('namespace')
+            
+            # If not in kwargs, check positional args
+            if not ids and other_args:
+                ids = other_args[0]
+            if not namespace and len(other_args) > 1:
+                namespace = other_args[1]
+            
             attributes["db.ids_count"] = len(ids)
             if namespace:
                 attributes["db.query.namespace"] = namespace
@@ -311,7 +381,7 @@ class PineconeInstrumentor(BaseInstrumentor):
             with instrumentor.tracer.start_as_current_span("pinecone.index.fetch") as span:
                 span.set_attributes(attributes)
                 try:
-                    result = original_method(self, ids, namespace=namespace, **kwargs)
+                    result = original_method(*args, **kwargs)
                     span.set_attribute("db.operation.status", "completed")
                     
                     # Add fetched documents if available
@@ -343,10 +413,33 @@ class PineconeInstrumentor(BaseInstrumentor):
         instrumentor = self  # Capture the instrumentor instance
         
         @functools.wraps(original_method)
-        def wrapper(self, id, values=None, set_metadata=None, namespace=None, **kwargs):
+        def wrapper(*args, **kwargs):
+            # Extract self and other parameters
+            if not args:
+                raise TypeError("Missing 'self' argument")
+            self_obj = args[0]
+            other_args = args[1:]
+            
             attributes = instrumentor._get_common_attributes("update")
             attributes["db.system.name"] = "pinecone"
-            attributes["db.update.id"] = id
+            
+            # Extract parameters from kwargs or positional args
+            id_param = kwargs.get('id')
+            values = kwargs.get('values')
+            set_metadata = kwargs.get('set_metadata')
+            namespace = kwargs.get('namespace')
+            
+            # If not in kwargs, check positional args
+            if not id_param and other_args:
+                id_param = other_args[0]
+            if not values and len(other_args) > 1:
+                values = other_args[1]
+            if not set_metadata and len(other_args) > 2:
+                set_metadata = other_args[2]
+            if not namespace and len(other_args) > 3:
+                namespace = other_args[3]
+            
+            attributes["db.update.id"] = id_param
             if namespace:
                 attributes["db.query.namespace"] = namespace
             if set_metadata:
@@ -357,8 +450,7 @@ class PineconeInstrumentor(BaseInstrumentor):
             with instrumentor.tracer.start_as_current_span("pinecone.index.update") as span:
                 span.set_attributes(attributes)
                 try:
-                    result = original_method(self, id, values=values, set_metadata=set_metadata,
-                                         namespace=namespace, **kwargs)
+                    result = original_method(*args, **kwargs)
                     span.set_attribute("db.operation.status", "completed")
                     return result
                 except Exception as e:
