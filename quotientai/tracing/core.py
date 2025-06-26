@@ -40,6 +40,7 @@ def start_span(name: str):
 class QuotientAttributes(str, Enum):
     app_name = "app.name"
     environment = "app.environment"
+    detections_array = "quotient.detections_array"
 
 
 class QuotientAttributesSpanProcessor(SpanProcessor):
@@ -54,16 +55,22 @@ class QuotientAttributesSpanProcessor(SpanProcessor):
 
     app_name: str
     environment: str
+    detections_array: str
 
-    def __init__(self, app_name: str, environment: str):
+    def __init__(self, app_name: str, environment: str, detections_array: Optional[str] = None):
         self.app_name = app_name
         self.environment = environment
+        self.detections_array = detections_array
 
     def on_start(self, span: Span, parent_context: Optional[otel_context.Context] = None) -> None:
         attributes = {
             QuotientAttributes.app_name: self.app_name,
             QuotientAttributes.environment: self.environment,
         }
+        
+        # Only add detections_array if it's not None (already converted to string format)
+        if self.detections_array is not None:
+            attributes[QuotientAttributes.detections_array] = self.detections_array
 
         span.set_attributes(attributes)
         super().on_start(span, parent_context)
@@ -78,10 +85,10 @@ class TracingResource:
         self._app_name = None
         self._environment = None
         self._instruments = None
-
+        self._detections_array = None
         atexit.register(self._cleanup)
 
-    def configure(self, app_name: str, environment: str, instruments: Optional[list] = None):
+    def configure(self, app_name: str, environment: str, instruments: Optional[list] = None, detections_array: Optional[list] = None):
         """
         Configure the tracing resource with app_name, environment, and instruments.
         This allows the trace decorator to be used without parameters.
@@ -100,14 +107,18 @@ class TracingResource:
         self._app_name = app_name
         self._environment = environment
         self._instruments = instruments
+        # Convert detections_array to comma-separated string immediately
+        self._detections_array = ",".join(detections_array) if detections_array else None
 
-    def init(self, app_name: str, environment: str, instruments: Optional[list] = None):
+    def init(self, app_name: str, environment: str, instruments: Optional[list] = None, detections_array: Optional[list] = None):
         """
         Initialize tracing with app_name, environment, and instruments.
         This is a convenience method that calls configure and then sets up the collector.
         """
-        self.configure(app_name, environment, instruments)
-        self._setup_auto_collector(app_name, environment, instruments)
+        self.configure(app_name, environment, instruments, detections_array)
+        # Convert detections_array to string for _setup_auto_collector
+        detections_array_str = ",".join(detections_array) if detections_array else None
+        self._setup_auto_collector(app_name, environment, instruments, detections_array_str)
 
     def get_vector_db_instrumentors(self):
         """
@@ -147,7 +158,7 @@ class TracingResource:
         return OTLPSpanExporter(endpoint=endpoint, headers=headers)
 
     @functools.lru_cache()
-    def _setup_auto_collector(self, app_name: str, environment: str, instruments: Optional[list] = None):
+    def _setup_auto_collector(self, app_name: str, environment: str, instruments: Optional[tuple] = None, detections_array: Optional[str] = None):
         """
         Automatically setup OTLP exporter to send traces to collector
         """
@@ -186,6 +197,7 @@ class TracingResource:
                 quotient_attributes_span_processor = QuotientAttributesSpanProcessor(
                     app_name=app_name,
                     environment=environment,
+                    detections_array=detections_array,
                 )
                 tracer_provider.add_span_processor(quotient_attributes_span_processor)
                 tracer_provider.add_span_processor(span_processor)
@@ -235,6 +247,7 @@ class TracingResource:
                     app_name=self._app_name,
                     environment=self._environment,
                     instruments=tuple(self._instruments) if self._instruments is not None else None,
+                    detections_array=self._detections_array,
                 )
 
                 # if there is no tracer, just run the function normally
@@ -262,6 +275,7 @@ class TracingResource:
                     app_name=self._app_name,
                     environment=self._environment,
                     instruments=tuple(self._instruments) if self._instruments is not None else None,
+                    detections_array=self._detections_array,
                 )
 
                 if self.tracer is None:
