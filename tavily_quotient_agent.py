@@ -223,6 +223,10 @@ quotient.tracer.init(
     app_name="tavily-quotient-agent",
     environment="local",
     instruments=[OpenAIInstrumentor(), LangChainInstrumentor()],
+    detections_array=[
+        "hallucination_detection",
+        "document_relevancy_detection",
+    ],
 )
 
 @quotient.trace()
@@ -233,7 +237,7 @@ def main():
     QUERIES_FILE = "search_queries.jsonl"
     
     # Number of queries to process
-    NUM_QUERIES = 10
+    NUM_QUERIES = 1
     
     # Model to use
     MODEL = "gpt-4o"
@@ -246,7 +250,7 @@ def main():
     
     # Step 2: Initialize Quotient
     print("📊 Initializing Quotient monitoring...")
-    quotient = initialize_quotient()
+    # quotient = initialize_quotient()
     
     # Step 3: Load queries
     print(f"📖 Loading queries from {QUERIES_FILE}...")
