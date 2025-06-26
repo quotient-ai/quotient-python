@@ -241,12 +241,15 @@ class TracingResource:
                 if self.tracer is None:
                     return func(*args, **kwargs)
 
-                with self.tracer.start_as_current_span(name):
+                with self.tracer.start_as_current_span(name) as root_span:
                     try:
                         result = func(*args, **kwargs)
                     except Exception as e:
                         raise e
                     finally:
+                        trace_id = root_span.get_span_context().trace_id
+                        self._create_end_of_trace_span(trace_id)
+                        
                         # here we can log the call once we have the result.
                         # TODO: add otel support for quotient logging
                         pass
@@ -264,12 +267,15 @@ class TracingResource:
                 if self.tracer is None:
                     return await func(*args, **kwargs)
 
-                with self.tracer.start_as_current_span(name):
+                with self.tracer.start_as_current_span(name) as root_span:
                     try:
                         result = await func(*args, **kwargs)
                     except Exception as e:
                         raise e
                     finally:
+                        trace_id = root_span.get_span_context().trace_id
+                        self._create_end_of_trace_span(trace_id)
+                        
                         # here we can log the call once we have the result.
                         # TODO: add otel support for quotient logging
                         pass
@@ -316,3 +322,17 @@ class TracingResource:
             logger.info("Forced flush of pending spans")
         except Exception as e:
             logger.error(f"Failed to force flush spans: {str(e)}")
+
+    def _create_end_of_trace_span(self, trace_id):
+        """Create an end-of-trace marker span"""
+        import time
+        
+        try:
+            with self.tracer.start_as_current_span("quotient.end_of_trace") as span:
+                span.set_attribute("quotient.trace.complete", True)
+                span.set_attribute("quotient.trace.marker", True)
+                span.set_attribute("quotient.trace.id", format(trace_id, '032x'))
+                span.set_attribute("quotient.marker.timestamp", time.time_ns())
+                logger.info(f"Created end-of-trace marker for trace: {format(trace_id, '032x')}")
+        except Exception as e:
+            logger.error(f"Failed to create end-of-trace span: {e}")
