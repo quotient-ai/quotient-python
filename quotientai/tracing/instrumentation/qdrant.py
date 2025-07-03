@@ -282,18 +282,18 @@ class QdrantInstrumentor(BaseInstrumentor):
                     span.set_attribute("db.operation.status", "completed")
                     
                     # Add retrieved documents if available
-                    vector_count = None
+                    vector_data = None
                     if hasattr(result, 'result') and result.result:
-                        vector_count = result.result
+                        vector_data = result.result
                     elif isinstance(result, list):
-                        vector_count = result
+                        vector_data = result
                     
-                    if vector_count:
-                        span.set_attribute("db.ids_count", len(vector_count))
+                    if vector_data:
+                        span.set_attribute("db.ids_count", len(vector_data))
                         
                         # Format documents for span attributes
                         documents = []
-                        for point in vector_count:
+                        for point in vector_data:
                             doc = {"id": point.id, "score": point.score}
                             if hasattr(point, 'payload') and point.payload:
                                 doc["metadata"] = point.payload
@@ -411,18 +411,18 @@ class QdrantInstrumentor(BaseInstrumentor):
                     span.set_attribute("db.operation.status", "completed")
                     
                     # Add retrieved documents if available
-                    vector_count = None
+                    vector_data = None
                     if hasattr(result, 'result') and result.result:
-                        vector_count = result.result
+                        vector_data = result.result
                     elif isinstance(result, list):
-                        vector_count = result
+                        vector_data = result
                     
-                    if vector_count:
-                        span.set_attribute("db.ids_count", len(vector_count))
+                    if vector_data:
+                        span.set_attribute("db.ids_count", len(vector_data))
                         
                         # Format documents for span attributes
                         documents = []
-                        for point in vector_count:
+                        for point in vector_data:
                             doc = {"id": point.id}
                             if hasattr(point, 'payload') and point.payload:
                                 doc["metadata"] = point.payload
@@ -481,18 +481,18 @@ class QdrantInstrumentor(BaseInstrumentor):
                     span.set_attribute("db.operation.status", "completed")
                     
                     # Add retrieved documents if available
-                    vector_count = None
+                    vector_data = None
                     if hasattr(result, 'result') and result.result:
-                        vector_count = result.result
+                        vector_data = result.result
                     elif isinstance(result, list):
-                        vector_count = result
+                        vector_data = result
                     
-                    if vector_count:
-                        span.set_attribute("db.vector_count", len(vector_count))
+                    if vector_data:
+                        span.set_attribute("db.vector_count", len(vector_data))
                         
                         # Format documents for span attributes
                         documents = []
-                        for point in vector_count:
+                        for point in vector_data:
                             doc = {"id": point.id}
                             if hasattr(point, 'payload') and point.payload:
                                 doc["metadata"] = point.payload
