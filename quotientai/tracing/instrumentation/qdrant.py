@@ -537,4 +537,4 @@ class QdrantInstrumentor(BaseInstrumentor):
                 
                 self._original_methods.clear()
         except ImportError:
-            pass 
+            pass
