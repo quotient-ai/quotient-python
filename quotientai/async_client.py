@@ -459,8 +459,8 @@ class AsyncQuotientTracer:
         self.detections = detections
 
         self.tracing_resource.configure(
-            app_name=app_name, 
-            environment=environment, 
+            app_name=app_name,
+            environment=environment,
             instruments=instruments,
             detections=detections
         )

@@ -5,7 +5,7 @@ import json
 import os
 import atexit
 import weakref
-
+import time
 from enum import Enum
 from typing import Optional
 
@@ -67,8 +67,7 @@ class QuotientAttributesSpanProcessor(SpanProcessor):
             QuotientAttributes.app_name: self.app_name,
             QuotientAttributes.environment: self.environment,
         }
-        
-        # Only add detections if it's not None (already converted to string format)
+
         if self.detections is not None:
             attributes[QuotientAttributes.detections] = self.detections
 
@@ -107,7 +106,6 @@ class TracingResource:
         self._app_name = app_name
         self._environment = environment
         self._instruments = instruments
-        # Convert detections to comma-separated string immediately
         self._detections = ",".join(detections) if detections else None
 
     def init(self, app_name: str, environment: str, instruments: Optional[list] = None, detections: Optional[list] = None):
@@ -116,7 +114,6 @@ class TracingResource:
         This is a convenience method that calls configure and then sets up the collector.
         """
         self.configure(app_name, environment, instruments, detections)
-        # Convert detections to string for _setup_auto_collector
         detections_str = ",".join(detections) if detections else None
         self._setup_auto_collector(app_name, environment, instruments, detections_str)
 
@@ -339,14 +336,11 @@ class TracingResource:
 
     def _create_end_of_trace_span(self, trace_id):
         """Create an end-of-trace marker span"""
-        import time
-        
         try:
             with self.tracer.start_as_current_span("quotient.end_of_trace") as span:
                 span.set_attribute("quotient.trace.complete", True)
                 span.set_attribute("quotient.trace.marker", True)
                 span.set_attribute("quotient.trace.id", format(trace_id, '032x'))
                 span.set_attribute("quotient.marker.timestamp", time.time_ns())
-                logger.info(f"Created end-of-trace marker for trace: {format(trace_id, '032x')}")
-        except Exception as e:
-            logger.error(f"Failed to create end-of-trace span: {e}")
+        except Exception as _:
+            pass
