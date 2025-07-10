@@ -461,7 +461,7 @@ class QuotientTracer:
         self.environment: Optional[str] = None
         self.metadata: Optional[Dict[str, Any]] = None
         self.instruments: Optional[List[Any]] = None
-        self.detections_array: Optional[List[str]] = None
+        self.detections: Optional[List[str]] = None
         self._configured = False
 
     def init(
@@ -470,7 +470,7 @@ class QuotientTracer:
         app_name: str,
         environment: str,
         instruments: Optional[List[Any]] = None,
-        detections_array: Optional[List[str]] = None,
+        detections: Optional[List[str]] = None,
     ) -> "QuotientTracer":
         """
         Configure the tracer with the provided parameters and return self.
@@ -479,13 +479,13 @@ class QuotientTracer:
         self.app_name = app_name
         self.environment = environment
         self.instruments = instruments
-        self.detections_array = detections_array
+        self.detections = detections
         # Configure the underlying tracing resource
         self.tracing_resource.configure(
             app_name=app_name,
             environment=environment,
             instruments=instruments,
-            detections_array=detections_array,
+            detections=detections,
         )
 
         self._configured = True

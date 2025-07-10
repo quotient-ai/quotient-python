@@ -445,10 +445,10 @@ class AsyncQuotientTracer:
         self.app_name: Optional[str] = None
         self.environment: Optional[str] = None
         self.instruments: Optional[list] = None
-        self.detections_array: Optional[List[str]] = None
+        self.detections: Optional[List[str]] = None
         self._configured = False
 
-    def init(self, app_name: str, environment: str, instruments: Optional[list] = None, detections_array: Optional[List[str]] = None):
+    def init(self, app_name: str, environment: str, instruments: Optional[list] = None, detections: Optional[List[str]] = None):
         """
         Configure the tracer with the provided parameters and return self.
         This method must be called before using trace().
@@ -456,13 +456,13 @@ class AsyncQuotientTracer:
         self.app_name = app_name
         self.environment = environment
         self.instruments = instruments
-        self.detections_array = detections_array
+        self.detections = detections
 
         self.tracing_resource.configure(
             app_name=app_name, 
             environment=environment, 
             instruments=instruments,
-            detections_array=detections_array
+            detections=detections
         )
 
         self._configured = True
