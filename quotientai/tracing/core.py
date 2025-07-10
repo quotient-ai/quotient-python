@@ -5,7 +5,7 @@ import json
 import os
 import atexit
 import weakref
-
+import time
 from enum import Enum
 from typing import Optional
 
@@ -40,6 +40,7 @@ def start_span(name: str):
 class QuotientAttributes(str, Enum):
     app_name = "app.name"
     environment = "app.environment"
+    detections = "quotient.detections"
 
 
 class QuotientAttributesSpanProcessor(SpanProcessor):
@@ -54,16 +55,21 @@ class QuotientAttributesSpanProcessor(SpanProcessor):
 
     app_name: str
     environment: str
+    detections: str
 
-    def __init__(self, app_name: str, environment: str):
+    def __init__(self, app_name: str, environment: str, detections: Optional[str] = None):
         self.app_name = app_name
         self.environment = environment
+        self.detections = detections
 
     def on_start(self, span: Span, parent_context: Optional[otel_context.Context] = None) -> None:
         attributes = {
             QuotientAttributes.app_name: self.app_name,
             QuotientAttributes.environment: self.environment,
         }
+
+        if self.detections is not None:
+            attributes[QuotientAttributes.detections] = self.detections
 
         span.set_attributes(attributes)
         super().on_start(span, parent_context)
@@ -78,10 +84,10 @@ class TracingResource:
         self._app_name = None
         self._environment = None
         self._instruments = None
-
+        self._detections = None
         atexit.register(self._cleanup)
 
-    def configure(self, app_name: str, environment: str, instruments: Optional[list] = None):
+    def configure(self, app_name: str, environment: str, instruments: Optional[list] = None, detections: Optional[list] = None):
         """
         Configure the tracing resource with app_name, environment, and instruments.
         This allows the trace decorator to be used without parameters.
@@ -100,14 +106,16 @@ class TracingResource:
         self._app_name = app_name
         self._environment = environment
         self._instruments = instruments
+        self._detections = ",".join(detections) if detections else None
 
-    def init(self, app_name: str, environment: str, instruments: Optional[list] = None):
+    def init(self, app_name: str, environment: str, instruments: Optional[list] = None, detections: Optional[list] = None):
         """
         Initialize tracing with app_name, environment, and instruments.
         This is a convenience method that calls configure and then sets up the collector.
         """
-        self.configure(app_name, environment, instruments)
-        self._setup_auto_collector(app_name, environment, instruments)
+        self.configure(app_name, environment, instruments, detections)
+        detections_str = ",".join(detections) if detections else None
+        self._setup_auto_collector(app_name, environment, instruments, detections_str)
 
     def get_vector_db_instrumentors(self):
         """
@@ -147,7 +155,7 @@ class TracingResource:
         return OTLPSpanExporter(endpoint=endpoint, headers=headers)
 
     @functools.lru_cache()
-    def _setup_auto_collector(self, app_name: str, environment: str, instruments: Optional[list] = None):
+    def _setup_auto_collector(self, app_name: str, environment: str, instruments: Optional[tuple] = None, detections: Optional[str] = None):
         """
         Automatically setup OTLP exporter to send traces to collector
         """
@@ -186,6 +194,7 @@ class TracingResource:
                 quotient_attributes_span_processor = QuotientAttributesSpanProcessor(
                     app_name=app_name,
                     environment=environment,
+                    detections=detections,
                 )
                 tracer_provider.add_span_processor(quotient_attributes_span_processor)
                 tracer_provider.add_span_processor(span_processor)
@@ -235,18 +244,22 @@ class TracingResource:
                     app_name=self._app_name,
                     environment=self._environment,
                     instruments=tuple(self._instruments) if self._instruments is not None else None,
+                    detections=self._detections,
                 )
 
                 # if there is no tracer, just run the function normally
                 if self.tracer is None:
                     return func(*args, **kwargs)
 
-                with self.tracer.start_as_current_span(name):
+                with self.tracer.start_as_current_span(name) as root_span:
                     try:
                         result = func(*args, **kwargs)
                     except Exception as e:
                         raise e
                     finally:
+                        trace_id = root_span.get_span_context().trace_id
+                        self._create_end_of_trace_span(trace_id)
+                        
                         # here we can log the call once we have the result.
                         # TODO: add otel support for quotient logging
                         pass
@@ -259,17 +272,21 @@ class TracingResource:
                     app_name=self._app_name,
                     environment=self._environment,
                     instruments=tuple(self._instruments) if self._instruments is not None else None,
+                    detections=self._detections,
                 )
 
                 if self.tracer is None:
                     return await func(*args, **kwargs)
 
-                with self.tracer.start_as_current_span(name):
+                with self.tracer.start_as_current_span(name) as root_span:
                     try:
                         result = await func(*args, **kwargs)
                     except Exception as e:
                         raise e
                     finally:
+                        trace_id = root_span.get_span_context().trace_id
+                        self._create_end_of_trace_span(trace_id)
+                        
                         # here we can log the call once we have the result.
                         # TODO: add otel support for quotient logging
                         pass
@@ -316,3 +333,14 @@ class TracingResource:
             logger.info("Forced flush of pending spans")
         except Exception as e:
             logger.error(f"Failed to force flush spans: {str(e)}")
+
+    def _create_end_of_trace_span(self, trace_id):
+        """Create an end-of-trace marker span"""
+        try:
+            with self.tracer.start_as_current_span("quotient.end_of_trace") as span:
+                span.set_attribute("quotient.trace.complete", True)
+                span.set_attribute("quotient.trace.marker", True)
+                span.set_attribute("quotient.trace.id", format(trace_id, '032x'))
+                span.set_attribute("quotient.marker.timestamp", time.time_ns())
+        except Exception as _:
+            pass
