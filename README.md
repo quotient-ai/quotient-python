@@ -19,19 +19,20 @@ Send your first log and detect hallucinations. Run the code below and see your L
 
 ```python
 from quotientai import QuotientAI
+from quotientai.types import DetectionType
 
 quotient = QuotientAI()
-quotient_logger = quotient.logger.init(
+quotient.logger.init(
     # Required
     app_name="my-app",
     environment="dev",
     # dynamic labels for slicing/dicing analytics e.g. by customer, feature, etc
     tags={"model": "gpt-4o", "feature": "customer-support"},
-    hallucination_detection=True,
-    hallucination_sample_rate=1.0,
+    detections=[DetectionType.HALLUCINATION, DetectionType.DOCUMENT_RELEVANCY],
+    detection_sample_rate=1.0,
 )
 
-log_id = logger.log(
+log_id = quotient.log(
     user_query="How do I cook a goose?",
     model_output="The capital of France is Paris",
     documents=["Here is an excellent goose recipe..."]
@@ -44,18 +45,19 @@ You can also use the async client if you need to create logs asynchronously.
 
 ```python
 from quotientai import AsyncQuotientAI
+from quotientai.types import DetectionType
 import asyncio
 
 quotient = AsyncQuotientAI()
 
-quotient_logger = quotient.logger.init(
+quotient.logger.init(
     # Required
     app_name="my-app",
     environment="dev",
     # dynamic labels for slicing/dicing analytics e.g. by customer, feature, etc
     tags={"model": "gpt-4o", "feature": "customer-support"},
-    hallucination_detection=True,
-    inconsistency_detection=True,
+    detections=[DetectionType.HALLUCINATION, DetectionType.DOCUMENT_RELEVANCY],
+    detection_sample_rate=1.0,
 )
 
 
@@ -63,7 +65,7 @@ async def main():
     # Mock retrieved documents
     retrieved_documents = [{"page_content": "Sample document"}]
 
-    log_id = await quotient_logger.log(
+    log_id = await quotient.log(
         user_query="Sample input",
         model_output="Sample output",
         # Page content from Documents from your retriever used to generate the model output

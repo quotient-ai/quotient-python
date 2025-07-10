@@ -4,6 +4,7 @@ from fastapi import APIRouter
 from dotenv import load_dotenv
 from openai import OpenAI, AsyncOpenAI
 from quotientai import QuotientAI, AsyncQuotientAI
+from quotientai.types import DetectionType
 
 from constants import (
     INSTRUCTIONS,
@@ -30,8 +31,6 @@ quotient_logger = quotient.logger.init(
     app_name="my-app",
     environment="dev",
     tags={"model": "gpt-4o", "feature": "customer-support"},
-    hallucination_detection=True,
-    hallucination_detection_sample_rate=0.0,
     sample_rate=1.0,
 )
 
@@ -43,8 +42,6 @@ quotient_async_logger = async_quotient.logger.init(
     app_name="my-app",
     environment="dev",
     tags={"model": "gpt-4o", "feature": "customer-support"},
-    hallucination_detection=True,
-    hallucination_detection_sample_rate=0.0,
     sample_rate=1.0,
 )
 
@@ -80,7 +77,9 @@ def create_log():
     ########################################################
     # Example synchronous log event
     ########################################################
-    quotient_logger.log(
+    quotient.log(
+        detections=[DetectionType.HALLUCINATION, DetectionType.DOCUMENT_RELEVANCY],
+        detection_sample_rate=1.0,
         user_query=QUESTION,
         model_output=model_output,
         documents=document_contents,
@@ -119,7 +118,9 @@ async def create_log_async():
     ########################################################
     # Example of an async log event
     ########################################################
-    await quotient_async_logger.log(
+    await async_quotient.log(
+        detections=[DetectionType.HALLUCINATION, DetectionType.DOCUMENT_RELEVANCY],
+        detection_sample_rate=1.0,
         user_query=QUESTION,
         model_output=model_output,
         documents=document_contents,
