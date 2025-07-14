@@ -122,6 +122,14 @@ class TracingResource:
         Can be overridden or patched for testing.
         """
         return OTLPSpanExporter(endpoint=endpoint, headers=headers)
+    
+    def _get_trace_api_key(self):
+        """
+        Get API key for trace identification.
+        Can be overridden to hash/truncate the key for security.
+        """
+        return self._client.api_key
+
 
     @functools.lru_cache()
     def _setup_auto_collector(self, app_name: str, environment: str, instruments: Optional[tuple] = None, detections: Optional[str] = None):
@@ -139,6 +147,7 @@ class TracingResource:
                 resource_attributes = {
                     QuotientAttributes.app_name: app_name,
                     QuotientAttributes.environment: environment,
+                    "quotient.api_key": self._get_trace_api_key(),
                 }
                 
                 if detections is not None:
