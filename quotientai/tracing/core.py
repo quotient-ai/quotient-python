@@ -123,12 +123,24 @@ class TracingResource:
         """
         return OTLPSpanExporter(endpoint=endpoint, headers=headers)
     
-    def _get_trace_api_key(self):
+    def _get_jwt(self):
         """
-        Get API key for trace identification.
-        Can be overridden to hash/truncate the key for security.
+        Get JWT token from client.
+        Returns the JWT token or falls back to API key if not found.
         """
-        return self._client.api_key
+        # First check if client already has a valid token loaded
+        if hasattr(self._client, '_is_token_valid') and self._client._is_token_valid():
+            return self._client.token
+
+        try:
+            with open(self._client._token_path, 'r') as f:
+                data = json.load(f)
+                jwt = data.get('token')
+                if jwt:
+                    return jwt
+            return None
+        except Exception as e:
+            return None
 
 
     @functools.lru_cache()
@@ -147,7 +159,7 @@ class TracingResource:
                 resource_attributes = {
                     QuotientAttributes.app_name: app_name,
                     QuotientAttributes.environment: environment,
-                    "quotient.api_key": self._get_trace_api_key(),
+                    "quotient.jwt": self._get_jwt(),  # Use JWT instead of API key
                 }
                 
                 if detections is not None:
@@ -163,10 +175,10 @@ class TracingResource:
                     "OTEL_EXPORTER_OTLP_ENDPOINT",
                     DEFAULT_TRACING_ENDPOINT,
                 )
-                
+
                 # Parse headers from environment or use default
                 headers = {
-                    "Authorization": f"Bearer {self._client.api_key}",
+                    "Authorization": f"Bearer {self._client.token}",
                     "Content-Type": "application/x-protobuf",
                 }
                 if "OTEL_EXPORTER_OTLP_HEADERS" in os.environ:
