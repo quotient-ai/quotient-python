@@ -15,6 +15,7 @@ from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExport
 
 from opentelemetry.sdk.trace import TracerProvider, SpanProcessor, Span
 from opentelemetry.sdk.trace.export import BatchSpanProcessor
+from opentelemetry.sdk.resources import Resource
 
 from opentelemetry.trace import (
     set_tracer_provider,
@@ -41,38 +42,6 @@ class QuotientAttributes(str, Enum):
     app_name = "app.name"
     environment = "app.environment"
     detections = "quotient.detections"
-
-
-class QuotientAttributesSpanProcessor(SpanProcessor):
-    """
-    Processor that adds Quotient-specific attributes to all spans, including:
-    
-    - `app_name`
-    - `environment`
-
-    Which are all required for tracing.
-    """
-
-    app_name: str
-    environment: str
-    detections: str
-
-    def __init__(self, app_name: str, environment: str, detections: Optional[str] = None):
-        self.app_name = app_name
-        self.environment = environment
-        self.detections = detections
-
-    def on_start(self, span: Span, parent_context: Optional[otel_context.Context] = None) -> None:
-        attributes = {
-            QuotientAttributes.app_name: self.app_name,
-            QuotientAttributes.environment: self.environment,
-        }
-
-        if self.detections is not None:
-            attributes[QuotientAttributes.detections] = self.detections
-
-        span.set_attributes(attributes)
-        super().on_start(span, parent_context)
 
 
 class TracingResource:
@@ -165,7 +134,20 @@ class TracingResource:
 
             # Only set up if not already configured (avoid double setup)
             if not hasattr(current_provider, '_span_processors') or not current_provider._span_processors:
-                tracer_provider = TracerProvider()
+                
+                # Create resource with quotient attributes
+                resource_attributes = {
+                    QuotientAttributes.app_name: app_name,
+                    QuotientAttributes.environment: environment,
+                }
+                
+                if detections is not None:
+                    resource_attributes[QuotientAttributes.detections] = detections
+                
+                resource = Resource.create(resource_attributes)
+                
+                # Create TracerProvider with the resource
+                tracer_provider = TracerProvider(resource=resource)
                 
                 # Get collector endpoint from environment or use default
                 exporter_endpoint = os.environ.get(
@@ -191,12 +173,6 @@ class TracingResource:
 
                 # Use batch processor for better performance
                 span_processor = BatchSpanProcessor(otlp_exporter)
-                quotient_attributes_span_processor = QuotientAttributesSpanProcessor(
-                    app_name=app_name,
-                    environment=environment,
-                    detections=detections,
-                )
-                tracer_provider.add_span_processor(quotient_attributes_span_processor)
                 tracer_provider.add_span_processor(span_processor)
                 
                 # Set the global tracer provider
