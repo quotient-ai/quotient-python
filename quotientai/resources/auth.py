@@ -11,7 +11,7 @@ class AuthResource:
         
         # Set the user_id if successful
         if response and isinstance(response, dict) and 'user_id' in response:
-            self._client.user_id = response['user_id']
+            self._client._user = response['user_id']
         
         return response
     
@@ -33,7 +33,7 @@ class AsyncAuthResource:
             
             # Set the user_id if successful
             if result and isinstance(result, dict) and 'user_id' in result:
-                self._client.user_id = result['user_id']
+                self._client._user = result['user_id']
             
             return result
         finally:

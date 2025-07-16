@@ -129,9 +129,9 @@ class TracingResource:
         Get user_id from client.
         Returns the user_id or None if not found.
         """
-        if hasattr(self._client, '_QuotientAI__user'):
-            return self._client._QuotientAI__user
-        return None
+        if hasattr(self._client, '_user'):
+            return self._client._user
+        return "None"
 
 
     @functools.lru_cache()
@@ -150,7 +150,7 @@ class TracingResource:
                 resource_attributes = {
                     QuotientAttributes.app_name: app_name,
                     QuotientAttributes.environment: environment,
-                    "quotient.user_id": self._get_user_id(),
+                    "quotient.user": self._get_user(),
                 }
                 
                 if detections is not None:
