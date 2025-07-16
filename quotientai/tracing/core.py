@@ -124,13 +124,13 @@ class TracingResource:
         return OTLPSpanExporter(endpoint=endpoint, headers=headers)
 
 
-    def _get_user_id(self):
+    def _get_user(self):
         """
         Get user_id from client.
         Returns the user_id or None if not found.
         """
-        if hasattr(self._client, 'user_id'):
-            return self._client.user_id
+        if hasattr(self._client, '_QuotientAI__user'):
+            return self._client._QuotientAI__user
         return None
 
 
