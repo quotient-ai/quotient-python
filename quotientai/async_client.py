@@ -30,6 +30,7 @@ class _AsyncQuotientClient(httpx.AsyncClient):
         self.token = None
         self.token_expiry = 0
         self.token_api_key = None
+        self.user_id = None
         self._token_path = (
             token_dir
             / ".quotient"

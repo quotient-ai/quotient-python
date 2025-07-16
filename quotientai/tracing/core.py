@@ -122,25 +122,16 @@ class TracingResource:
         Can be overridden or patched for testing.
         """
         return OTLPSpanExporter(endpoint=endpoint, headers=headers)
-    
-    def _get_jwt(self):
-        """
-        Get JWT token from client.
-        Returns the JWT token or falls back to API key if not found.
-        """
-        # First check if client already has a valid token loaded
-        if hasattr(self._client, '_is_token_valid') and self._client._is_token_valid():
-            return self._client.token
 
-        try:
-            with open(self._client._token_path, 'r') as f:
-                data = json.load(f)
-                jwt = data.get('token')
-                if jwt:
-                    return jwt
-            return None
-        except Exception as e:
-            return None
+
+    def _get_user_id(self):
+        """
+        Get user_id from client.
+        Returns the user_id or None if not found.
+        """
+        if hasattr(self._client, 'user_id'):
+            return self._client.user_id
+        return None
 
 
     @functools.lru_cache()
@@ -159,7 +150,7 @@ class TracingResource:
                 resource_attributes = {
                     QuotientAttributes.app_name: app_name,
                     QuotientAttributes.environment: environment,
-                    "quotient.jwt": self._get_jwt(),  # Use JWT instead of API key
+                    "quotient.user_id": self._get_user_id(),
                 }
                 
                 if detections is not None:

@@ -8,6 +8,11 @@ class AuthResource:
         A call to GET /auth/profile to initially authenticate the user.
         """
         response = self._client._get("/auth/profile")
+        
+        # Set the user_id if successful
+        if response and isinstance(response, dict) and 'user_id' in response:
+            self._client.user_id = response['user_id']
+        
         return response
     
 class AsyncAuthResource:
@@ -25,6 +30,11 @@ class AsyncAuthResource:
             task = loop.create_task(self._client._get("/auth/profile"))
             # Run the task to completion
             result = loop.run_until_complete(task)
+            
+            # Set the user_id if successful
+            if result and isinstance(result, dict) and 'user_id' in result:
+                self._client.user_id = result['user_id']
+            
             return result
         finally:
             loop.close()
