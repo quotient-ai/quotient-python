@@ -42,6 +42,7 @@ class QuotientAttributes(str, Enum):
     app_name = "app.name"
     environment = "app.environment"
     detections = "quotient.detections"
+    user = "quotient.user"
 
 
 class TracingResource:
@@ -123,6 +124,17 @@ class TracingResource:
         """
         return OTLPSpanExporter(endpoint=endpoint, headers=headers)
 
+
+    def _get_user(self):
+        """
+        Get user_id from client.
+        Returns the user_id or None if not found.
+        """
+        if hasattr(self._client, '_user'):
+            return self._client._user
+        return "None"
+
+
     @functools.lru_cache()
     def _setup_auto_collector(self, app_name: str, environment: str, instruments: Optional[tuple] = None, detections: Optional[str] = None):
         """
@@ -139,6 +151,7 @@ class TracingResource:
                 resource_attributes = {
                     QuotientAttributes.app_name: app_name,
                     QuotientAttributes.environment: environment,
+                    QuotientAttributes.user: self._get_user(),
                 }
                 
                 if detections is not None:
@@ -154,7 +167,7 @@ class TracingResource:
                     "OTEL_EXPORTER_OTLP_ENDPOINT",
                     DEFAULT_TRACING_ENDPOINT,
                 )
-                
+
                 # Parse headers from environment or use default
                 headers = {
                     "Authorization": f"Bearer {self._client.api_key}",

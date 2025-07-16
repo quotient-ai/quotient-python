@@ -32,6 +32,7 @@ class _BaseQuotientClient(httpx.Client):
         self.token = None
         self.token_expiry = 0
         self.token_api_key = None
+        self._user = None
         self._token_path = (
             token_dir
             / ".quotient"
