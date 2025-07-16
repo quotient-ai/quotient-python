@@ -166,7 +166,7 @@ class TracingResource:
                     "OTEL_EXPORTER_OTLP_ENDPOINT",
                     DEFAULT_TRACING_ENDPOINT,
                 )
-
+                
                 # Parse headers from environment or use default
                 headers = {
                     "Authorization": f"Bearer {self._client.api_key}",
