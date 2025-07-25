@@ -1,9 +1,10 @@
 [tool.poetry]
 name = "quotientai"
-version = "0.4.4"
+version = "0.4.5"
 authors = [
     "Freddie Vargus <freddie@quotientai.co>",
     "Michael Goitia Sarmiento <mike@quotientai.co>",
+    "Chiraag Rekhari <chiraag@quotientai.co>"
 ]
 description = "Python library for tracing, logging, and detecting problems with AI Agents"
 readme = "README.md"
