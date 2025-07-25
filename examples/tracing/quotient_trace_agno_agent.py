@@ -15,21 +15,19 @@ quotient.tracer.init(
     instruments=[AgnoInstrumentor()],
 )
 
-@quotient.trace()
+@quotient.trace('agno-agent-ddgs-search')
 def run_agno():
-    with start_span("run_agno"):
-        # add additional span attributes
-        span = get_current_span()
-        span.set_attribute("blah.blah", "blah")
-        span.set_attribute("blah.blah2", "blah2")
+    # add additional span attributes
+    span = get_current_span()
+    span.set_attribute("mycustom.attr", "customvalue")
 
-        agent = Agent(
-            model=OpenAIChat(id="gpt-4o-mini"), 
-            tools=[DuckDuckGoTools()],
-            markdown=True, 
-        )
+    agent = Agent(
+        model=OpenAIChat(id="gpt-4o-mini"), 
+        tools=[DuckDuckGoTools()],
+        markdown=True, 
+    )
 
-        agent.run("What is currently trending on Twitter?")
+    agent.run("What is currently trending on Twitter?")
 
 if __name__ == "__main__":
     run_agno()
