@@ -205,17 +205,24 @@ class TracingResource:
             # Fallback to no-op tracer
             self.tracer = None
 
-    def trace(self):
+    def trace(self, name: Optional[str] = None):
         """
         Decorator to trace function calls for Quotient.
         
         The TracingResource must be pre-configured via the configure() method
         before using this decorator.
         
+        Args:
+            name: Optional custom name for the span. If not provided, uses func.__qualname__
+        
         Example:
             quotient.tracer.init(app_name="my_app", environment="prod")
             @quotient.trace()
             def my_function():
+                pass
+            
+            @quotient.trace('myagent')
+            def my_other_function():
                 pass
         """
         # Use only configured values - no parameters accepted
@@ -224,7 +231,7 @@ class TracingResource:
             return lambda func: func
 
         def decorator(func):
-            name = func.__qualname__
+            span_name = name if name is not None else func.__qualname__
 
             @functools.wraps(func)
             def sync_func_wrapper(*args, **kwargs):
@@ -240,7 +247,7 @@ class TracingResource:
                 if self.tracer is None:
                     return func(*args, **kwargs)
 
-                with self.tracer.start_as_current_span(name) as root_span:
+                with self.tracer.start_as_current_span(span_name) as root_span:
                     try:
                         result = func(*args, **kwargs)
                     except Exception as e:
@@ -267,7 +274,7 @@ class TracingResource:
                 if self.tracer is None:
                     return await func(*args, **kwargs)
 
-                with self.tracer.start_as_current_span(name) as root_span:
+                with self.tracer.start_as_current_span(span_name) as root_span:
                     try:
                         result = await func(*args, **kwargs)
                     except Exception as e:
