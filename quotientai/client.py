@@ -493,7 +493,7 @@ class QuotientTracer:
 
         return self
 
-    def trace(self):
+    def trace(self, name: Optional[str] = None):
         """
         Decorator to trace function calls for Quotient.
 
@@ -720,9 +720,9 @@ class QuotientAI:
         )
         return log_id
 
-    def trace(self):
+    def trace(self, name: Optional[str] = None):
         """Direct access to the tracer's trace decorator."""
-        return self.tracer.trace()
+        return self.tracer.trace(name)
 
     def poll_for_detection(
         self, log_id: str, timeout: int = 300, poll_interval: float = 2.0
