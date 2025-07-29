@@ -19,8 +19,8 @@ quotient = QuotientAI()
 
 # Initialize tracing with Qdrant instrumentor
 quotient.tracer.init(
-    app_name="qdrant_tracing_example",
-    environment="local",
+    app_name="qdrant-tracing-app",
+    environment="dev",
     instruments=[QdrantInstrumentor()],
 )
 

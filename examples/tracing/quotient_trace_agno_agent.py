@@ -10,8 +10,8 @@ from quotientai.tracing import start_span
 
 quotient = QuotientAI()
 quotient.tracer.init(
-    app_name="openinference_test_openai",
-    environment="local",
+    app_name="agno-search-app",
+    environment="dev",
     instruments=[AgnoInstrumentor()],
 )
 
@@ -27,7 +27,7 @@ def run_agno():
         markdown=True, 
     )
 
-    agent.run("What is currently trending on Twitter?")
+    agent.print_response("What is currently trending on Twitter?")
 
 if __name__ == "__main__":
     run_agno()
