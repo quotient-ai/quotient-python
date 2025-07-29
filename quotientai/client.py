@@ -515,7 +515,7 @@ class QuotientTracer:
             return lambda func: func
 
         # Call the tracing resource without parameters since it's now configured
-        return self.tracing_resource.trace()
+        return self.tracing_resource.trace(name)
 
     def force_flush(self):
         """
