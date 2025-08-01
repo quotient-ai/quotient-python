@@ -4,16 +4,14 @@ import inspect
 import json
 import os
 import atexit
-import weakref
 import time
 from enum import Enum
 from typing import Optional
 
 
-from opentelemetry import context as otel_context
 from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
 
-from opentelemetry.sdk.trace import TracerProvider, SpanProcessor, Span
+from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry.sdk.trace.export import BatchSpanProcessor
 from opentelemetry.sdk.resources import Resource
 
