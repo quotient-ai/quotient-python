@@ -138,11 +138,15 @@ class _BaseQuotientClient(httpx.Client):
         return self._handle_response(response)
 
     @handle_errors
-    def _post(self, path: str, data: dict = {}, timeout: int = None) -> dict:
+    def _post(
+        self, path: str, data: Optional[dict] = None, timeout: int = None
+    ) -> dict:
         """Send a POST request to the specified path."""
         self._update_auth_header()
 
-        if isinstance(data, dict):
+        if data is None:
+            data = {}
+        elif isinstance(data, dict):
             data = {k: v for k, v in data.items() if v is not None}
         elif isinstance(data, list):
             data = [v for v in data if v is not None]
@@ -155,11 +159,19 @@ class _BaseQuotientClient(httpx.Client):
         return self._handle_response(response)
 
     @handle_errors
-    def _patch(self, path: str, data: dict = {}, timeout: int = None) -> dict:
+    def _patch(
+        self, path: str, data: Optional[dict] = None, timeout: int = None
+    ) -> dict:
         """Send a PATCH request to the specified path."""
         self._update_auth_header()
 
-        data = {k: v for k, v in data.items() if v is not None}
+        if data is None:
+            data = {}
+        elif isinstance(data, dict):
+            data = {k: v for k, v in data.items() if v is not None}
+        elif isinstance(data, list):
+            data = [v for v in data if v is not None]
+
         response = self.patch(
             url=path,
             json=data,
@@ -456,13 +468,17 @@ class QuotientTracer:
     This class handles both configuration (via init) and tracing.
     """
 
-    def __init__(self, tracing_resource: TracingResource):
+    def __init__(
+        self, tracing_resource: Optional[TracingResource], lazy_init: bool = False
+    ):
         self.tracing_resource = tracing_resource
         self.app_name: Optional[str] = None
         self.environment: Optional[str] = None
         self.metadata: Optional[Dict[str, Any]] = None
         self.instruments: Optional[List[Any]] = None
         self.detections: Optional[List[str]] = None
+        self.lazy_init = lazy_init
+
         self._configured = False
 
     def init(
@@ -481,13 +497,14 @@ class QuotientTracer:
         self.environment = environment
         self.instruments = instruments
         self.detections = detections
-        # Configure the underlying tracing resource
-        self.tracing_resource.configure(
-            app_name=app_name,
-            environment=environment,
-            instruments=instruments,
-            detections=detections,
-        )
+
+        # Configure the underlying tracing resource (if available)
+        if self.tracing_resource:
+            self.tracing_resource.configure(
+                app_name=app_name,
+                environment=environment,
+                instruments=instruments,
+            )
 
         self._configured = True
 
@@ -508,21 +525,73 @@ class QuotientTracer:
             async def my_async_function():
                 pass
         """
-        if not self._configured:
-            logger.error(
-                f"tracer is not configured. Please call init() before tracing."
-            )
-            return lambda func: func
+        # For lazy_init, return a lazy decorator that checks configuration at execution time
+        if self.lazy_init:
+            return self._create_lazy_decorator(name)
+        else:
+            # For non-lazy_init, use the original behavior
+            if not self.tracing_resource:
+                logger.error(
+                    "tracer is not configured. Please call init() before tracing."
+                )
+                return lambda func: func
+            # Warn if not configured but still allow tracing since resource is available
+            if not self._configured:
+                logger.warning(
+                    "tracer is not explicitly configured. Consider calling tracer.init() for full configuration."
+                )
 
-        # Call the tracing resource without parameters since it's now configured
-        return self.tracing_resource.trace(name)
+            # Call the tracing resource without parameters since it's now configured
+            return self.tracing_resource.trace(name)
+
+    def _create_lazy_decorator(self, name: Optional[str] = None):
+        """
+        Create a lazy decorator that defers the tracing decision until function execution.
+        This allows decorators to be applied before the client is configured.
+        """
+        import functools
+        import inspect
+
+        def decorator(func):
+            @functools.wraps(func)
+            def sync_wrapper(*args, **kwargs):
+                # Check configuration at execution time, not decoration time
+                if self._configured and self.tracing_resource:
+                    # Get the actual decorator from the tracing resource
+                    actual_decorator = self.tracing_resource.trace(name)
+                    # Apply it to the function and call immediately
+                    return actual_decorator(func)(*args, **kwargs)
+                else:
+                    # No tracing - just call the function
+                    return func(*args, **kwargs)
+
+            @functools.wraps(func)
+            async def async_wrapper(*args, **kwargs):
+                # Check configuration at execution time, not decoration time
+                if self._configured and self.tracing_resource:
+                    # Get the actual decorator from the tracing resource
+                    actual_decorator = self.tracing_resource.trace(name)
+                    # Apply it to the function and call immediately
+                    return await actual_decorator(func)(*args, **kwargs)
+                else:
+                    # No tracing - just call the function
+                    return await func(*args, **kwargs)
+
+            # Return the appropriate wrapper based on whether the function is async
+            if inspect.iscoroutinefunction(func):
+                return async_wrapper
+            else:
+                return sync_wrapper
+
+        return decorator
 
     def force_flush(self):
         """
         Force flush all pending spans to the collector.
         This is useful for debugging and ensuring spans are sent immediately.
         """
-        self.tracing_resource.force_flush()
+        if self.tracing_resource:
+            self.tracing_resource.force_flush()
 
 
 class QuotientAI:
@@ -535,34 +604,96 @@ class QuotientAI:
     Args:
         api_key (Optional[str]): The API key to use for authentication. If not provided,
             will attempt to read from QUOTIENT_API_KEY environment variable.
+        lazy_init (bool): If True, defer authentication until first use. Useful for
+            environments where API keys aren't available at build time.
     """
 
-    def __init__(self, api_key: Optional[str] = None):
+    def __init__(self, api_key: Optional[str] = None, lazy_init: bool = False):
         self.api_key = api_key or os.environ.get("QUOTIENT_API_KEY")
-        if not self.api_key:
+        self.lazy_init = lazy_init
+        self._initialized = False
+        self._initialization_error = None
+
+        # Initialize resources as None initially
+        self.auth = None
+        self.logs = None
+        self.tracing = None
+        self.logger = None
+
+        # Always create a tracer instance for lazy_init mode to avoid decorator errors
+        if lazy_init:
+            # Create a minimal tracer instance that can handle decorators
+            self.tracer = QuotientTracer(None, lazy_init=True)
+        else:
+            self.tracer = None
+
+        if not lazy_init:
+            self._ensure_initialized()
+
+    def _ensure_initialized(self):
+        """Ensure the client is properly initialized with resources and authentication."""
+        if self._initialized:
+            return
+
+        if self._initialization_error:
             logger.error(
+                f"Previous initialization failed: {self._initialization_error}"
+            )
+            return
+
+        # Try to get API key if not already set
+        if not self.api_key:
+            self.api_key = os.environ.get("QUOTIENT_API_KEY")
+
+        if not self.api_key:
+            error_msg = (
                 "could not find API key. either pass api_key to QuotientAI() or "
                 "set the QUOTIENT_API_KEY environment variable. "
                 f"if you do not have an API key, you can create one at https://app.quotientai.co in your settings page"
             )
-
-        _client = _BaseQuotientClient(self.api_key)
-        self.auth = resources.AuthResource(_client)
-        self.logs = resources.LogsResource(_client)
-        self.tracing = resources.TracingResource(_client)
-
-        # Create an unconfigured logger instance.
-        self.logger = QuotientLogger(self.logs)
-        self.tracer = QuotientTracer(self.tracing)
+            logger.error(error_msg)
+            self._initialization_error = error_msg
+            return
 
         try:
+            _client = _BaseQuotientClient(self.api_key)
+            self.auth = resources.AuthResource(_client)
+            self.logs = resources.LogsResource(_client)
+            self.tracing = resources.TracingResource(_client)
+
+            # Create an unconfigured logger instance.
+            self.logger = QuotientLogger(self.logs)
+
+            # Update tracer with the actual tracing resource if it was created in lazy mode
+            if self.lazy_init and self.tracer:
+                self.tracer.tracing_resource = self.tracing
+            else:
+                self.tracer = QuotientTracer(self.tracing, lazy_init=self.lazy_init)
+
             self.auth.authenticate()
+            self._initialized = True
         except Exception as e:
-            logger.error(
+            error_msg = (
                 "If you are seeing this error, please check that your API key is correct.\n"
                 f"If the issue persists, please contact support@quotientai.co\n{traceback.format_exc()}"
             )
-            return None
+            logger.error(error_msg)
+            self._initialization_error = str(e)
+            return
+
+    def configure(self, api_key: str):
+        """
+        Configure the client with an API key at runtime.
+        This is useful for environments where the API key is not available at build time.
+
+        Args:
+            api_key: The API key to use for authentication
+        """
+        self.api_key = api_key
+        self._initialized = False
+        self._initialization_error = None
+        self._ensure_initialized()
+        return self
 
     def log(
         self,
@@ -606,6 +737,11 @@ class QuotientAI:
         Returns:
             Log ID if successful, None otherwise
         """
+        self._ensure_initialized()
+        if not self._initialized or not self.logger:
+            logger.error("Client not properly initialized. Cannot log.")
+            return None
+
         if not self.logger._configured:
             logger.error(
                 "logger must be initialized with valid inputs before using log()."
@@ -722,6 +858,13 @@ class QuotientAI:
 
     def trace(self, name: Optional[str] = None):
         """Direct access to the tracer's trace decorator."""
+        self._ensure_initialized()
+        if not self._initialized or not self.tracer:
+            # Return a no-op decorator if not initialized
+            def no_op_decorator(func):
+                return func
+
+            return no_op_decorator
         return self.tracer.trace(name)
 
     def poll_for_detection(
@@ -735,6 +878,11 @@ class QuotientAI:
             timeout: Maximum time to wait for results in seconds (default: 300s/5min)
             poll_interval: How often to poll the API in seconds (default: 2s)
         """
+        self._ensure_initialized()
+        if not self._initialized or not self.logger:
+            logger.error("Client not properly initialized. Cannot poll for detection.")
+            return None
+
         if not self.logger._configured:
             logger.error(
                 "Logger is not configured. Please call quotient.logger.init() before using poll_for_detection()."
@@ -755,4 +903,8 @@ class QuotientAI:
         Force flush all pending spans to the collector.
         This is useful for debugging and ensuring spans are sent immediately.
         """
+        self._ensure_initialized()
+        if not self._initialized or not self.tracer:
+            logger.warning("Client not properly initialized. Cannot force flush.")
+            return
         self.tracer.force_flush()

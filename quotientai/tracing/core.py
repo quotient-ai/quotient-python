@@ -4,16 +4,14 @@ import inspect
 import json
 import os
 import atexit
-import weakref
 import time
 from enum import Enum
 from typing import Optional
 
 
-from opentelemetry import context as otel_context
 from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
 
-from opentelemetry.sdk.trace import TracerProvider, SpanProcessor, Span
+from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry.sdk.trace.export import BatchSpanProcessor
 from opentelemetry.sdk.resources import Resource
 
@@ -162,6 +160,13 @@ class TracingResource:
         Automatically setup OTLP exporter to send traces to collector
         """
         try:
+            # Check if we have a valid API key
+            if not hasattr(self._client, "api_key") or not self._client.api_key:
+                logger.warning(
+                    "No API key available - skipping tracing setup. This is normal at build time."
+                )
+                return
+
             # Check if tracer provider is already set up
             current_provider = get_tracer_provider()
 
@@ -231,7 +236,9 @@ class TracingResource:
                 )
 
         except Exception as e:
-            logger.error(f"Failed to setup tracing: {str(e)}")
+            logger.warning(
+                f"Failed to setup tracing: {str(e)} - continuing without tracing"
+            )
             # Fallback to no-op tracer
             self.tracer = None
 

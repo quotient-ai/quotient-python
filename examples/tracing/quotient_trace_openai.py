@@ -5,15 +5,15 @@ from openinference.instrumentation.openai import OpenAIInstrumentor
 from quotientai import QuotientAI
 
 quotient = QuotientAI()
+
 quotient.tracer.init(
-    app_name="openinference_test_openai",
+    app_name="quotient-trace-openai",
     environment="local",
     instruments=[OpenAIInstrumentor()],
 )
 
-
 @quotient.trace()
-def test_openai():
+def main():
     client = openai.OpenAI()
     response = client.chat.completions.create(
         model="gpt-3.5-turbo",
@@ -29,4 +29,4 @@ def test_openai():
 
 
 if __name__ == "__main__":
-    test_openai()
+    main()

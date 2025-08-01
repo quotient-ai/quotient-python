@@ -23,7 +23,7 @@ from quotientai.tracing.instrumentation import QdrantInstrumentor
 
 
 # Initialize QuotientAI client
-quotient = QuotientAI()
+quotient = QuotientAI(lazy=True)
 
 # Initialize tracing with Qdrant instrumentor
 quotient.tracer.init(
