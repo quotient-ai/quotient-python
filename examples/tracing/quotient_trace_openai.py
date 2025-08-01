@@ -1,4 +1,3 @@
-import os
 import openai
 
 from openinference.instrumentation.openai import OpenAIInstrumentor
@@ -9,15 +8,14 @@ from quotientai import QuotientAI
 quotient = QuotientAI()
 
 quotient.tracer.init(
-    app_name="openinference_test_openai",
+    app_name="quotient-trace-openai",
     environment="local",
     instruments=[OpenAIInstrumentor()],
 )
 
-
 # Apply decorator at module level - it will be a no-op until client is configured
 @quotient.trace()
-def test_openai():
+def main():
     client = openai.OpenAI()
     response = client.chat.completions.create(
         model="gpt-3.5-turbo",
@@ -32,30 +30,5 @@ def test_openai():
             print(content, end="")
 
 
-# def setup_quotient():
-#     """Configure QuotientAI at runtime when API key is available."""
-#     # Get API key from environment
-#     quotient_api_key = os.environ.get("QUOTIENT_API_KEY")
-
-#     if not quotient_api_key:
-#         print("Warning: QUOTIENT_API_KEY not found. Tracing will be disabled.")
-#         return False
-
-#     # Configure the client with the API key
-#     quotient.configure(quotient_api_key)
-
-#     # Initialize the tracer with instruments
-#     quotient.tracer.init(
-#         app_name="mike-trace-openai-test",
-#         environment="dev",
-#         instruments=[OpenAIInstrumentor()],
-#     )
-
-#     print("QuotientAI tracing configured successfully.")
-#     return True
-
-
 if __name__ == "__main__":
-    # Set up QuotientAI tracing (this would typically be done in your app initialization)
-    # tracing_enabled = setup_quotient()
-    test_openai()
+    main()
