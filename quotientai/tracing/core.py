@@ -46,10 +46,8 @@ def start_span(name: str):
 class QuotientAttributes(str, Enum):
     app_name = "app.name"
     environment = "app.environment"
-<<<<<<< Updated upstream
     detections = "quotient.detections"
     user = "quotient.user"
-=======
 
 
 class QuotientAttributesSpanProcessor(SpanProcessor):
@@ -79,7 +77,6 @@ class QuotientAttributesSpanProcessor(SpanProcessor):
 
         span.set_attributes(attributes)
         super().on_start(span, parent_context)
->>>>>>> Stashed changes
 
 
 class TracingResource:
@@ -95,15 +92,11 @@ class TracingResource:
         atexit.register(self._cleanup)
 
     def configure(
-<<<<<<< Updated upstream
         self,
         app_name: str,
         environment: str,
         instruments: Optional[list] = None,
         detections: Optional[list] = None,
-=======
-        self, app_name: str, environment: str, instruments: Optional[list] = None
->>>>>>> Stashed changes
     ):
         """
         Configure the tracing resource with app_name, environment, and instruments.
@@ -188,15 +181,11 @@ class TracingResource:
 
     @functools.lru_cache()
     def _setup_auto_collector(
-<<<<<<< Updated upstream
         self,
         app_name: str,
         environment: str,
         instruments: Optional[tuple] = None,
         detections: Optional[str] = None,
-=======
-        self, app_name: str, environment: str, instruments: Optional[list] = None
->>>>>>> Stashed changes
     ):
         """
         Automatically setup OTLP exporter to send traces to collector
@@ -217,7 +206,6 @@ class TracingResource:
                 not hasattr(current_provider, "_span_processors")
                 or not current_provider._span_processors
             ):
-<<<<<<< Updated upstream
 
                 # Create resource with quotient attributes
                 resource_attributes = {
@@ -233,9 +221,6 @@ class TracingResource:
 
                 # Create TracerProvider with the resource
                 tracer_provider = TracerProvider(resource=resource)
-=======
-                tracer_provider = TracerProvider()
->>>>>>> Stashed changes
 
                 # Get collector endpoint from environment or use default
                 exporter_endpoint = os.environ.get(
@@ -295,12 +280,9 @@ class TracingResource:
         The TracingResource must be pre-configured via the configure() method
         before using this decorator.
 
-<<<<<<< Updated upstream
         Args:
             name: Optional custom name for the span. If not provided, uses func.__qualname__
 
-=======
->>>>>>> Stashed changes
         Example:
             quotient.tracer.init(app_name="my_app", environment="prod")
             @quotient.trace()
@@ -313,13 +295,8 @@ class TracingResource:
         """
         # Use only configured values - no parameters accepted
         if not self._app_name or not self._environment:
-<<<<<<< Updated upstream
             logger.error(
                 "tracer must be initialized with valid inputs before using trace(). Double check your inputs and try again."
-=======
-            logger.warning(
-                "tracer not initialized - returning no-op decorator. This is normal at build time."
->>>>>>> Stashed changes
             )
             return lambda func: func
 
@@ -337,10 +314,7 @@ class TracingResource:
                         if self._instruments is not None
                         else None
                     ),
-<<<<<<< Updated upstream
                     detections=self._detections,
-=======
->>>>>>> Stashed changes
                 )
 
                 # if there is no tracer, just run the function normally
@@ -372,10 +346,7 @@ class TracingResource:
                         if self._instruments is not None
                         else None
                     ),
-<<<<<<< Updated upstream
                     detections=self._detections,
-=======
->>>>>>> Stashed changes
                 )
 
                 if self.tracer is None:
