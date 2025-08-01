@@ -522,15 +522,65 @@ class QuotientTracer:
             async def my_async_function():
                 pass
         """
-        if not self._configured or not self.tracing_resource:
-            if not self.lazy_init:
+        # For lazy_init, return a lazy decorator that checks configuration at execution time
+        if self.lazy_init:
+            return self._create_lazy_decorator(name)
+        else:
+            # For non-lazy_init, use the original behavior
+            if not self.tracing_resource:
                 logger.error(
-                    f"tracer is not configured. Please call init() before tracing."
+                    "tracer is not configured. Please call init() before tracing."
                 )
-            return lambda func: func
+                return lambda func: func
+            # Warn if not configured but still allow tracing since resource is available
+            if not self._configured:
+                logger.warning(
+                    "tracer is not explicitly configured. Consider calling tracer.init() for full configuration."
+                )
 
-        # Call the tracing resource without parameters since it's now configured
-        return self.tracing_resource.trace(name)
+            # Call the tracing resource without parameters since it's now configured
+            return self.tracing_resource.trace(name)
+
+    def _create_lazy_decorator(self, name: Optional[str] = None):
+        """
+        Create a lazy decorator that defers the tracing decision until function execution.
+        This allows decorators to be applied before the client is configured.
+        """
+        import functools
+        import inspect
+
+        def decorator(func):
+            @functools.wraps(func)
+            def sync_wrapper(*args, **kwargs):
+                # Check configuration at execution time, not decoration time
+                if self._configured and self.tracing_resource:
+                    # Get the actual decorator from the tracing resource
+                    actual_decorator = self.tracing_resource.trace(name)
+                    # Apply it to the function and call immediately
+                    return actual_decorator(func)(*args, **kwargs)
+                else:
+                    # No tracing - just call the function
+                    return func(*args, **kwargs)
+
+            @functools.wraps(func)
+            async def async_wrapper(*args, **kwargs):
+                # Check configuration at execution time, not decoration time
+                if self._configured and self.tracing_resource:
+                    # Get the actual decorator from the tracing resource
+                    actual_decorator = self.tracing_resource.trace(name)
+                    # Apply it to the function and call immediately
+                    return await actual_decorator(func)(*args, **kwargs)
+                else:
+                    # No tracing - just call the function
+                    return await func(*args, **kwargs)
+
+            # Return the appropriate wrapper based on whether the function is async
+            if inspect.iscoroutinefunction(func):
+                return async_wrapper
+            else:
+                return sync_wrapper
+
+        return decorator
 
     def force_flush(self):
         """
