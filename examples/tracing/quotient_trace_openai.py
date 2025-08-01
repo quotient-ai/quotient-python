@@ -11,6 +11,7 @@ quotient.tracer.init(
     instruments=[OpenAIInstrumentor()],
 )
 
+
 @quotient.trace()
 def test_openai():
     client = openai.OpenAI()
@@ -23,8 +24,9 @@ def test_openai():
     )
 
     for chunk in response:
-            if chunk.choices and (content := chunk.choices[0].delta.content):
-                print(content, end="")
+        if chunk.choices and (content := chunk.choices[0].delta.content):
+            print(content, end="")
+
 
 if __name__ == "__main__":
     test_openai()

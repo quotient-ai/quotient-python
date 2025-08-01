@@ -11,9 +11,13 @@ import traceback
 # Configure logger to print to stdout
 logger = logging.getLogger(__name__)
 handler = logging.StreamHandler()
-handler.setFormatter(logging.Formatter('%(asctime)s %(levelname)s:%(name)s: %(message)s'))
+handler.setFormatter(
+    logging.Formatter("%(asctime)s %(levelname)s:%(name)s: %(message)s")
+)
 logger.addHandler(handler)
-logger.setLevel(logging.ERROR)  # Only log errors since we're using error level in our code
+logger.setLevel(
+    logging.ERROR
+)  # Only log errors since we're using error level in our code
 
 from tenacity import (
     retry,
@@ -164,7 +168,9 @@ def _parse_unprocessable_entity_error(response: httpx.Response) -> None:
     try:
         body = response.json()
     except ValueError:
-        logger.error(f"API Response Validation Error: Invalid JSON\n{traceback.format_exc()}")
+        logger.error(
+            f"API Response Validation Error: Invalid JSON\n{traceback.format_exc()}"
+        )
         return None
 
     # ensure we surface what fields are missing and are required
@@ -179,7 +185,9 @@ def _parse_unprocessable_entity_error(response: httpx.Response) -> None:
             message = f"missing required fields: {', '.join(missing_fields)}"
             return message
     else:
-        logger.error(f"API Response Validation Error: Missing detail in response\n{traceback.format_exc()}")
+        logger.error(
+            f"API Response Validation Error: Missing detail in response\n{traceback.format_exc()}"
+        )
         return None
 
 
@@ -187,14 +195,18 @@ def _parse_bad_request_error(response: httpx.Response) -> None:
     try:
         body = response.json()
     except ValueError:
-        logger.error(f"API Response Validation Error: Invalid JSON\n{traceback.format_exc()}")
+        logger.error(
+            f"API Response Validation Error: Invalid JSON\n{traceback.format_exc()}"
+        )
         return None
 
     if "detail" in body:
         message = body["detail"]
         return message
     else:
-        logger.error(f"API Response Validation Error: Missing detail in response\n{traceback.format_exc()}")
+        logger.error(
+            f"API Response Validation Error: Missing detail in response\n{traceback.format_exc()}"
+        )
         return None
 
 
@@ -218,20 +230,30 @@ def handle_errors(func):
                 logger.error(f"Bad request error: {message}\n{traceback.format_exc()}")
                 return None
             elif exc.response.status_code == 401:
-                logger.error(f"unauthorized: the request requires user authentication. ensure your API key is correct. {exc.response.text}\n{traceback.format_exc()}")
+                logger.error(
+                    f"unauthorized: the request requires user authentication. ensure your API key is correct. {exc.response.text}\n{traceback.format_exc()}"
+                )
                 return None
             elif exc.response.status_code == 403:
-                logger.error(f"forbidden: the server understood the request, but it refuses to authorize it. {exc.response.text}\n{traceback.format_exc()}")
+                logger.error(
+                    f"forbidden: the server understood the request, but it refuses to authorize it. {exc.response.text}\n{traceback.format_exc()}"
+                )
                 return None
             elif exc.response.status_code == 404:
-                logger.error(f"not found: the server can not find the requested resource. {exc.response.text}\n{traceback.format_exc()}")
+                logger.error(
+                    f"not found: the server can not find the requested resource. {exc.response.text}\n{traceback.format_exc()}"
+                )
                 return None
             elif exc.response.status_code == 422:
                 message = _parse_unprocessable_entity_error(exc.response)
-                logger.error(f"Unprocessable entity error: {message}\n{traceback.format_exc()}")
+                logger.error(
+                    f"Unprocessable entity error: {message}\n{traceback.format_exc()}"
+                )
                 return None
             else:
-                logger.error(f"Unexpected status code {exc.response.status_code}. contact support@quotientai.co for help. {exc.response.text}\n{traceback.format_exc()}")
+                logger.error(
+                    f"Unexpected status code {exc.response.status_code}. contact support@quotientai.co for help. {exc.response.text}\n{traceback.format_exc()}"
+                )
                 return None
 
         except httpx.ReadTimeout as exc:  # pragma: no cover
@@ -239,7 +261,9 @@ def handle_errors(func):
             return None  # pragma: no cover
 
         except httpx.RequestError as exc:
-            logger.error(f"connection error. please try again later. {exc}\n{traceback.format_exc()}")
+            logger.error(
+                f"connection error. please try again later. {exc}\n{traceback.format_exc()}"
+            )
             return None
 
     return wrapper
@@ -269,20 +293,30 @@ def handle_async_errors(func):
                 logger.error(f"Bad request error: {message}\n{traceback.format_exc()}")
                 return None
             elif exc.response.status_code == 401:
-                logger.error(f"unauthorized: the request requires user authentication. ensure your API key is correct. {exc.response.text}\n{traceback.format_exc()}")
+                logger.error(
+                    f"unauthorized: the request requires user authentication. ensure your API key is correct. {exc.response.text}\n{traceback.format_exc()}"
+                )
                 return None
             elif exc.response.status_code == 403:
-                logger.error(f"forbidden: the server understood the request, but it refuses to authorize it. {exc.response.text}\n{traceback.format_exc()}")
+                logger.error(
+                    f"forbidden: the server understood the request, but it refuses to authorize it. {exc.response.text}\n{traceback.format_exc()}"
+                )
                 return None
             elif exc.response.status_code == 404:
-                logger.error(f"not found: the server can not find the requested resource. {exc.response.text}\n{traceback.format_exc()}")
+                logger.error(
+                    f"not found: the server can not find the requested resource. {exc.response.text}\n{traceback.format_exc()}"
+                )
                 return None
             elif exc.response.status_code == 422:
                 message = _parse_unprocessable_entity_error(exc.response)
-                logger.error(f"Unprocessable entity error: {message}\n{traceback.format_exc()}")
+                logger.error(
+                    f"Unprocessable entity error: {message}\n{traceback.format_exc()}"
+                )
                 return None
             else:
-                logger.error(f"Unexpected status code {exc.response.status_code}. contact support@quotientai.co for help. {exc.response.text}\n{traceback.format_exc()}")
+                logger.error(
+                    f"Unexpected status code {exc.response.status_code}. contact support@quotientai.co for help. {exc.response.text}\n{traceback.format_exc()}"
+                )
                 return None
 
         except httpx.ReadTimeout as exc:  # pragma: no cover
@@ -290,7 +324,9 @@ def handle_async_errors(func):
             return None  # pragma: no cover
 
         except httpx.RequestError as exc:
-            logger.error(f"connection error. please try again later. {exc}\n{traceback.format_exc()}")
+            logger.error(
+                f"connection error. please try again later. {exc}\n{traceback.format_exc()}"
+            )
             return None
 
     return wrapper

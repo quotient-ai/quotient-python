@@ -27,7 +27,12 @@ from quotientai.exceptions import logger
 from quotientai._constants import TRACER_NAME, DEFAULT_TRACING_ENDPOINT
 
 # Import the new instrumentors
-from quotientai.tracing.instrumentation import ChromaInstrumentor, PineconeInstrumentor, QdrantInstrumentor
+from quotientai.tracing.instrumentation import (
+    ChromaInstrumentor,
+    PineconeInstrumentor,
+    QdrantInstrumentor,
+)
+
 
 @contextlib.contextmanager
 def start_span(name: str):
@@ -57,7 +62,13 @@ class TracingResource:
         self._detections = None
         atexit.register(self._cleanup)
 
-    def configure(self, app_name: str, environment: str, instruments: Optional[list] = None, detections: Optional[list] = None):
+    def configure(
+        self,
+        app_name: str,
+        environment: str,
+        instruments: Optional[list] = None,
+        detections: Optional[list] = None,
+    ):
         """
         Configure the tracing resource with app_name, environment, and instruments.
         This allows the trace decorator to be used without parameters.
@@ -78,7 +89,13 @@ class TracingResource:
         self._instruments = instruments
         self._detections = ",".join(detections) if detections else None
 
-    def init(self, app_name: str, environment: str, instruments: Optional[list] = None, detections: Optional[list] = None):
+    def init(
+        self,
+        app_name: str,
+        environment: str,
+        instruments: Optional[list] = None,
+        detections: Optional[list] = None,
+    ):
         """
         Initialize tracing with app_name, environment, and instruments.
         This is a convenience method that calls configure and then sets up the collector.
@@ -90,7 +107,7 @@ class TracingResource:
     def get_vector_db_instrumentors(self):
         """
         Get a list of available vector database instrumentors.
-        
+
         Returns:
             dict: Dictionary containing available instrumentors
         """
@@ -103,12 +120,12 @@ class TracingResource:
     def instrument_vector_dbs(self, *db_names):
         """
         Instrument specific vector databases.
-        
+
         Args:
             *db_names: Names of vector databases to instrument ('chroma', 'pinecone', 'qdrant')
         """
         available_instrumentors = self.get_vector_db_instrumentors()
-        
+
         for db_name in db_names:
             if db_name.lower() in available_instrumentors:
                 instrumentor = available_instrumentors[db_name.lower()]
@@ -124,19 +141,23 @@ class TracingResource:
         """
         return OTLPSpanExporter(endpoint=endpoint, headers=headers)
 
-
     def _get_user(self):
         """
         Get user_id from client.
         Returns the user_id or None if not found.
         """
-        if hasattr(self._client, '_user'):
+        if hasattr(self._client, "_user"):
             return self._client._user
         return "None"
 
-
     @functools.lru_cache()
-    def _setup_auto_collector(self, app_name: str, environment: str, instruments: Optional[tuple] = None, detections: Optional[str] = None):
+    def _setup_auto_collector(
+        self,
+        app_name: str,
+        environment: str,
+        instruments: Optional[tuple] = None,
+        detections: Optional[str] = None,
+    ):
         """
         Automatically setup OTLP exporter to send traces to collector
         """
@@ -145,23 +166,26 @@ class TracingResource:
             current_provider = get_tracer_provider()
 
             # Only set up if not already configured (avoid double setup)
-            if not hasattr(current_provider, '_span_processors') or not current_provider._span_processors:
-                
+            if (
+                not hasattr(current_provider, "_span_processors")
+                or not current_provider._span_processors
+            ):
+
                 # Create resource with quotient attributes
                 resource_attributes = {
                     QuotientAttributes.app_name: app_name,
                     QuotientAttributes.environment: environment,
                     QuotientAttributes.user: self._get_user(),
                 }
-                
+
                 if detections is not None:
                     resource_attributes[QuotientAttributes.detections] = detections
-                
+
                 resource = Resource.create(resource_attributes)
-                
+
                 # Create TracerProvider with the resource
                 tracer_provider = TracerProvider(resource=resource)
-                
+
                 # Get collector endpoint from environment or use default
                 exporter_endpoint = os.environ.get(
                     "OTEL_EXPORTER_OTLP_ENDPOINT",
@@ -175,11 +199,15 @@ class TracingResource:
                 }
                 if "OTEL_EXPORTER_OTLP_HEADERS" in os.environ:
                     try:
-                        env_headers = json.loads(os.environ["OTEL_EXPORTER_OTLP_HEADERS"])
+                        env_headers = json.loads(
+                            os.environ["OTEL_EXPORTER_OTLP_HEADERS"]
+                        )
                         if isinstance(env_headers, dict):
                             headers.update(env_headers)
                     except json.JSONDecodeError:
-                        logger.warning("failed to parse OTEL_EXPORTER_OTLP_HEADERS, using default headers")
+                        logger.warning(
+                            "failed to parse OTEL_EXPORTER_OTLP_HEADERS, using default headers"
+                        )
 
                 # Configure OTLP exporter to send to collector
                 otlp_exporter = self._create_otlp_exporter(exporter_endpoint, headers)
@@ -187,7 +215,7 @@ class TracingResource:
                 # Use batch processor for better performance
                 span_processor = BatchSpanProcessor(otlp_exporter)
                 tracer_provider.add_span_processor(span_processor)
-                
+
                 # Set the global tracer provider
                 set_tracer_provider(tracer_provider)
 
@@ -195,10 +223,12 @@ class TracingResource:
                 if instruments:
                     for instrument in instruments:
                         instrument.instrument()
-            
+
             # Initialize tracer if not already done
             if self.tracer is None:
-                self.tracer = get_tracer(TRACER_NAME, tracer_provider=get_tracer_provider())
+                self.tracer = get_tracer(
+                    TRACER_NAME, tracer_provider=get_tracer_provider()
+                )
 
         except Exception as e:
             logger.error(f"Failed to setup tracing: {str(e)}")
@@ -208,26 +238,28 @@ class TracingResource:
     def trace(self, name: Optional[str] = None):
         """
         Decorator to trace function calls for Quotient.
-        
+
         The TracingResource must be pre-configured via the configure() method
         before using this decorator.
-        
+
         Args:
             name: Optional custom name for the span. If not provided, uses func.__qualname__
-        
+
         Example:
             quotient.tracer.init(app_name="my_app", environment="prod")
             @quotient.trace()
             def my_function():
                 pass
-            
+
             @quotient.trace('myagent')
             def my_other_function():
                 pass
         """
         # Use only configured values - no parameters accepted
         if not self._app_name or not self._environment:
-            logger.error("tracer must be initialized with valid inputs before using trace(). Double check your inputs and try again.")
+            logger.error(
+                "tracer must be initialized with valid inputs before using trace(). Double check your inputs and try again."
+            )
             return lambda func: func
 
         def decorator(func):
@@ -239,7 +271,11 @@ class TracingResource:
                 self._setup_auto_collector(
                     app_name=self._app_name,
                     environment=self._environment,
-                    instruments=tuple(self._instruments) if self._instruments is not None else None,
+                    instruments=(
+                        tuple(self._instruments)
+                        if self._instruments is not None
+                        else None
+                    ),
                     detections=self._detections,
                 )
 
@@ -255,7 +291,7 @@ class TracingResource:
                     finally:
                         trace_id = root_span.get_span_context().trace_id
                         self._create_end_of_trace_span(trace_id)
-                        
+
                         # here we can log the call once we have the result.
                         # TODO: add otel support for quotient logging
                         pass
@@ -267,7 +303,11 @@ class TracingResource:
                 self._setup_auto_collector(
                     app_name=self._app_name,
                     environment=self._environment,
-                    instruments=tuple(self._instruments) if self._instruments is not None else None,
+                    instruments=(
+                        tuple(self._instruments)
+                        if self._instruments is not None
+                        else None
+                    ),
                     detections=self._detections,
                 )
 
@@ -282,7 +322,7 @@ class TracingResource:
                     finally:
                         trace_id = root_span.get_span_context().trace_id
                         self._create_end_of_trace_span(trace_id)
-                        
+
                         # here we can log the call once we have the result.
                         # TODO: add otel support for quotient logging
                         pass
@@ -304,7 +344,7 @@ class TracingResource:
         if self.tracer is not None:
             try:
                 provider = get_tracer_provider()
-                if hasattr(provider, 'shutdown'):
+                if hasattr(provider, "shutdown"):
                     provider.shutdown()
                 self.tracer = None
             except Exception as e:
@@ -324,7 +364,7 @@ class TracingResource:
         """
         try:
             provider = get_tracer_provider()
-            if hasattr(provider, 'force_flush'):
+            if hasattr(provider, "force_flush"):
                 provider.force_flush()
             logger.info("Forced flush of pending spans")
         except Exception as e:
@@ -336,7 +376,7 @@ class TracingResource:
             with self.tracer.start_as_current_span("quotient.end_of_trace") as span:
                 span.set_attribute("quotient.trace.complete", True)
                 span.set_attribute("quotient.trace.marker", True)
-                span.set_attribute("quotient.trace.id", format(trace_id, '032x'))
+                span.set_attribute("quotient.trace.id", format(trace_id, "032x"))
                 span.set_attribute("quotient.marker.timestamp", time.time_ns())
         except Exception as _:
             pass
