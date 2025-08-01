@@ -4,7 +4,6 @@ from openinference.instrumentation.openai import OpenAIInstrumentor
 
 from quotientai import QuotientAI
 
-# Initialize with lazy_init=True to avoid errors if API key is not available at build time
 quotient = QuotientAI()
 
 quotient.tracer.init(
@@ -13,7 +12,6 @@ quotient.tracer.init(
     instruments=[OpenAIInstrumentor()],
 )
 
-# Apply decorator at module level - it will be a no-op until client is configured
 @quotient.trace()
 def main():
     client = openai.OpenAI()
