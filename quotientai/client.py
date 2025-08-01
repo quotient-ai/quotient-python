@@ -144,7 +144,9 @@ class _BaseQuotientClient(httpx.Client):
         """Send a POST request to the specified path."""
         self._update_auth_header()
 
-        if isinstance(data, dict):
+        if data is None:
+            data = {}
+        elif isinstance(data, dict):
             data = {k: v for k, v in data.items() if v is not None}
         elif isinstance(data, list):
             data = [v for v in data if v is not None]
@@ -163,7 +165,12 @@ class _BaseQuotientClient(httpx.Client):
         """Send a PATCH request to the specified path."""
         self._update_auth_header()
 
-        data = {k: v for k, v in data.items() if v is not None}
+        if data is None:
+            data = {}
+        elif isinstance(data, dict):
+            data = {k: v for k, v in data.items() if v is not None}
+        elif isinstance(data, list):
+            data = [v for v in data if v is not None]
 
         response = self.patch(
             url=path,

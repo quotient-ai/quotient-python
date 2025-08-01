@@ -39,7 +39,7 @@ def setup_quotient():
 
     # Initialize the tracer with instruments
     quotient.tracer.init(
-        app_name="freddie-trace-openai-test",
+        app_name="quotient-trace-openai-lazyinit",
         environment="dev",
         instruments=[OpenAIInstrumentor()],
     )
