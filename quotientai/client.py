@@ -144,9 +144,7 @@ class _BaseQuotientClient(httpx.Client):
         """Send a POST request to the specified path."""
         self._update_auth_header()
 
-        if data is None:
-            data = {}
-        elif isinstance(data, dict):
+        if isinstance(data, dict):
             data = {k: v for k, v in data.items() if v is not None}
         elif isinstance(data, list):
             data = [v for v in data if v is not None]
@@ -165,10 +163,8 @@ class _BaseQuotientClient(httpx.Client):
         """Send a PATCH request to the specified path."""
         self._update_auth_header()
 
-        if data is None:
-            data = {}
-        else:
-            data = {k: v for k, v in data.items() if v is not None}
+        data = {k: v for k, v in data.items() if v is not None}
+
         response = self.patch(
             url=path,
             json=data,
@@ -208,7 +204,7 @@ class QuotientLogger:
         *,
         app_name: str,
         environment: str,
-        tags: Optional[Dict[str, Any]] = None,
+        tags: Optional[Dict[str, Any]] = {},
         sample_rate: float = 1.0,
         # New detection parameters (recommended)
         detections: Optional[List[DetectionType]] = None,
@@ -333,7 +329,7 @@ class QuotientLogger:
         documents: List[Union[str, LogDocument]] = None,
         message_history: Optional[List[Dict[str, Any]]] = None,
         instructions: Optional[List[str]] = None,
-        tags: Optional[Dict[str, Any]] = None,
+        tags: Optional[Dict[str, Any]] = {},
         hallucination_detection: Optional[bool] = None,
         inconsistency_detection: Optional[bool] = None,
     ):
@@ -708,7 +704,7 @@ class QuotientAI:
         documents: Optional[List[Union[str, LogDocument]]] = None,
         message_history: Optional[List[Dict[str, Any]]] = None,
         instructions: Optional[List[str]] = None,
-        tags: Optional[Dict[str, Any]] = None,
+        tags: Optional[Dict[str, Any]] = {},
     ):
         """
         Log the model interaction.

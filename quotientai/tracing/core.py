@@ -50,35 +50,6 @@ class QuotientAttributes(str, Enum):
     user = "quotient.user"
 
 
-class QuotientAttributesSpanProcessor(SpanProcessor):
-    """
-    Processor that adds Quotient-specific attributes to all spans, including:
-
-    - `app_name`
-    - `environment`
-
-    Which are all required for tracing.
-    """
-
-    app_name: str
-    environment: str
-
-    def __init__(self, app_name: str, environment: str):
-        self.app_name = app_name
-        self.environment = environment
-
-    def on_start(
-        self, span: Span, parent_context: Optional[otel_context.Context] = None
-    ) -> None:
-        attributes = {
-            QuotientAttributes.app_name: self.app_name,
-            QuotientAttributes.environment: self.environment,
-        }
-
-        span.set_attributes(attributes)
-        super().on_start(span, parent_context)
-
-
 class TracingResource:
 
     def __init__(self, client):
