@@ -1,8 +1,9 @@
-import gzip
 import json
-from typing import List, Optional, Dict, Any
+import re
+
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, timedelta
+from typing import Any, Dict, List, Optional
 
 from quotientai.exceptions import logger
 
@@ -98,7 +99,7 @@ class TracesResource:
         List traces with optional filtering parameters.
 
         Args:
-            time_range: Optional time range filter (e.g., "1 DAY", "30 MINUTES")
+            time_range: Optional time range filter (e.g., "1d", "1h", "1m")
             app_name: Optional app name filter
             environments: Optional list of environments to filter by
             compress: Whether to request compressed response
@@ -110,6 +111,11 @@ class TracesResource:
             params = {}
             if time_range:
                 params["time_range"] = time_range
+                # convert time range from 1d / 1h / 1m to 1 DAY / 1 HOUR / 1 MINUTE, months to MONTHS
+                params["time_range"] = params["time_range"].replace("d", " DAY").replace("h", " HOUR").replace("m", " MINUTE").replace("M", " MONTHS")
+                # add a space between the number and the unit
+                params["time_range"] = re.sub(r'(\d+)([a-zA-Z]+)', r'\1 \2', params["time_range"])
+                
             if app_name:
                 params["app_name"] = app_name
             if environments:
