@@ -14,24 +14,20 @@ class Trace:
     """
     
     trace_id: str
-    user_id: str
     root_span: Optional[Dict[str, Any]] = None
-    spans_by_id: Dict[str, Any] = None
     total_duration_ms: float = 0
     start_time: Optional[datetime] = None
     end_time: Optional[datetime] = None
     span_list: List[Dict[str, Any]] = None
     
     def __post_init__(self):
-        if self.spans_by_id is None:
-            self.spans_by_id = {}
         if self.span_list is None:
             self.span_list = []
     
     def __rich_repr__(self):  # pragma: no cover
-        yield "trace_id", self.trace_id
-        yield "user_id", self.user_id
+        yield "id", self.trace_id
         yield "total_duration_ms", self.total_duration_ms
+
         if self.start_time:
             yield "start_time", self.start_time
         if self.end_time:
@@ -48,7 +44,7 @@ class Traces:
         self.count = count
 
     def __repr__(self):
-        return f"Traces(count={self.count}, data={type(self.data)})"
+        return f"Traces(count={self.count}, data=[{type(self.data[0] if self.data else None)}])"
     
     def to_jsonl(self, filename: Optional[str] = None) -> str:
         """
@@ -65,9 +61,7 @@ class Traces:
             # Convert Trace object to dict for JSON serialization
             trace_dict = {
                 "trace_id": trace.trace_id,
-                "user_id": trace.user_id,
                 "root_span": trace.root_span,
-                "spans_by_id": trace.spans_by_id,
                 "total_duration_ms": trace.total_duration_ms,
                 "start_time": trace.start_time.isoformat() if trace.start_time else None,
                 "end_time": trace.end_time.isoformat() if trace.end_time else None,
@@ -145,9 +139,7 @@ class TracesResource:
                 
                 trace = Trace(
                     trace_id=trace_dict["trace_id"],
-                    user_id=trace_dict["user_id"],
                     root_span=trace_dict.get("root_span"),
-                    spans_by_id=trace_dict.get("spans_by_id", {}),
                     total_duration_ms=trace_dict.get("total_duration_ms", 0),
                     start_time=start_time,
                     end_time=end_time,
@@ -194,9 +186,7 @@ class TracesResource:
             
             trace = Trace(
                 trace_id=trace_dict["trace_id"],
-                user_id=trace_dict["user_id"],
                 root_span=trace_dict.get("root_span"),
-                spans_by_id=trace_dict.get("spans_by_id", {}),
                 total_duration_ms=trace_dict.get("total_duration_ms", 0),
                 start_time=start_time,
                 end_time=end_time,
