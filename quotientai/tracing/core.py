@@ -1,13 +1,13 @@
+import atexit
 import contextlib
 import functools
 import inspect
 import json
 import os
-import atexit
 import time
+
 from enum import Enum
 from typing import Optional
-
 
 from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
 

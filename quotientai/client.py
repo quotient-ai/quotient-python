@@ -618,6 +618,7 @@ class QuotientAI:
         self.auth = None
         self.logs = None
         self.tracing = None
+        self.traces = None
         self.logger = None
 
         # Always create a tracer instance for lazy_init mode to avoid decorator errors
@@ -660,6 +661,7 @@ class QuotientAI:
             self.auth = resources.AuthResource(_client)
             self.logs = resources.LogsResource(_client)
             self.tracing = resources.TracingResource(_client)
+            self.traces = resources.TracesResource(_client)
 
             # Create an unconfigured logger instance.
             self.logger = QuotientLogger(self.logs)
