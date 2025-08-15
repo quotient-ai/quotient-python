@@ -99,7 +99,7 @@ class TracesResource:
         List traces with optional filtering parameters.
 
         Args:
-            time_range: Optional time range filter (e.g., "1d", "1h", "1m")
+            time_range: Optional time range filter (e.g., "1d", "30m", "6M"). Valid units: "d" for days, "m" for minutes, "M" for months. Hours are not supported.
             app_name: Optional app name filter
             environments: Optional list of environments to filter by
             compress: Whether to request compressed response
@@ -111,10 +111,23 @@ class TracesResource:
             params = {}
             if time_range:
                 params["time_range"] = time_range
-                # convert time range from 1d / 1h / 1m to 1 DAY / 1 HOUR / 1 MINUTE, months to MONTHS
-                params["time_range"] = params["time_range"].replace("d", " DAY").replace("h", " HOUR").replace("m", " MINUTE").replace("M", " MONTHS")
-                # add a space between the number and the unit
+                # First add spaces between numbers and units using regex
                 params["time_range"] = re.sub(r'(\d+)([a-zA-Z]+)', r'\1 \2', params["time_range"])
+                # Then convert time range with proper pluralization
+                # Extract number and unit, then convert with pluralization
+                match = re.match(r'(\d+)\s+([a-zA-Z]+)', params["time_range"])
+                if match:
+                    number = int(match.group(1))
+                    unit = match.group(2)
+                    
+                    # Convert units with pluralization
+                    if unit == "d":
+                        params["time_range"] = f"{number} {'DAY' if number == 1 else 'DAYS'}"
+                    elif unit == "m":
+                        params["time_range"] = f"{number} {'MINUTE' if number == 1 else 'MINUTES'}"
+                    elif unit == "M":
+                        params["time_range"] = f"{number} {'MONTH' if number == 1 else 'MONTHS'}"
+                    # Note: 'h' (hours) is not a valid unit, so we don't handle it
                 
             if app_name:
                 params["app_name"] = app_name
