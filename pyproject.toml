@@ -1,10 +1,9 @@
 [tool.poetry]
 name = "quotientai"
-version = "0.4.8"
+version = "0.4.9"
 authors = [
     "Freddie Vargus <freddie@quotientai.co>",
-    "Michael Goitia Sarmiento <mike@quotientai.co>",
-    "Chiraag Rekhari <chiraag@quotientai.co>"
+    "Michael Goitia Sarmiento <mike@quotientai.co>"
 ]
 description = "Python library for tracing, logging, and detecting problems with AI Agents"
 readme = "README.md"
@@ -42,6 +41,7 @@ build-backend = "poetry.core.masonry.api"
 
 [tool.poetry.scripts]
 quotient = "quotientai.cli.entrypoint:app"
+
 
 
 
