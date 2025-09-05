@@ -19,10 +19,15 @@ from opentelemetry.trace import (
     set_tracer_provider,
     get_tracer,
     get_tracer_provider,
+    get_current_span,
+    set_span_in_context,
 )
+
+from opentelemetry.context import attach, detach, get_current
 
 from quotientai.exceptions import logger
 from quotientai._constants import TRACER_NAME, DEFAULT_TRACING_ENDPOINT
+from quotientai._context_utils import ContextObject
 
 # Import the new instrumentors
 from quotientai.tracing.instrumentation import (
@@ -31,14 +36,28 @@ from quotientai.tracing.instrumentation import (
     QdrantInstrumentor,
 )
 
+# Global context object for trace context propagation
+_trace_context = ContextObject("quotient_trace_context")
+
 
 @contextlib.contextmanager
 def start_span(name: str):
     """
     Context manager to start a span.
     """
-    with get_tracer(TRACER_NAME).start_as_current_span(name) as span:
-        yield span
+    tracer = get_tracer(TRACER_NAME)
+    current_context = _trace_context.get()
+    
+    if current_context is not None:
+        # We're in an existing trace, create a child span
+        with tracer.start_as_current_span(name) as span:
+            with _trace_context.using(span):
+                yield span
+    else:
+        # This is a root span
+        with tracer.start_as_current_span(name) as span:
+            with _trace_context.using(span):
+                yield span
 
 
 class QuotientAttributes(str, Enum):
@@ -290,20 +309,38 @@ class TracingResource:
                 if self.tracer is None:
                     return func(*args, **kwargs)
 
-                with self.tracer.start_as_current_span(span_name) as root_span:
-                    try:
-                        result = func(*args, **kwargs)
-                    except Exception as e:
-                        raise e
-                    finally:
-                        trace_id = root_span.get_span_context().trace_id
-                        self._create_end_of_trace_span(trace_id)
+                # Check if we're already in a trace context
+                current_context = _trace_context.get()
+                if current_context is not None:
+                    # We're in an existing trace, create a child span
+                    with self.tracer.start_as_current_span(span_name) as span:
+                        # Store the context for nested calls
+                        with _trace_context.using(span):
+                            try:
+                                result = func(*args, **kwargs)
+                            except Exception as e:
+                                raise e
+                            finally:
+                                # Only create end-of-trace span for root spans
+                                pass
+                        return result
+                else:
+                    # This is a root span
+                    with self.tracer.start_as_current_span(span_name) as root_span:
+                        # Store the context for nested calls
+                        with _trace_context.using(root_span):
+                            try:
+                                result = func(*args, **kwargs)
+                            except Exception as e:
+                                raise e
+                            finally:
+                                trace_id = root_span.get_span_context().trace_id
+                                self._create_end_of_trace_span(trace_id)
 
-                        # here we can log the call once we have the result.
-                        # TODO: add otel support for quotient logging
-                        pass
-
-                return result
+                                # here we can log the call once we have the result.
+                                # TODO: add otel support for quotient logging
+                                pass
+                        return result
 
             @functools.wraps(func)
             async def async_func_wrapper(*args, **kwargs):
@@ -321,20 +358,38 @@ class TracingResource:
                 if self.tracer is None:
                     return await func(*args, **kwargs)
 
-                with self.tracer.start_as_current_span(span_name) as root_span:
-                    try:
-                        result = await func(*args, **kwargs)
-                    except Exception as e:
-                        raise e
-                    finally:
-                        trace_id = root_span.get_span_context().trace_id
-                        self._create_end_of_trace_span(trace_id)
+                # Check if we're already in a trace context
+                current_context = _trace_context.get()
+                if current_context is not None:
+                    # We're in an existing trace, create a child span
+                    with self.tracer.start_as_current_span(span_name) as span:
+                        # Store the context for nested calls
+                        with _trace_context.using(span):
+                            try:
+                                result = await func(*args, **kwargs)
+                            except Exception as e:
+                                raise e
+                            finally:
+                                # Only create end-of-trace span for root spans
+                                pass
+                        return result
+                else:
+                    # This is a root span
+                    with self.tracer.start_as_current_span(span_name) as root_span:
+                        # Store the context for nested calls
+                        with _trace_context.using(root_span):
+                            try:
+                                result = await func(*args, **kwargs)
+                            except Exception as e:
+                                raise e
+                            finally:
+                                trace_id = root_span.get_span_context().trace_id
+                                self._create_end_of_trace_span(trace_id)
 
-                        # here we can log the call once we have the result.
-                        # TODO: add otel support for quotient logging
-                        pass
-
-                return result
+                                # here we can log the call once we have the result.
+                                # TODO: add otel support for quotient logging
+                                pass
+                        return result
 
             if inspect.iscoroutinefunction(func):
                 return async_func_wrapper
