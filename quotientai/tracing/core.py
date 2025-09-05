@@ -39,16 +39,25 @@ from quotientai.tracing.instrumentation import (
 # Global context object for trace context propagation
 _trace_context = ContextObject("quotient_trace_context")
 
+def get_tracer_or_none():
+    """Get the global tracer or None if not available."""
+    # Always return the global tracer, not the current context
+    return _trace_context._global
+
 
 @contextlib.contextmanager
 def start_span(name: str):
     """
     Context manager to start a span.
     """
-    tracer = get_tracer(TRACER_NAME)
-    current_context = _trace_context.get()
+    tracer = get_tracer_or_none()
+    if tracer is None:
+        yield None
+        return
     
-    if current_context is not None:
+    # Always use the tracer to create spans, but check if we're in a trace context
+    current_context = _trace_context.get()
+    if current_context is not None and hasattr(current_context, 'get_span_context'):
         # We're in an existing trace, create a child span
         with tracer.start_as_current_span(name) as span:
             with _trace_context.using(span):
@@ -120,6 +129,10 @@ class TracingResource:
         self.configure(app_name, environment, instruments, detections)
         detections_str = ",".join(detections) if detections else None
         self._setup_auto_collector(app_name, environment, instruments, detections_str)
+        
+        # Set the tracer in the global context
+        if self.tracer is not None:
+            _trace_context.set_global(self.tracer)
 
     def get_vector_db_instrumentors(self):
         """
@@ -281,120 +294,93 @@ class TracingResource:
             def my_other_function():
                 pass
         """
-        # Use only configured values - no parameters accepted
-        if not self._app_name or not self._environment:
-            logger.error(
-                "tracer must be initialized with valid inputs before using trace(). Double check your inputs and try again."
-            )
-            return lambda func: func
+        # We'll check initialization in the wrapper functions
 
         def decorator(func):
             span_name = name if name is not None else func.__qualname__
 
             @functools.wraps(func)
-            def sync_func_wrapper(*args, **kwargs):
-
-                self._setup_auto_collector(
-                    app_name=self._app_name,
-                    environment=self._environment,
-                    instruments=(
-                        tuple(self._instruments)
-                        if self._instruments is not None
-                        else None
-                    ),
-                    detections=self._detections,
-                )
-
-                # if there is no tracer, just run the function normally
-                if self.tracer is None:
+            def wrapper_sync(*args, **kwargs):
+                tracer = get_tracer_or_none()
+                if tracer is None:
                     return func(*args, **kwargs)
 
-                # Check if we're already in a trace context
+                # Always use the tracer to create spans, but check if we're in a trace context
                 current_context = _trace_context.get()
-                if current_context is not None:
+                if current_context is not None and hasattr(current_context, 'get_span_context'):
                     # We're in an existing trace, create a child span
-                    with self.tracer.start_as_current_span(span_name) as span:
-                        # Store the context for nested calls
+                    with tracer.start_as_current_span(span_name) as span:
                         with _trace_context.using(span):
-                            try:
-                                result = func(*args, **kwargs)
-                            except Exception as e:
-                                raise e
-                            finally:
-                                # Only create end-of-trace span for root spans
-                                pass
-                        return result
+                            return func(*args, **kwargs)
                 else:
                     # This is a root span
-                    with self.tracer.start_as_current_span(span_name) as root_span:
-                        # Store the context for nested calls
+                    with tracer.start_as_current_span(span_name) as root_span:
                         with _trace_context.using(root_span):
                             try:
                                 result = func(*args, **kwargs)
-                            except Exception as e:
-                                raise e
                             finally:
                                 trace_id = root_span.get_span_context().trace_id
                                 self._create_end_of_trace_span(trace_id)
-
-                                # here we can log the call once we have the result.
-                                # TODO: add otel support for quotient logging
-                                pass
-                        return result
+                            return result
 
             @functools.wraps(func)
-            async def async_func_wrapper(*args, **kwargs):
-                self._setup_auto_collector(
-                    app_name=self._app_name,
-                    environment=self._environment,
-                    instruments=(
-                        tuple(self._instruments)
-                        if self._instruments is not None
-                        else None
-                    ),
-                    detections=self._detections,
-                )
-
-                if self.tracer is None:
+            async def wrapper_async(*args, **kwargs):
+                tracer = get_tracer_or_none()
+                if tracer is None:
                     return await func(*args, **kwargs)
 
-                # Check if we're already in a trace context
+                # Always use the tracer to create spans, but check if we're in a trace context
                 current_context = _trace_context.get()
-                if current_context is not None:
+                if current_context is not None and hasattr(current_context, 'get_span_context'):
                     # We're in an existing trace, create a child span
-                    with self.tracer.start_as_current_span(span_name) as span:
-                        # Store the context for nested calls
+                    with tracer.start_as_current_span(span_name) as span:
                         with _trace_context.using(span):
-                            try:
-                                result = await func(*args, **kwargs)
-                            except Exception as e:
-                                raise e
-                            finally:
-                                # Only create end-of-trace span for root spans
-                                pass
-                        return result
+                            return await func(*args, **kwargs)
                 else:
                     # This is a root span
-                    with self.tracer.start_as_current_span(span_name) as root_span:
-                        # Store the context for nested calls
+                    with tracer.start_as_current_span(span_name) as root_span:
                         with _trace_context.using(root_span):
                             try:
                                 result = await func(*args, **kwargs)
-                            except Exception as e:
-                                raise e
+                            finally:
+                                trace_id = root_span.get_span_context().trace_id
+                                self._create_end_of_trace_span(trace_id)
+                            return result
+
+            @functools.wraps(func)
+            async def wrapper_async_gen(*args, **kwargs):
+                tracer = get_tracer_or_none()
+                if tracer is None:
+                    async for item in func(*args, **kwargs):
+                        yield item
+                    return
+
+                # Always use the tracer to create spans, but check if we're in a trace context
+                current_context = _trace_context.get()
+                if current_context is not None and hasattr(current_context, 'get_span_context'):
+                    # We're in an existing trace, create a child span
+                    with tracer.start_as_current_span(span_name) as span:
+                        with _trace_context.using(span):
+                            async for item in func(*args, **kwargs):
+                                yield item
+                else:
+                    # This is a root span
+                    with tracer.start_as_current_span(span_name) as root_span:
+                        with _trace_context.using(root_span):
+                            try:
+                                async for item in func(*args, **kwargs):
+                                    yield item
                             finally:
                                 trace_id = root_span.get_span_context().trace_id
                                 self._create_end_of_trace_span(trace_id)
 
-                                # here we can log the call once we have the result.
-                                # TODO: add otel support for quotient logging
-                                pass
-                        return result
-
-            if inspect.iscoroutinefunction(func):
-                return async_func_wrapper
-
-            return sync_func_wrapper
+            # Check for async generators first, then regular async functions
+            if inspect.isasyncgenfunction(func):
+                return wrapper_async_gen
+            elif inspect.iscoroutinefunction(func):
+                return wrapper_async
+            else:
+                return wrapper_sync
 
         return decorator
 

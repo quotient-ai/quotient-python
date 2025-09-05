@@ -8,33 +8,43 @@ from __future__ import annotations
 
 import contextlib
 import contextvars
+import threading
 from typing import Generic, Optional, TypeVar
 
 T = TypeVar("T")
 
 class ContextObject(Generic[T]):
-    """Small wrapper around :pyclass:`contextvars.ContextVar` with a global default.
+    """Small wrapper around :pyclass:`contextvars.ContextVar` with a global default and thread safety.
 
     Features
     --------
-    1. ``.set_global(value)`` sets a *process-wide* fallback value.
+    1. ``.set_global(value)`` sets a *process-wide* fallback value with thread safety.
     2. ``.using(value)`` returns a context-manager that temporarily overrides the
        value for the current context (works for threads & asyncio tasks).
     3. ``.get()`` fetches the current value, falling back to the global default
        when no local override exists – and *never* raises ``LookupError``.
+    4. Thread-safe global value management using a mutex.
     """
 
     def __init__(self, name: str):
         self._var: contextvars.ContextVar[Optional[T]] = contextvars.ContextVar(name)
         self._global: Optional[T] = None
+        self._mutex = threading.Lock()
 
     def set_global(self, value: T) -> None:
-        """Set the process-wide default value."""
-        self._global = value
+        """Set the process-wide default value with thread safety."""
+        with self._mutex:
+            self._global = value
 
     def get(self) -> Optional[T]:
         """Get the current value or *None* if neither local nor global set."""
-        return self._var.get(self._global)
+        # Try to get local context first (no lock needed for contextvars)
+        try:
+            return self._var.get()
+        except LookupError:
+            # Fall back to global value with thread safety
+            with self._mutex:
+                return self._global
 
     @contextlib.contextmanager
     def using(self, value: T):
