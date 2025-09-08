@@ -85,7 +85,16 @@ class TracingResource:
         self._app_name = app_name
         self._environment = environment
         self._instruments = instruments
-        self._detections = ",".join(detections) if detections else None
+        # Normalize detections to a comma-separated string, supporting Enum values
+        if detections:
+            try:
+                normalized = [getattr(d, "value", d) for d in detections]
+                self._detections = ",".join(normalized)
+            except Exception:
+                # Fallback: coerce to strings if unexpected types are present
+                self._detections = ",".join(str(d) for d in detections)
+        else:
+            self._detections = None
 
     def init(
         self,
@@ -98,9 +107,15 @@ class TracingResource:
         Initialize tracing with app_name, environment, and instruments.
         This is a convenience method that calls configure and then sets up the collector.
         """
+        # Reuse configure() to normalize and store detections
         self.configure(app_name, environment, instruments, detections)
-        detections_str = ",".join(detections) if detections else None
-        self._setup_auto_collector(app_name, environment, instruments, detections_str)
+        detections_str = self._detections
+        self._setup_auto_collector(
+            app_name,
+            environment,
+            tuple(instruments) if instruments is not None else None,
+            detections_str,
+        )
 
     def get_vector_db_instrumentors(self):
         """
@@ -291,6 +306,13 @@ class TracingResource:
                     return func(*args, **kwargs)
 
                 with self.tracer.start_as_current_span(span_name) as root_span:
+                    if self._detections:
+                        try:
+                            root_span.set_attribute(
+                                QuotientAttributes.detections.value, self._detections
+                            )
+                        except Exception:
+                            pass
                     try:
                         result = func(*args, **kwargs)
                     except Exception as e:
@@ -322,6 +344,13 @@ class TracingResource:
                     return await func(*args, **kwargs)
 
                 with self.tracer.start_as_current_span(span_name) as root_span:
+                    if self._detections:
+                        try:
+                            root_span.set_attribute(
+                                QuotientAttributes.detections.value, self._detections
+                            )
+                        except Exception:
+                            pass
                     try:
                         result = await func(*args, **kwargs)
                     except Exception as e:

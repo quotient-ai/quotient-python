@@ -504,6 +504,7 @@ class QuotientTracer:
                 app_name=app_name,
                 environment=environment,
                 instruments=instruments,
+                detections=detections,
             )
 
         self._configured = True
