@@ -500,7 +500,7 @@ class QuotientTracer:
 
         # Configure the underlying tracing resource (if available)
         if self.tracing_resource:
-            self.tracing_resource.configure(
+            self.tracing_resource.init(
                 app_name=app_name,
                 environment=environment,
                 instruments=instruments,
@@ -543,6 +543,27 @@ class QuotientTracer:
 
             # Call the tracing resource without parameters since it's now configured
             return self.tracing_resource.trace(name)
+
+    def start_span(self, name: str):
+        """
+        Start a span.
+        """
+        if self.lazy_init:
+            return self._create_lazy_decorator(name)
+        else:
+            # For non-lazy_init, use the original behavior
+            if not self.tracing_resource:
+                logger.error(
+                    "tracer is not configured. Please call init() before tracing."
+                )
+                return lambda func: func
+            # Warn if not configured but still allow tracing since resource is available
+            if not self._configured:
+                logger.warning(
+                    "tracer is not explicitly configured. Consider calling tracer.init() for full configuration."
+                )
+                
+            return self.tracing_resource.start_span(name)
 
     def _create_lazy_decorator(self, name: Optional[str] = None):
         """

@@ -100,7 +100,12 @@ class TracingResource:
         """
         self.configure(app_name, environment, instruments, detections)
         detections_str = ",".join(detections) if detections else None
-        self._setup_auto_collector(app_name, environment, instruments, detections_str)
+        self._setup_auto_collector(
+            app_name=app_name,
+            environment=environment,
+            instruments=tuple(instruments),
+            detections=detections_str,
+        )
 
     def get_vector_db_instrumentors(self):
         """
@@ -228,6 +233,7 @@ class TracingResource:
                 if instruments:
                     for instrument in instruments:
                         instrument.instrument()
+                        
 
             # Initialize tracer if not already done
             if self.tracer is None:
@@ -272,20 +278,19 @@ class TracingResource:
         def decorator(func):
             span_name = name if name is not None else func.__qualname__
 
+            self._setup_auto_collector(
+                app_name=self._app_name,
+                environment=self._environment,
+                instruments=(
+                    tuple(self._instruments)
+                    if self._instruments is not None
+                    else None
+                ),
+                detections=self._detections,
+            )
+
             @functools.wraps(func)
             def sync_func_wrapper(*args, **kwargs):
-
-                self._setup_auto_collector(
-                    app_name=self._app_name,
-                    environment=self._environment,
-                    instruments=(
-                        tuple(self._instruments)
-                        if self._instruments is not None
-                        else None
-                    ),
-                    detections=self._detections,
-                )
-
                 # if there is no tracer, just run the function normally
                 if self.tracer is None:
                     return func(*args, **kwargs)
@@ -307,17 +312,6 @@ class TracingResource:
 
             @functools.wraps(func)
             async def async_func_wrapper(*args, **kwargs):
-                self._setup_auto_collector(
-                    app_name=self._app_name,
-                    environment=self._environment,
-                    instruments=(
-                        tuple(self._instruments)
-                        if self._instruments is not None
-                        else None
-                    ),
-                    detections=self._detections,
-                )
-
                 if self.tracer is None:
                     return await func(*args, **kwargs)
 
@@ -342,6 +336,25 @@ class TracingResource:
             return sync_func_wrapper
 
         return decorator
+
+    def start_span(self, name: str):
+        """
+        Start a span.
+        """
+        # Initialize tracer if not already done
+        if self.tracer is None:
+            self.tracer = get_tracer(
+                TRACER_NAME, tracer_provider=get_tracer_provider()
+            )
+
+        # Use only configured values - no parameters accepted
+        if not self._app_name or not self._environment:
+            logger.error(
+                "tracer must be initialized with valid inputs before using trace(). Double check your inputs and try again."
+            )
+            return lambda func: func
+
+        return self.tracer.start_span(name)
 
     def _cleanup(self):
         """
