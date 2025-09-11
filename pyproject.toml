@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "quotientai"
-version = "0.4.10"
+version = "0.4.11"
 authors = [
     "Freddie Vargus <freddie@quotientai.co>",
     "Michael Goitia Sarmiento <mike@quotientai.co>"
@@ -41,6 +41,7 @@ build-backend = "poetry.core.masonry.api"
 
 [tool.poetry.scripts]
 quotient = "quotientai.cli.entrypoint:app"
+
 
 
 
