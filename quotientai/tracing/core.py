@@ -100,7 +100,12 @@ class TracingResource:
         """
         self.configure(app_name, environment, instruments, detections)
         detections_str = ",".join(detections) if detections else None
-        self._setup_auto_collector(app_name, environment, instruments, detections_str)
+        self._setup_auto_collector(
+            app_name=app_name,
+            environment=environment,
+            instruments=tuple(instruments),
+            detections=detections_str,
+        )
 
     def get_vector_db_instrumentors(self):
         """

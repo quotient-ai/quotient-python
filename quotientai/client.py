@@ -500,7 +500,7 @@ class QuotientTracer:
 
         # Configure the underlying tracing resource (if available)
         if self.tracing_resource:
-            self.tracing_resource.configure(
+            self.tracing_resource.init(
                 app_name=app_name,
                 environment=environment,
                 instruments=instruments,
