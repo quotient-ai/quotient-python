@@ -14,10 +14,6 @@ class AuthResource:
         # Set the user_id if successful
         if response and isinstance(response, dict) and "user_id" in response:
             self._client._user = response["user_id"]
-            print(f"✅ Authentication successful! User ID set to: {response['user_id']}")
-        else:
-            # Print what we got for debugging
-            print(f"❌ Authentication response missing user_id. Response: {response}")
 
         return response
 
