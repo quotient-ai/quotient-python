@@ -14,6 +14,10 @@ class AuthResource:
         # Set the user_id if successful
         if response and isinstance(response, dict) and "user_id" in response:
             self._client._user = response["user_id"]
+        else:
+            # Log what we got for debugging
+            from quotientai.exceptions import logger
+            logger.warning(f"Authentication response missing user_id. Response: {response}")
 
         return response
 
