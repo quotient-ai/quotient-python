@@ -147,9 +147,9 @@ class TracingResource:
     def _get_user(self):
         """
         Get user_id from client.
-        Returns the user_id or None if not found.
+        Returns the user_id or "None" if not found.
         """
-        if hasattr(self._client, "_user"):
+        if hasattr(self._client, "_user") and self._client._user is not None:
             return self._client._user
         return "None"
 
@@ -344,15 +344,16 @@ class TracingResource:
         # Initialize tracer if not already done
         if self.tracer is None:
             self.tracer = get_tracer(
-                TRACER_NAME, tracer_provider=get_tracer_provider()
+                TRACER_NAME, 
+                tracer_provider=get_tracer_provider(),
             )
 
         # Use only configured values - no parameters accepted
         if not self._app_name or not self._environment:
             logger.error(
-                "tracer must be initialized with valid inputs before using trace(). Double check your inputs and try again."
+                "tracer must be initialized with valid inputs before using start_span(). Double check your inputs and try again."
             )
-            return lambda func: func
+            return None
 
         return self.tracer.start_span(name)
 
