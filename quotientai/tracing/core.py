@@ -150,9 +150,7 @@ class TracingResource:
         Returns the user_id or "None" if not found.
         """
         if hasattr(self._client, "_user") and self._client._user is not None:
-            print(f"🔍 _get_user() returning: {self._client._user}")
             return self._client._user
-        print(f"🔍 _get_user() returning 'None' (client._user = {getattr(self._client, '_user', 'NOT_SET')})")
         return "None"
 
     @functools.lru_cache()
