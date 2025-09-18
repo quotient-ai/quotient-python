@@ -469,7 +469,10 @@ class QuotientTracer:
     """
 
     def __init__(
-        self, tracing_resource: Optional[TracingResource], lazy_init: bool = False
+        self, 
+        tracing_resource: Optional[TracingResource], 
+        lazy_init: bool = False, 
+        ensure_init_callback=None,
     ):
         self.tracing_resource = tracing_resource
         self.app_name: Optional[str] = None
@@ -478,6 +481,7 @@ class QuotientTracer:
         self.instruments: Optional[List[Any]] = None
         self.detections: Optional[List[str]] = None
         self.lazy_init = lazy_init
+        self.ensure_init_callback = ensure_init_callback
 
         self._configured = False
 
@@ -548,22 +552,23 @@ class QuotientTracer:
         """
         Start a span.
         """
-        if self.lazy_init:
-            return self._create_lazy_decorator(name)
-        else:
-            # For non-lazy_init, use the original behavior
-            if not self.tracing_resource:
-                logger.error(
-                    "tracer is not configured. Please call init() before tracing."
-                )
-                return lambda func: func
-            # Warn if not configured but still allow tracing since resource is available
-            if not self._configured:
-                logger.warning(
-                    "tracer is not explicitly configured. Consider calling tracer.init() for full configuration."
-                )
-                
-            return self.tracing_resource.start_span(name)
+        if not self._configured:
+            logger.error(
+                "tracer is not configured. Please call init() before using start_span()."
+            )
+            return None
+        
+        # For lazy_init, ensure initialization if tracing_resource is not available
+        if self.lazy_init and not self.tracing_resource and self.ensure_init_callback:
+            self.ensure_init_callback()
+        
+        if not self.tracing_resource:
+            logger.error(
+                "tracer is configured but tracing resource is not available. This may indicate an initialization issue."
+            )
+            return None
+            
+        return self.tracing_resource.start_span(name)
 
     def _create_lazy_decorator(self, name: Optional[str] = None):
         """
@@ -645,7 +650,7 @@ class QuotientAI:
         # Always create a tracer instance for lazy_init mode to avoid decorator errors
         if lazy_init:
             # Create a minimal tracer instance that can handle decorators
-            self.tracer = QuotientTracer(None, lazy_init=True)
+            self.tracer = QuotientTracer(None, lazy_init=True, ensure_init_callback=self._ensure_initialized)
         else:
             self.tracer = None
 
@@ -680,6 +685,10 @@ class QuotientAI:
         try:
             _client = _BaseQuotientClient(self.api_key)
             self.auth = resources.AuthResource(_client)
+            
+            # Authenticate FIRST to set the user ID
+            self.auth.authenticate()
+            
             self.logs = resources.LogsResource(_client)
             self.tracing = resources.TracingResource(_client)
             self.traces = resources.TracesResource(_client)
@@ -690,10 +699,16 @@ class QuotientAI:
             # Update tracer with the actual tracing resource if it was created in lazy mode
             if self.lazy_init and self.tracer:
                 self.tracer.tracing_resource = self.tracing
+                # Configure the tracing resource with the settings from the tracer
+                if self.tracer._configured:
+                    self.tracing.init(
+                        app_name=self.tracer.app_name,
+                        environment=self.tracer.environment,
+                        instruments=self.tracer.instruments,
+                    )
             else:
-                self.tracer = QuotientTracer(self.tracing, lazy_init=self.lazy_init)
+                self.tracer = QuotientTracer(self.tracing, lazy_init=self.lazy_init, ensure_init_callback=self._ensure_initialized)
 
-            self.auth.authenticate()
             self._initialized = True
         except Exception as e:
             error_msg = (
@@ -717,6 +732,7 @@ class QuotientAI:
         self._initialization_error = None
         self._ensure_initialized()
         return self
+
 
     def log(
         self,
