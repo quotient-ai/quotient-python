@@ -7,7 +7,7 @@ import enum
 import uuid
 
 from collections import deque
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from threading import Thread, Event
 from typing import Any, Dict, List, Optional, Union
@@ -48,12 +48,12 @@ class Log:
     hallucination_detection: bool
     inconsistency_detection: bool
     user_query: str
-    model_output: str
-    documents: Optional[List[Union[str, LogDocument]]]
-    message_history: Optional[List[Dict[str, Any]]]
-    instructions: Optional[List[str]]
-    tags: Dict[str, Any]
-    created_at: datetime
+    model_output: Optional[str] = None
+    documents: Optional[List[Union[str, LogDocument]]] = field(default_factory=list)
+    message_history: Optional[List[Dict[str, Any]]] = field(default_factory=list)
+    instructions: Optional[List[str]] = field(default_factory=list)
+    tags: Dict[str, Any] = field(default_factory=dict)
+    created_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
     status: Optional[LogStatus] = None
     updated_at: Optional[datetime] = None
     has_hallucination: Optional[bool] = None
