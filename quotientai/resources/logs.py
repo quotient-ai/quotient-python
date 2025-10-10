@@ -255,6 +255,33 @@ class LogsResource:
 
         try:
             response = self._client._get("/logs", params=params)
+            if response is None:
+                logger.error(
+                    f"Failed to retrieve logs from API. The server returned no response. Please check your connection and try again."
+                )
+                return []
+            
+            if response.get("logs") is None:
+                time_range = ""
+                if start_date and end_date:
+                    time_range = f" from {start_date.strftime('%Y-%m-%d')} to {end_date.strftime('%Y-%m-%d')}"
+                elif start_date:
+                    time_range = f" from {start_date.strftime('%Y-%m-%d')} onwards"
+                elif end_date:
+                    time_range = f" until {end_date.strftime('%Y-%m-%d')}"
+                
+                filters = []
+                if app_name:
+                    filters.append(f"app_name '{app_name}'")
+                if environment:
+                    filters.append(f"environment '{environment}'")
+                
+                filter_text = f" for {', '.join(filters)}" if filters else ""
+                logger.error(
+                    f"No logs found{filter_text}{time_range}. Please check your query parameters or try again in 30 seconds."
+                )
+                return []
+
             data = response["logs"]
 
             logs = []
@@ -422,11 +449,33 @@ class AsyncLogsResource:
 
         try:
             response = await self._client._get("/logs", params=params)
-            if response is None or response["logs"] is None:
+            if response is None:
                 logger.error(
-                    f"No logs found. Please check your query parameters and try again."
+                    f"Failed to retrieve logs from API. The server returned no response. Please check your connection and try again."
                 )
                 return []
+            
+            if response.get("logs") is None:
+                time_range = ""
+                if start_date and end_date:
+                    time_range = f" from {start_date.strftime('%Y-%m-%d')} to {end_date.strftime('%Y-%m-%d')}"
+                elif start_date:
+                    time_range = f" from {start_date.strftime('%Y-%m-%d')} onwards"
+                elif end_date:
+                    time_range = f" until {end_date.strftime('%Y-%m-%d')}"
+                
+                filters = []
+                if app_name:
+                    filters.append(f"app_name '{app_name}'")
+                if environment:
+                    filters.append(f"environment '{environment}'")
+                
+                filter_text = f" for {', '.join(filters)}" if filters else ""
+                logger.error(
+                    f"No logs found{filter_text}{time_range}. Please check your query parameters or try again in 30 seconds."
+                )
+                return []
+
             data = response["logs"]
 
             logs = []
