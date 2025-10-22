@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "quotientai"
-version = "0.4.15"
+version = "0.4.16"
 authors = [
     "Freddie Vargus <freddie@quotientai.co>",
     "Michael Goitia Sarmiento <mike@quotientai.co>"
@@ -22,7 +22,7 @@ click = "^8.1.7"
 httpx = ">=0.27.0"
 tenacity = "<=9.0.0"
 pyjwt = "^2.10.1"
-pydantic = "^2.10.6"
+pydantic = ">=2.10.6"
 opentelemetry-exporter-otlp = "^1.34.0"
 opentelemetry-sdk = "^1.34.0"
 
@@ -41,6 +41,7 @@ build-backend = "poetry.core.masonry.api"
 
 [tool.poetry.scripts]
 quotient = "quotientai.cli.entrypoint:app"
+
 
 
 
