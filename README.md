@@ -1,5 +1,6 @@
 # quotientai
-[![PyPI version](https://img.shields.io/pypi/v/quotientai)](https://pypi.org/project/quotientai)
+[![PyPI version](https://img.shields.io/pypi/v/quotientai)](https://pypi.org/project/quotientai)[![FOSSA Status](https://app.fossa.com/api/projects/git%2Bgithub.com%2Fquotient-ai%2Fquotient-python.svg?type=shield)](https://app.fossa.com/projects/git%2Bgithub.com%2Fquotient-ai%2Fquotient-python?ref=badge_shield)
+
 
 ## Overview
 
@@ -91,3 +92,7 @@ async def main():
 # Run the async function
 asyncio.run(main())
 ```
+
+
+## License
+[![FOSSA Status](https://app.fossa.com/api/projects/git%2Bgithub.com%2Fquotient-ai%2Fquotient-python.svg?type=large)](https://app.fossa.com/projects/git%2Bgithub.com%2Fquotient-ai%2Fquotient-python?ref=badge_large)
